@@ -9,6 +9,8 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
+dsh-api-raw = { path = "../dsh-api-raw" }
+
 chrono = { version = "0.4", features = ["serde"] }
 dsh_sdk = { version = "0.4", features = ["rest-token-fetcher"], default-features = false }
 lazy_static = "1.5"

@@ -12,10 +12,10 @@
 use crate::dsh_api_client::DshApiClient;
 use std::collections::HashMap;
 
-use crate::types::AppCatalogApp;
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
+use dsh_api_raw::types::AppCatalogApp;
 
 /// # Manage apps in the App Catalog
 ///

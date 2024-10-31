@@ -11,10 +11,10 @@
 //! * [`get_topic_ids() -> Vec<String>`](DshApiClient::get_topic_ids)
 
 use crate::dsh_api_client::DshApiClient;
-use crate::types::{AllocationStatus, Topic, TopicStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
+use dsh_api_raw::types::{AllocationStatus, Topic, TopicStatus};
 
 /// # Manage Kafka topics
 ///

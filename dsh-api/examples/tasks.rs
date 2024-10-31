@@ -1,5 +1,5 @@
 use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-use dsh_api::types::{AllocationStatus, Task};
+use dsh_api_raw::types::{AllocationStatus, Task};
 
 const SERVICE_ID: &str = "consentfilter-test002";
 const TASK_ID: &str = "8f4b5747-lnmj4-00000000";

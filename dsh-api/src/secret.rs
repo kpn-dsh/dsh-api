@@ -13,11 +13,11 @@
 
 use crate::dsh_api_client::DshApiClient;
 #[allow(unused_imports)]
-use crate::types::Empty;
-use crate::types::{AllocationStatus, Secret};
-#[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
+#[allow(unused_imports)]
+use dsh_api_raw::types::Empty;
+use dsh_api_raw::types::{AllocationStatus, Secret};
 
 /// # Manage secrets
 ///

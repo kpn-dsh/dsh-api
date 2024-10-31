@@ -10,10 +10,10 @@ use std::collections::{HashMap, HashSet};
 use crate::dsh_api_client::DshApiClient;
 use serde_json::{from_str, Value};
 
-use crate::types::AppCatalogManifest;
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
+use dsh_api_raw::types::AppCatalogManifest;
 
 pub const API_VERSION: &str = "apiVersion";
 pub const CONFIGURATION: &str = "configuration";

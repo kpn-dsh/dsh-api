@@ -6,9 +6,9 @@ use lazy_static::lazy_static;
 use log::info;
 
 use crate::dsh_api_client::DshApiClient;
-use crate::dsh_api_tenant::DEFAULT_DSH_API_TENANT;
+use crate::dsh_api_tenant::{DshApiTenant, DEFAULT_DSH_API_TENANT};
 use crate::platform::{DshPlatform, DEFAULT_DSH_PLATFORM};
-use crate::{generated::Client as GeneratedClient, DshApiTenant};
+use dsh_api_raw::generated::Client as GeneratedClient;
 
 #[derive(Debug)]
 pub struct DshApiClientFactory {

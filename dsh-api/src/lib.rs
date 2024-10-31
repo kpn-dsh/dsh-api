@@ -7,14 +7,6 @@ use std::str::Utf8Error;
 use reqwest::Error as ReqwestError;
 use serde_json::Error as SerdeJsonError;
 
-use crate::dsh_api_tenant::DshApiTenant;
-pub use crate::generated::types;
-
-// Private module `generated` will contain the generated Client code.
-pub(crate) mod generated {
-  include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
-}
-
 pub mod app_catalog;
 pub mod app_catalog_app_configuration;
 pub mod app_catalog_manifest;

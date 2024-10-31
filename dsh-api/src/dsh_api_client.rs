@@ -9,8 +9,10 @@ use reqwest::StatusCode as ReqwestStatusCode;
 use serde::Serialize;
 
 use crate::platform::DshPlatform;
-use crate::types::error::ConversionError;
-use crate::{generated::Client as GeneratedClient, DshApiError, DshApiTenant};
+use dsh_api_raw::types::error::ConversionError;
+use dsh_api_raw::{generated::Client as GeneratedClient};
+use crate::dsh_api_tenant::DshApiTenant;
+use crate::DshApiError;
 
 #[derive(Debug)]
 pub struct DshApiClient<'a> {

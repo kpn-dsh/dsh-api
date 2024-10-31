@@ -11,10 +11,10 @@
 //! * [`get_certificate_ids(&self) -> Vec<String>`](DshApiClient::get_certificate_ids)
 
 use crate::dsh_api_client::DshApiClient;
-use crate::types::{AllocationStatus, Certificate, CertificateStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
+use dsh_api_raw::types::{AllocationStatus, Certificate, CertificateStatus};
 
 /// # Manage certificates
 ///

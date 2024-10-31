@@ -19,10 +19,10 @@
 use std::collections::HashMap;
 
 use crate::dsh_api_client::DshApiClient;
-use crate::types::{AllocationStatus, Application, ApplicationSecret, ApplicationVolumes, HealthCheck, Metrics, PortMapping, Task, TaskStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
+use dsh_api_raw::types::{AllocationStatus, Application, ApplicationSecret, ApplicationVolumes, HealthCheck, Metrics, PortMapping, Task, TaskStatus};
 
 /// # Manage applications
 ///

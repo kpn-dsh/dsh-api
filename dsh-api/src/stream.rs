@@ -17,10 +17,10 @@ use std::collections::HashMap;
 use futures::future::join_all;
 
 use crate::dsh_api_client::DshApiClient;
-use crate::types::{InternalManagedStream, ManagedInternalStreamId, ManagedPublicStreamId, PublicManagedStream};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
+use dsh_api_raw::types::{InternalManagedStream, ManagedInternalStreamId, ManagedPublicStreamId, PublicManagedStream};
 
 /// # Manage Kafka streams
 ///

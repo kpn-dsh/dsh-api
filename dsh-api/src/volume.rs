@@ -11,10 +11,10 @@
 //! * [`get_volume_ids() -> Vec<String>`](DshApiClient::get_volume_ids)
 
 use crate::dsh_api_client::DshApiClient;
-use crate::types::{AllocationStatus, Volume, VolumeStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
+use dsh_api_raw::types::{AllocationStatus, Volume, VolumeStatus};
 
 /// # Manage volumes
 ///
