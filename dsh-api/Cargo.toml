@@ -1,3 +1,4 @@
+# dsh-api
 [package]
 name = "dsh-api"
 
@@ -9,8 +10,8 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
-dsh-api-raw = { path = "../dsh-api-raw" }
-
+dsh-api-macros = { path = "../dsh-api-macros" }
+dsh-api-generated = { path = "../dsh-api-generated" }
 chrono = { version = "0.4", features = ["serde"] }
 dsh_sdk = { version = "0.4", features = ["rest-token-fetcher"], default-features = false }
 lazy_static = "1.5"
@@ -28,8 +29,8 @@ log = "0.4.22"
 serde_json = "1.0"
 tokio = { version = "1.40", features = ["rt", "rt-multi-thread", "macros"] }
 
-[build-dependencies]
-prettyplease = "0.1"
-progenitor = "0.7"
-serde_json = "1.0"
-syn = "1.0"
+#[build-dependencies]
+#prettyplease = "0.1"
+#progenitor = "0.7"
+#serde_json = "1.0"
+#syn = "1.0"

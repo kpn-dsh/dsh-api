@@ -8,11 +8,11 @@ use progenitor_client::{ByteStream, Error as ProgenitorError, ResponseValue as P
 use reqwest::StatusCode as ReqwestStatusCode;
 use serde::Serialize;
 
-use crate::platform::DshPlatform;
-use dsh_api_raw::types::error::ConversionError;
-use dsh_api_raw::{generated::Client as GeneratedClient};
 use crate::dsh_api_tenant::DshApiTenant;
+use crate::platform::DshPlatform;
 use crate::DshApiError;
+use dsh_api_generated::generated::Client as GeneratedClient;
+use dsh_api_generated::types::error::ConversionError;
 
 #[derive(Debug)]
 pub struct DshApiClient<'a> {

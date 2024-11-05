@@ -2,7 +2,7 @@ use serde_json::de::from_str;
 use serde_json::Value;
 
 use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-use dsh_api_raw::types::AppCatalogManifest;
+use dsh_api_generated::types::AppCatalogManifest;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {

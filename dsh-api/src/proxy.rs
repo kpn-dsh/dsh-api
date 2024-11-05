@@ -12,8 +12,8 @@ use crate::dsh_api_client::DshApiClient;
 use crate::DshApiError;
 use crate::DshApiResult;
 #[allow(unused_imports)]
-use dsh_api_raw::types::Empty;
-use dsh_api_raw::types::KafkaProxy;
+use dsh_api_generated::types::Empty;
+use dsh_api_generated::types::KafkaProxy;
 
 /// # Manage proxies
 ///
@@ -40,7 +40,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .kafka_proxy_delete_by_tenant_kafkaproxy_by_id_configuration(self.tenant_name(), proxy_id, self.token())
+          .delete_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -56,12 +56,12 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<KafkaProxy>` - proxy
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_proxy_configuration(&self, proxy_id: &str) -> DshApiResult<KafkaProxy> {
+  pub async fn get_proxy(&self, proxy_id: &str) -> DshApiResult<KafkaProxy> {
     self
       .process(
         self
           .generated_client
-          .kafka_proxy_get_by_tenant_kafkaproxy_by_id_configuration(self.tenant_name(), proxy_id, self.token())
+          .get_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -76,7 +76,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_proxy_ids(&self) -> DshApiResult<Vec<String>> {
     let mut proxy_ids: Vec<String> = self
-      .process(self.generated_client.kafka_proxy_get_by_tenant_kafkaproxy(self.tenant_name(), self.token()).await)
+      .process(self.generated_client.get_kafkaproxy_by_tenant(self.tenant_name(), self.token()).await)
       .map(|result| result.1)
       .map(|proxy_ids| proxy_ids.iter().map(|proxy_id| proxy_id.to_string()).collect())?;
     proxy_ids.sort();
@@ -100,7 +100,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .kafka_proxy_put_by_tenant_kafkaproxy_by_id_configuration(self.tenant_name(), proxy_id, self.token(), &proxy)
+          .put_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token(), &proxy)
           .await,
       )
       .map(|result| result.1)

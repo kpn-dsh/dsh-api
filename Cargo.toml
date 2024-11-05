@@ -1,12 +1,14 @@
+# root
 [workspace]
 resolver = "2"
 members = [
     "dsh-api",
-    "dsh-api-raw",
+    "dsh-api-generated",
+    "dsh-api-macros"
 ]
 
 [workspace.package]
-authors = ["Wilbert Schelvis <wilbert.schelvis@kpn.com", "Unibox Team <unibox@kpn.com>"]
+authors = ["Unibox Team <unibox@kpn.com>"]
 description = "DSH Resource Management Api Client"
 edition = "2021"
 rust-version = "1.77"

@@ -15,7 +15,7 @@ use std::collections::HashMap;
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_raw::types::AppCatalogApp;
+use dsh_api_generated::types::AppCatalogApp;
 
 /// # Manage apps in the App Catalog
 ///
@@ -43,7 +43,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .app_catalog_get_by_tenant_appcatalogapp_by_appcatalogappid_actual(self.tenant_name(), app_id, self.token())
+          .get_appcatalogapp_actual_by_tenant_by_appcatalogappid(self.tenant_name(), app_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -58,12 +58,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_app_actual_configurations(&self) -> DshApiResult<HashMap<String, AppCatalogApp>> {
     self
-      .process(
-        self
-          .generated_client
-          .app_catalog_get_by_tenant_appcatalogapp_actual(self.tenant_name(), self.token())
-          .await,
-      )
+      .process(self.generated_client.get_appcatalogapp_actual_by_tenant(self.tenant_name(), self.token()).await)
       .map(|result| result.1)
   }
 
@@ -82,7 +77,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .app_catalog_get_by_tenant_appcatalogapp_by_appcatalogappid_configuration(self.tenant_name(), app_id, self.token())
+          .get_appcatalogapp_configuration_by_tenant_by_appcatalogappid(self.tenant_name(), app_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -100,7 +95,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .app_catalog_get_by_tenant_appcatalogapp_configuration(self.tenant_name(), self.token())
+          .get_appcatalogapp_configuration_by_tenant(self.tenant_name(), self.token())
           .await,
       )
       .map(|result| result.1)

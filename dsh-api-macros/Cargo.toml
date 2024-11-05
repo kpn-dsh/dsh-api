@@ -1,0 +1,18 @@
+# dsh-api-macros
+[package]
+name = "dsh-api-macros"
+
+authors.workspace = true
+description.workspace = true
+edition.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0", features = ["full"] }
+quote = "1.0"
+proc-macro2 = "1.0"

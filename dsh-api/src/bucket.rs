@@ -14,7 +14,7 @@ use crate::dsh_api_client::DshApiClient;
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_raw::types::{AllocationStatus, Bucket, BucketStatus};
+use dsh_api_generated::types::{AllocationStatus, Bucket, BucketStatus};
 
 /// # Manage buckets
 ///
@@ -45,7 +45,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .bucket_put_by_tenant_bucket_by_id_configuration(self.tenant_name(), bucket_id, self.token(), &bucket)
+          .put_bucket_configuration_by_tenant_by_id(self.tenant_name(), bucket_id, self.token(), &bucket)
           .await,
       )
       .map(|result| result.1)
@@ -67,7 +67,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .bucket_delete_by_tenant_bucket_by_id_configuration(self.tenant_name(), bucket_id, self.token())
+          .delete_bucket_configuration_by_tenant_by_id(self.tenant_name(), bucket_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -91,12 +91,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_bucket(&self, bucket_id: &str) -> DshApiResult<BucketStatus> {
     self
-      .process_raw(
-        self
-          .generated_client
-          .bucket_get_by_tenant_bucket_by_id(self.tenant_name(), bucket_id, self.token())
-          .await,
-      )
+      .process_raw(self.generated_client.get_bucket_by_tenant_by_id(self.tenant_name(), bucket_id, self.token()).await)
       .map(|result| result.1)
   }
 
@@ -115,7 +110,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .bucket_get_by_tenant_bucket_by_id_actual(self.tenant_name(), bucket_id, self.token())
+          .get_bucket_actual_by_tenant_by_id(self.tenant_name(), bucket_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -136,7 +131,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .bucket_get_by_tenant_bucket_by_id_status(self.tenant_name(), bucket_id, self.token())
+          .get_bucket_status_by_tenant_by_id(self.tenant_name(), bucket_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -157,7 +152,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .bucket_get_by_tenant_bucket_by_id_configuration(self.tenant_name(), bucket_id, self.token())
+          .get_bucket_configuration_by_tenant_by_id(self.tenant_name(), bucket_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -172,7 +167,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_bucket_ids(&self) -> DshApiResult<Vec<String>> {
     let mut bucket_ids: Vec<String> = self
-      .process(self.generated_client.bucket_get_by_tenant_bucket(self.tenant_name(), self.token()).await)
+      .process(self.generated_client.get_bucket_by_tenant(self.tenant_name(), self.token()).await)
       .map(|result| result.1)
       .map(|bucket_ids| bucket_ids.iter().map(|bucket_id| bucket_id.to_string()).collect())?;
     bucket_ids.sort();

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-use dsh_api_raw::types::AppCatalogApp;
+use dsh_api_generated::types::AppCatalogApp;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {

@@ -14,7 +14,7 @@ use crate::dsh_api_client::DshApiClient;
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_raw::types::{AllocationStatus, Topic, TopicStatus};
+use dsh_api_generated::types::{AllocationStatus, Topic, TopicStatus};
 
 /// # Manage Kafka topics
 ///
@@ -45,7 +45,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .topic_put_by_tenant_topic_by_id_configuration(self.tenant_name(), topic_id, self.token(), configuration)
+          .put_topic_configuration_by_tenant_by_id(self.tenant_name(), topic_id, self.token(), configuration)
           .await,
       )
       .map(|result| result.1)
@@ -67,7 +67,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .topic_delete_by_tenant_topic_by_id_configuration(self.tenant_name(), topic_id, self.token())
+          .delete_topic_configuration_by_tenant_by_id(self.tenant_name(), topic_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -91,12 +91,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_topic(&self, topic_id: &str) -> DshApiResult<TopicStatus> {
     self
-      .process(
-        self
-          .generated_client
-          .topic_get_by_tenant_topic_by_id(self.tenant_name(), topic_id, self.token())
-          .await,
-      )
+      .process(self.generated_client.get_topic_by_tenant_by_id(self.tenant_name(), topic_id, self.token()).await)
       .map(|result| result.1)
   }
 
@@ -115,7 +110,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .topic_get_by_tenant_topic_by_id_status(self.tenant_name(), topic_id, self.token())
+          .get_topic_status_by_tenant_by_id(self.tenant_name(), topic_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -136,7 +131,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .topic_get_by_tenant_topic_by_id_configuration(self.tenant_name(), topic_id, self.token())
+          .get_topic_configuration_by_tenant_by_id(self.tenant_name(), topic_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -157,7 +152,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .topic_get_by_tenant_topic_by_id_actual(self.tenant_name(), topic_id, self.token())
+          .get_topic_actual_by_tenant_by_id(self.tenant_name(), topic_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -172,7 +167,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_topic_ids(&self) -> DshApiResult<Vec<String>> {
     let mut topic_ids: Vec<String> = self
-      .process(self.generated_client.topic_get_by_tenant_topic(self.tenant_name(), self.token()).await)
+      .process(self.generated_client.get_topic_by_tenant(self.tenant_name(), self.token()).await)
       .map(|result| result.1)
       .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
     topic_ids.sort();

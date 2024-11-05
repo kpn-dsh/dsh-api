@@ -1,30 +1,24 @@
+# dsh-api-generated
 [package]
-name = "dsh-api-raw"
+name = "dsh-api-generated"
 version = "0.1.0"
 edition = "2021"
-#license.workspace = true
-#readme = "README.md"
 description = "REST API client for KPN Data Services Hub"
-#homepage.workspace = true
-#repository.workspace = true
 keywords = ["kpn", "dsh", "rest", "api", "client"]
 
 [dependencies]
+bytes = "1.7"
 chrono = { version = "0.4", features = ["serde"] }
-dsh_sdk = { version = "0.4", features = ["rest-token-fetcher"], default-features = false }
-lazy_static = "1.5"
+futures = "0.3"
 progenitor-client = "0.7"
 regress = "0.10"
 reqwest = { version = "0.11" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-bytes = "1.7"
-futures = "0.3"
-futures-core = "0.3"
-log = "0.4.22"
 
 [build-dependencies]
 prettyplease = "0.1"
 progenitor = "0.7"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 syn = "1.0"

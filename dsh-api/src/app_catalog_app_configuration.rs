@@ -11,7 +11,7 @@ use crate::dsh_api_client::DshApiClient;
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_raw::types::{AllocationStatus, AppCatalogAppConfiguration};
+use dsh_api_generated::types::{AllocationStatus, AppCatalogAppConfiguration};
 
 /// # Manage the App Catalog
 ///
@@ -39,7 +39,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .app_catalog_app_configuration_put_appcatalog_by_tenant_appcatalogapp_by_appcatalogappid_configuration(self.tenant_name(), app_catalog_id, self.token(), body)
+          .put_appcatalog_appcatalogapp_configuration_by_tenant_by_appcatalogappid(self.tenant_name(), app_catalog_id, self.token(), body)
           .await,
       )
       .map(|result| result.1)
@@ -61,7 +61,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .app_catalog_app_configuration_delete_appcatalog_by_tenant_appcatalogapp_by_appcatalogappid_configuration(self.tenant_name(), app_catalog_id, self.token())
+          .delete_appcatalog_appcatalogapp_configuration_by_tenant_by_appcatalogappid(self.tenant_name(), app_catalog_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -82,7 +82,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .app_catalog_app_configuration_get_appcatalog_by_tenant_appcatalogapp_by_appcatalogappid_status(self.tenant_name(), app_catalog_id, self.token())
+          .get_appcatalog_appcatalogapp_status_by_tenant_by_appcatalogappid(self.tenant_name(), app_catalog_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -103,7 +103,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .app_catalog_app_configuration_get_appcatalog_by_tenant_appcatalogapp_by_appcatalogappid_configuration(self.tenant_name(), app_catalog_id, self.token())
+          .get_appcatalog_appcatalogapp_configuration_by_tenant_by_appcatalogappid(self.tenant_name(), app_catalog_id, self.token())
           .await,
       )
       .map(|result| result.1)

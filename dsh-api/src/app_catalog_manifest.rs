@@ -13,7 +13,7 @@ use serde_json::{from_str, Value};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_raw::types::AppCatalogManifest;
+use dsh_api_generated::types::AppCatalogManifest;
 
 pub const API_VERSION: &str = "apiVersion";
 pub const CONFIGURATION: &str = "configuration";
@@ -44,12 +44,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_app_catalog_manifests(&self) -> DshApiResult<Vec<AppCatalogManifest>> {
     self
-      .process(
-        self
-          .generated_client
-          .app_catalog_manifest_get_appcatalog_by_tenant_manifest(self.tenant_name(), self.token())
-          .await,
-      )
+      .process(self.generated_client.get_appcatalog_manifest_by_tenant(self.tenant_name(), self.token()).await)
       .map(|result| result.1)
   }
 
@@ -61,12 +56,7 @@ impl DshApiClient<'_> {
   /// * `Ok<Vec<String>>` - vector containing all manifest ids
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_app_catalog_manifest_ids(&self) -> DshApiResult<Vec<String>> {
-    let (_, manifests) = self.process(
-      self
-        .generated_client
-        .app_catalog_manifest_get_appcatalog_by_tenant_manifest(self.tenant_name(), self.token())
-        .await,
-    )?;
+    let (_, manifests) = self.process(self.generated_client.get_appcatalog_manifest_by_tenant(self.tenant_name(), self.token()).await)?;
     let mut unique_ids: HashSet<String> = HashSet::new();
     for manifest in manifests {
       let payload = from_str::<Value>(manifest.payload.as_str())?;
@@ -88,12 +78,7 @@ impl DshApiClient<'_> {
   /// * `Ok<Vec<(String, Vec<String>)>>` - vector containing pairs of ids and versions
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_app_catalog_manifest_ids_with_versions(&self) -> DshApiResult<Vec<(String, Vec<String>)>> {
-    let (_, manifests) = self.process(
-      self
-        .generated_client
-        .app_catalog_manifest_get_appcatalog_by_tenant_manifest(self.tenant_name(), self.token())
-        .await,
-    )?;
+    let (_, manifests) = self.process(self.generated_client.get_appcatalog_manifest_by_tenant(self.tenant_name(), self.token()).await)?;
     let mut id_versions: HashMap<String, Vec<String>> = HashMap::new();
     for manifest in manifests {
       let payload = from_str::<Value>(manifest.payload.as_str())?;

@@ -8,7 +8,7 @@ use log::info;
 use crate::dsh_api_client::DshApiClient;
 use crate::dsh_api_tenant::{DshApiTenant, DEFAULT_DSH_API_TENANT};
 use crate::platform::{DshPlatform, DEFAULT_DSH_PLATFORM};
-use dsh_api_raw::generated::Client as GeneratedClient;
+use dsh_api_generated::generated::Client as GeneratedClient;
 
 #[derive(Debug)]
 pub struct DshApiClientFactory {

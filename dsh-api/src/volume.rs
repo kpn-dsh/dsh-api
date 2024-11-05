@@ -14,7 +14,7 @@ use crate::dsh_api_client::DshApiClient;
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_raw::types::{AllocationStatus, Volume, VolumeStatus};
+use dsh_api_generated::types::{AllocationStatus, Volume, VolumeStatus};
 
 /// # Manage volumes
 ///
@@ -45,7 +45,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .volume_put_by_tenant_volume_by_id_configuration(self.tenant_name(), volume_id, self.token(), configuration)
+          .put_volume_configuration_by_tenant_by_id(self.tenant_name(), volume_id, self.token(), configuration)
           .await,
       )
       .map(|result| result.1)
@@ -67,7 +67,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .volume_delete_by_tenant_volume_by_id_configuration(self.tenant_name(), volume_id, self.token())
+          .delete_volume_configuration_by_tenant_by_id(self.tenant_name(), volume_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -87,16 +87,11 @@ impl DshApiClient<'_> {
   /// * `volume_id` - name of the requested volume
   ///
   /// ## Returns
-  /// * `Ok<`[`volumeStatus`]`>` - volume status
+  /// * `Ok<`[`VolumeStatus`]`>` - volume status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_volume(&self, volume_id: &str) -> DshApiResult<VolumeStatus> {
     self
-      .process(
-        self
-          .generated_client
-          .volume_get_by_tenant_volume_by_id(self.tenant_name(), volume_id, self.token())
-          .await,
-      )
+      .process(self.generated_client.get_volume_by_tenant_by_id(self.tenant_name(), volume_id, self.token()).await)
       .map(|result| result.1)
   }
 
@@ -115,7 +110,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .volume_get_by_tenant_volume_by_id_status(self.tenant_name(), volume_id, self.token())
+          .get_volume_status_by_tenant_by_id(self.tenant_name(), volume_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -129,14 +124,14 @@ impl DshApiClient<'_> {
   /// * `volume_id` - name of the requested volume
   ///
   /// ## Returns
-  /// * `Ok<`[`volume`]`>` - volume configuration
+  /// * `Ok<`[`Volume`]`>` - volume configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_volume_configuration(&self, volume_id: &str) -> DshApiResult<Volume> {
     self
       .process(
         self
           .generated_client
-          .volume_get_by_tenant_volume_by_id_configuration(self.tenant_name(), volume_id, self.token())
+          .get_volume_configuration_by_tenant_by_id(self.tenant_name(), volume_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -150,14 +145,14 @@ impl DshApiClient<'_> {
   /// * `volume_id` - name of the requested volume
   ///
   /// ## Returns
-  /// * `Ok<`[`volume`]`>` - volume configuration
+  /// * `Ok<`[`Volume`]`>` - volume configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_volume_actual_configuration(&self, volume_id: &str) -> DshApiResult<Volume> {
     self
       .process(
         self
           .generated_client
-          .volume_get_by_tenant_volume_by_id_actual(self.tenant_name(), volume_id, self.token())
+          .get_volume_actual_by_tenant_by_id(self.tenant_name(), volume_id, self.token())
           .await,
       )
       .map(|result| result.1)
@@ -172,7 +167,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_volume_ids(&self) -> DshApiResult<Vec<String>> {
     let mut volume_ids: Vec<String> = self
-      .process(self.generated_client.volume_get_by_tenant_volume(self.tenant_name(), self.token()).await)
+      .process(self.generated_client.get_volume_by_tenant(self.tenant_name(), self.token()).await)
       .map(|result| result.1)
       .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
     volume_ids.sort();
