@@ -30,9 +30,9 @@ use crate::DshApiResult;
 /// easily configured apps that you can select from the App Catalog.
 ///
 /// ## API methods
-/// * [`get_app_actual_configuration(app_catalog_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)
+/// * [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)
 /// * [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)
-/// * [`get_app_configuration(app_catalog_id) -> AppCatalogApp`](DshApiClient::get_app_configuration)
+/// * [`get_app_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_configuration)
 /// * [`get_app_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_configurations)
 ///
 /// ## Utility methods
@@ -152,7 +152,7 @@ impl DshApiClient<'_> {
   /// * `app` - app to get the application resource from
   ///
   /// ## Returns
-  /// * `Some((String, &'['Application']'))`
+  /// * `Some((String, &`[`Application`]`))`
   pub fn application_from_app(app: &AppCatalogApp) -> Option<(String, &Application)> {
     app.resources.iter().find_map(|(resource_id, resource)| match resource {
       AppCatalogAppResourcesValue::Application(application) => Some((resource_id.to_string(), application)),
