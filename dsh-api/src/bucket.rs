@@ -30,7 +30,7 @@ use crate::DshApiResult;
 impl DshApiClient<'_> {
   /// # Create bucket
   ///
-  /// `PUT /allocation/{tenant}/bucket/{id}/configuration`
+  /// API function: `PUT /allocation/{tenant}/bucket/{id}/configuration`
   ///
   /// ## Parameters
   /// * `bucket_id` - id of the bucket to update
@@ -53,7 +53,7 @@ impl DshApiClient<'_> {
 
   /// # Delete bucket
   ///
-  /// `DELETE /allocation/{tenant}/bucket/{id}/configuration`
+  /// API function: `DELETE /allocation/{tenant}/bucket/{id}/configuration`
   ///
   /// ## Parameters
   /// * `bucket_id` - id of the bucket to delete
@@ -75,7 +75,7 @@ impl DshApiClient<'_> {
 
   /// # Return bucket
   ///
-  /// `GET /allocation/{tenant}/bucket/{id}`
+  /// API function: `GET /allocation/{tenant}/bucket/{id}`
   ///
   /// This method combines the results of the methods
   /// [`get_bucket_actual()`](DshApiClient::get_bucket_actual_configuration),
@@ -97,7 +97,7 @@ impl DshApiClient<'_> {
 
   /// # Return actual state of bucket
   ///
-  /// `GET /allocation/{tenant}/bucket/{id}/actual`
+  /// API function: `GET /allocation/{tenant}/bucket/{id}/actual`
   ///
   /// ## Parameters
   /// * `bucket_id` - id of the requested bucket
@@ -118,7 +118,7 @@ impl DshApiClient<'_> {
 
   /// # Return bucket allocation status
   ///
-  /// `GET /allocation/{tenant}/bucket/{id}/status`
+  /// API function: `GET /allocation/{tenant}/bucket/{id}/status`
   ///
   /// ## Parameters
   /// * `bucket_id` - id of the requested bucket
@@ -139,7 +139,7 @@ impl DshApiClient<'_> {
 
   /// # Return bucket configuration
   ///
-  /// `GET /allocation/{tenant}/bucket/{id}/configuration`
+  /// API function: `GET /allocation/{tenant}/bucket/{id}/configuration`
   ///
   /// ## Parameters
   /// * `bucket_id` - id of the requested bucket
@@ -160,7 +160,7 @@ impl DshApiClient<'_> {
 
   /// # Return bucket ids
   ///
-  /// `GET /allocation/{tenant}/bucket`
+  /// API function: `GET /allocation/{tenant}/bucket`
   ///
   /// ## Returns
   /// * `Ok<Vec<String>` - bucket ids

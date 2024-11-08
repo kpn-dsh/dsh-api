@@ -30,7 +30,7 @@ use crate::DshApiResult;
 impl DshApiClient<'_> {
   /// # Create topic
   ///
-  /// `PUT /allocation/{tenant}/topic/{id}/configuration`
+  /// API function: `PUT /allocation/{tenant}/topic/{id}/configuration`
   ///
   /// ## Parameters
   /// * `topic_id` - name of the created topic
@@ -53,7 +53,7 @@ impl DshApiClient<'_> {
 
   /// # Delete topic
   ///
-  /// `DELETE /allocation/{tenant}/topic/{id}/configuration`
+  /// API function: `DELETE /allocation/{tenant}/topic/{id}/configuration`
   ///
   /// ## Parameters
   /// * `topic_id` - name of the topic to delete
@@ -75,7 +75,7 @@ impl DshApiClient<'_> {
 
   /// # Return topic
   ///
-  /// `GET /allocation/{tenant}/topic/{id}`
+  /// API function: `GET /allocation/{tenant}/topic/{id}`
   ///
   /// This method combines the results of the methods
   /// [`get_topic_allocation_status()`](DshApiClient::get_topic_allocation_status),
@@ -97,7 +97,7 @@ impl DshApiClient<'_> {
 
   /// # Return topic allocation status
   ///
-  /// `GET /allocation/{tenant}/topic/{id}/status`
+  /// API function: `GET /allocation/{tenant}/topic/{id}/status`
   ///
   /// ## Parameters
   /// * `topic_id` - name of the requested topic
@@ -118,7 +118,7 @@ impl DshApiClient<'_> {
 
   /// # Return topic configuration
   ///
-  /// `GET /allocation/{tenant}/topic/{id}/configuration`
+  /// API function: `GET /allocation/{tenant}/topic/{id}/configuration`
   ///
   /// ## Parameters
   /// * `topic_id` - name of the requested topic
@@ -139,7 +139,7 @@ impl DshApiClient<'_> {
 
   /// # Return actual topic configuration
   ///
-  /// `GET /allocation/{tenant}/topic/{id}/actual`
+  /// API function: `GET /allocation/{tenant}/topic/{id}/actual`
   ///
   /// ## Parameters
   /// * `topic_id` - name of the requested topic
@@ -160,7 +160,7 @@ impl DshApiClient<'_> {
 
   /// # Return sorted list of topic names
   ///
-  /// `GET /allocation/{tenant}/topic`
+  /// API function: `GET /allocation/{tenant}/topic`
   ///
   /// ## Returns
   /// * `Ok<Vec<String>>` - list of topic names

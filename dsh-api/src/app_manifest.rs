@@ -46,7 +46,7 @@ pub const VERSION: &str = "version";
 impl DshApiClient<'_> {
   /// # Return a list of all App Catalog manifests
   ///
-  /// `GET /appcatalog/{tenant}/manifest`
+  /// API function: `GET /appcatalog/{tenant}/manifest`
   ///
   /// ## Returns
   /// * `Ok<Vec`[`AppCatalogManifest`]`>` - vector containing all app manifests

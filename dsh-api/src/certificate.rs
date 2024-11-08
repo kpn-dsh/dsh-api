@@ -30,7 +30,7 @@ use crate::DshApiResult;
 impl DshApiClient<'_> {
   /// # Create certificate
   ///
-  /// `PUT /allocation/{tenant}/certificate/{id}/configuration`
+  /// API function: `PUT /allocation/{tenant}/certificate/{id}/configuration`
   ///
   /// ## Parameters
   /// * `certificate_id` - id of the certificate to update
@@ -53,7 +53,7 @@ impl DshApiClient<'_> {
 
   /// # Delete certificate
   ///
-  /// `DELETE /allocation/{tenant}/certificate/{id}/configuration`
+  /// API function: `DELETE /allocation/{tenant}/certificate/{id}/configuration`
   ///
   /// ## Parameters
   /// * `certificate_id` - id of the certificate to delete
@@ -75,7 +75,7 @@ impl DshApiClient<'_> {
 
   /// # Return certificate
   ///
-  /// `GET /allocation/{tenant}/certificate/{id}`
+  /// API function: `GET /allocation/{tenant}/certificate/{id}`
   ///
   /// This method combines the results of the methods
   /// [`get_certificate_actual()`](DshApiClient::get_certificate_actual_configuration),
@@ -102,7 +102,7 @@ impl DshApiClient<'_> {
 
   /// # Return actual state of certificate
   ///
-  /// `GET /allocation/{tenant}/certificate/{id}/actual`
+  /// API function: `GET /allocation/{tenant}/certificate/{id}/actual`
   ///
   /// ## Parameters
   /// * `certificate_id` - id of the requested certificate
@@ -123,7 +123,7 @@ impl DshApiClient<'_> {
 
   /// # Return certificate allocation status
   ///
-  /// `GET /allocation/{tenant}/certificate/{id}/status`
+  /// API function: `GET /allocation/{tenant}/certificate/{id}/status`
   ///
   /// ## Parameters
   /// * `certificate_id` - id of the requested certificate
@@ -144,7 +144,7 @@ impl DshApiClient<'_> {
 
   /// # Return certificate configuration
   ///
-  /// `GET /allocation/{tenant}/certificate/{id}/configuration`
+  /// API function: `GET /allocation/{tenant}/certificate/{id}/configuration`
   ///
   /// ## Parameters
   /// * `certificate_id` - id of the requested certificate
@@ -165,7 +165,7 @@ impl DshApiClient<'_> {
 
   /// # Return certificate ids
   ///
-  /// `GET /allocation/{tenant}/certificate`
+  /// API function: `GET /allocation/{tenant}/certificate`
   ///
   /// ## Returns
   /// * `Ok<Vec<String>` - certificate ids

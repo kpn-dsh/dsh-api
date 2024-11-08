@@ -38,7 +38,7 @@ use crate::DshApiResult;
 impl DshApiClient<'_> {
   /// # Create internal stream
   ///
-  /// `POST /manage/{manager}/stream/internal/{streamId}/configuration`
+  /// API function: `POST /manage/{manager}/stream/internal/{streamId}/configuration`
   ///
   /// ## Parameters
   /// * `stream_id` - name of the internal created stream
@@ -61,7 +61,7 @@ impl DshApiClient<'_> {
 
   /// # Create public stream
   ///
-  /// `POST /manage/{manager}/stream/public/{streamId}/configuration`
+  /// API function: `POST /manage/{manager}/stream/public/{streamId}/configuration`
   ///
   /// ## Parameters
   /// * `stream_id` - name of the public created stream
@@ -84,7 +84,7 @@ impl DshApiClient<'_> {
 
   /// # Delete internal stream
   ///
-  /// `DELETE /manage/{manager}/stream/internal/{streamId}/configuration`
+  /// API function: `DELETE /manage/{manager}/stream/internal/{streamId}/configuration`
   ///
   /// ## Parameters
   /// * `stream_id` - name of the internal stream to delete
@@ -106,7 +106,7 @@ impl DshApiClient<'_> {
 
   /// # Delete public stream
   ///
-  /// `DELETE /manage/{manager}/stream/public/{streamId}/configuration`
+  /// API function: `DELETE /manage/{manager}/stream/public/{streamId}/configuration`
   ///
   /// ## Parameters
   /// * `stream_id` - name of the public stream to delete
@@ -128,7 +128,7 @@ impl DshApiClient<'_> {
 
   /// # Return internal stream configuration
   ///
-  /// `GET /manage/{manager}/stream/internal/{streamId}/configuration`
+  /// API function: `GET /manage/{manager}/stream/internal/{streamId}/configuration`
   ///
   /// ## Parameters
   /// * `stream_id` - name of the requested internal stream
@@ -149,8 +149,8 @@ impl DshApiClient<'_> {
 
   /// # Return internal stream configurations as a `HashMap`
   ///
-  /// `GET /manage/{manager}/stream`
-  /// `GET /manage/{manager}/stream/internal/{streamId}/configuration`
+  /// API function: `GET /manage/{manager}/stream`
+  /// API function: `GET /manage/{manager}/stream/internal/{streamId}/configuration`
   ///
   /// ## Returns
   /// * `Ok<HashMap<>>` - internal stream configurations
@@ -169,7 +169,7 @@ impl DshApiClient<'_> {
 
   /// # Return public stream configuration
   ///
-  /// `GET /manage/{manager}/stream/public/{streamId}/configuration`
+  /// API function: `GET /manage/{manager}/stream/public/{streamId}/configuration`
   ///
   /// ## Parameters
   /// * `stream_id` - name of the requested public stream
@@ -190,8 +190,8 @@ impl DshApiClient<'_> {
 
   /// # Return public stream configurations as a `HashMap`
   ///
-  /// `GET /manage/{manager}/stream`
-  /// `GET /manage/{manager}/stream/public/{streamId}/configuration`
+  /// API function: `GET /manage/{manager}/stream`
+  /// API function: `GET /manage/{manager}/stream/public/{streamId}/configuration`
   ///
   /// ## Returns
   /// * `Ok<HashMap<>>` - public stream configurations
@@ -210,7 +210,7 @@ impl DshApiClient<'_> {
 
   /// # Return sorted list of internal and public stream names
   ///
-  /// `GET /manage/{manager}/stream`
+  /// API function: `GET /manage/{manager}/stream`
   ///
   /// ## Returns
   /// * `Ok<Vec<String>>` - list of stream names

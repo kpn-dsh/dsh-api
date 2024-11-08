@@ -26,7 +26,7 @@ use crate::DshApiResult;
 impl DshApiClient<'_> {
   /// # Delete proxy
   ///
-  /// `DELETE /allocation/{tenant}/kafkaproxy/{id}/configuration`
+  /// API function: `DELETE /allocation/{tenant}/kafkaproxy/{id}/configuration`
   ///
   /// ## Parameters
   /// * `proxy_id` - id of the proxy to delete
@@ -48,7 +48,7 @@ impl DshApiClient<'_> {
 
   /// # Return proxy
   ///
-  /// `GET /allocation/{tenant}/kafkaproxy/{id}/configuration`
+  /// API function: `GET /allocation/{tenant}/kafkaproxy/{id}/configuration`
   ///
   /// ## Parameters
   /// * `proxy_id` - id of the requested proxy
@@ -69,7 +69,7 @@ impl DshApiClient<'_> {
 
   /// # Return sorted list of Kafka proxy ids
   ///
-  /// `GET /allocation/{tenant}/kafkaproxy`
+  /// API function: `GET /allocation/{tenant}/kafkaproxy`
   ///
   /// ## Returns
   /// * `Ok<Vec<String>>` - list of proxy ids
@@ -85,7 +85,7 @@ impl DshApiClient<'_> {
 
   /// # Update proxy configuration
   ///
-  /// `PUT /allocation/{tenant}/kafkaproxy/{id}/configuration`
+  /// API function: `PUT /allocation/{tenant}/kafkaproxy/{id}/configuration`
   ///
   /// ## Parameters
   /// * `proxy_id` - id of the proxy to update

@@ -30,7 +30,7 @@ use crate::DshApiResult;
 impl DshApiClient<'_> {
   /// # Create volume
   ///
-  /// `PUT /allocation/{tenant}/volume/{id}/configuration`
+  /// API function: `PUT /allocation/{tenant}/volume/{id}/configuration`
   ///
   /// ## Parameters
   /// * `volume_id` - name of the created volume
@@ -53,7 +53,7 @@ impl DshApiClient<'_> {
 
   /// # Delete volume
   ///
-  /// `DELETE /allocation/{tenant}/volume/{id}/configuration`
+  /// API function: `DELETE /allocation/{tenant}/volume/{id}/configuration`
   ///
   /// ## Parameters
   /// * `volume_id` - name of the volume to delete
@@ -75,7 +75,7 @@ impl DshApiClient<'_> {
 
   /// # Return volume
   ///
-  /// `GET /allocation/{tenant}/volume/{id}`
+  /// API function: `GET /allocation/{tenant}/volume/{id}`
   ///
   /// This method combines the results of the methods
   /// [`get_volume_allocation_status()`](DshApiClient::get_volume_allocation_status),
@@ -97,7 +97,7 @@ impl DshApiClient<'_> {
 
   /// # Return volume allocation status
   ///
-  /// `GET /allocation/{tenant}/volume/{id}/status`
+  /// API function: `GET /allocation/{tenant}/volume/{id}/status`
   ///
   /// ## Parameters
   /// * `volume_id` - name of the requested volume
@@ -118,7 +118,7 @@ impl DshApiClient<'_> {
 
   /// # Return volume configuration
   ///
-  /// `GET /allocation/{tenant}/volume/{id}/configuration`
+  /// API function: `GET /allocation/{tenant}/volume/{id}/configuration`
   ///
   /// ## Parameters
   /// * `volume_id` - name of the requested volume
@@ -139,7 +139,7 @@ impl DshApiClient<'_> {
 
   /// # Return actual volume configuration
   ///
-  /// `GET /allocation/{tenant}/volume/{id}/actual`
+  /// API function: `GET /allocation/{tenant}/volume/{id}/actual`
   ///
   /// ## Parameters
   /// * `volume_id` - name of the requested volume
@@ -160,7 +160,7 @@ impl DshApiClient<'_> {
 
   /// # Return sorted list of volume names
   ///
-  /// `GET /allocation/{tenant}/volume`
+  /// API function: `GET /allocation/{tenant}/volume`
   ///
   /// ## Returns
   /// * `Ok<Vec<String>>` - list of volume names

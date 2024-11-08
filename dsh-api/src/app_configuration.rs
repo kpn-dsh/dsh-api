@@ -26,7 +26,7 @@ use crate::DshApiResult;
 impl DshApiClient<'_> {
   /// # Create or update a new App Catalog App
   ///
-  /// `PUT /appcatalog/{tenant}/appcatalogapp/{appcatalogappid}/configuration`
+  /// API function: `PUT /appcatalog/{tenant}/appcatalogapp/{appcatalogappid}/configuration`
   ///
   /// ## Parameters
   /// * `app_catalog_id` - id of the app that must be deleted
@@ -49,7 +49,7 @@ impl DshApiClient<'_> {
 
   /// # Delete an App Catalog App
   ///
-  /// `DELETE /appcatalog/{tenant}/appcatalogapp/{appcatalogappid}/configuration`
+  /// API function: `DELETE /appcatalog/{tenant}/appcatalogapp/{appcatalogappid}/configuration`
   ///
   /// ## Parameters
   /// * `app_catalog_id` - id of the app that must be deleted
@@ -71,7 +71,7 @@ impl DshApiClient<'_> {
 
   /// # Get an App Catalog App status
   ///
-  /// `GET /appcatalog/{tenant}/appcatalogapp/{appcatalogappid}/status`
+  /// API function: `GET /appcatalog/{tenant}/appcatalogapp/{appcatalogappid}/status`
   ///
   /// ## Parameters
   /// * `app_catalog_id` - id of the requested app
@@ -92,7 +92,7 @@ impl DshApiClient<'_> {
 
   /// # Get an App Catalog App configuration
   ///
-  /// `GET /appcatalog/{tenant}/appcatalogapp/{appcatalogappid}/configuration`
+  /// API function: `GET /appcatalog/{tenant}/appcatalogapp/{appcatalogappid}/configuration`
   ///
   /// ## Parameters
   /// * `app_catalog_id` - id of the requested app

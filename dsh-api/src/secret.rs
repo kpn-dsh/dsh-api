@@ -33,7 +33,7 @@ use crate::DshApiResult;
 impl DshApiClient<'_> {
   /// # Create secret
   ///
-  /// `POST /allocation/{tenant}/secret`
+  /// API function: `POST /allocation/{tenant}/secret`
   ///
   /// ## Parameters
   /// * `secret` - secret to be created, consisting of a key/value pair
@@ -50,7 +50,7 @@ impl DshApiClient<'_> {
 
   /// # Delete secret
   ///
-  /// `DELETE /allocation/{tenant}/secret/{id}/configuration`
+  /// API function: `DELETE /allocation/{tenant}/secret/{id}/configuration`
   ///
   /// ## Parameters
   /// * `secret_id` - id of the secret to delete
@@ -72,7 +72,7 @@ impl DshApiClient<'_> {
 
   /// # Return secret
   ///
-  /// `GET /allocation/{tenant}/secret/{id}`
+  /// API function: `GET /allocation/{tenant}/secret/{id}`
   ///
   /// ## Parameters
   /// * `secret_id` - id of the requested secret
@@ -89,7 +89,7 @@ impl DshApiClient<'_> {
 
   /// # Return actual state of secret
   ///
-  /// `GET /allocation/{tenant}/secret/{id}/actual`
+  /// API function: `GET /allocation/{tenant}/secret/{id}/actual`
   ///
   /// ## Parameters
   /// * `secret_id` - id of the requested secret
@@ -110,7 +110,7 @@ impl DshApiClient<'_> {
 
   /// # Return secret allocation status
   ///
-  /// `GET /allocation/{tenant}/secret/{id}/status`
+  /// API function: `GET /allocation/{tenant}/secret/{id}/status`
   ///
   /// ## Parameters
   /// * `secret_id` - id of the requested secret
@@ -131,7 +131,7 @@ impl DshApiClient<'_> {
 
   /// # Return configuration of secret
   ///
-  /// `GET /allocation/{tenant}/secret/{id}/configuration`
+  /// API function: `GET /allocation/{tenant}/secret/{id}/configuration`
   ///
   /// ## Parameters
   /// * `secret_id` - id of the requested secret
@@ -153,7 +153,7 @@ impl DshApiClient<'_> {
 
   /// # Return sorted list of secret names
   ///
-  /// `GET /allocation/{tenant}/secret`
+  /// API function: `GET /allocation/{tenant}/secret`
   ///
   /// ## Returns
   /// * `Ok<Vec<String>>` - list of secret names
@@ -169,7 +169,7 @@ impl DshApiClient<'_> {
 
   /// # Update secret value
   ///
-  /// `PUT /allocation/{tenant}/secret/{id}`
+  /// API function: `PUT /allocation/{tenant}/secret/{id}`
   ///
   /// ## Parameters
   /// * `secret_id` - id of the secret to update

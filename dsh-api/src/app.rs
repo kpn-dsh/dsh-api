@@ -44,7 +44,7 @@ use crate::DshApiResult;
 impl DshApiClient<'_> {
   /// # Return actual configuration of deployed App
   ///
-  /// `GET /allocation/{tenant}/appcatalogapp/{appcatalogappid}/actual`
+  /// API function: `GET /allocation/{tenant}/appcatalogapp/{appcatalogappid}/actual`
   ///
   /// ## Parameters
   /// * `app_id` - app id of the requested configuration
@@ -65,7 +65,7 @@ impl DshApiClient<'_> {
 
   /// # Get all actual configurations of deployed Apps
   ///
-  /// `GET /allocation/{tenant}/appcatalogapp/actual`
+  /// API function: `GET /allocation/{tenant}/appcatalogapp/actual`
   ///
   /// ## Returns
   /// * `Ok<HashMap<String, `[`AppCatalogApp`]`>>` - hashmap containing the app configurations
@@ -78,7 +78,7 @@ impl DshApiClient<'_> {
 
   /// # Return App configuration
   ///
-  /// `GET /allocation/{tenant}/appcatalogapp/{appcatalogappid}/configuration`
+  /// API function: `GET /allocation/{tenant}/appcatalogapp/{appcatalogappid}/configuration`
   ///
   /// ## Parameters
   /// * `app_id` - app id of the requested configuration
@@ -99,7 +99,7 @@ impl DshApiClient<'_> {
 
   /// # Get all App configurations
   ///
-  /// `GET /allocation/{tenant}/appcatalogapp/configuration`
+  /// API function: `GET /allocation/{tenant}/appcatalogapp/configuration`
   ///
   /// ## Returns
   /// * `Ok<HashMap<String, `[`AppCatalogApp`]`>>` - hashmap containing the app configurations
