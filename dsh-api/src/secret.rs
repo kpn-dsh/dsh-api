@@ -11,6 +11,8 @@
 //! * [`get_secret_ids() -> Vec<String>`](DshApiClient::get_secret_ids)
 //! * [`update_secret(secret_id, secret) -> ()`](DshApiClient::update_secret)
 
+// TODO Special treatment for system secrets
+
 use crate::dsh_api_client::DshApiClient;
 #[allow(unused_imports)]
 use crate::types::{AllocationStatus, Empty, Secret};
