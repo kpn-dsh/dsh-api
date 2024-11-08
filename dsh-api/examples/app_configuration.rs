@@ -14,10 +14,10 @@ async fn main() -> Result<(), String> {
   // let deployed: () = client.deploy_app_catalog_app(app_catalog_id, body).await?;
   // println!("{}", serde_json::to_string_pretty(&deployed).unwrap());
 
-  let configuration: AppCatalogAppConfiguration = client.get_app_catalog_app_configuration(app_catalog_id).await?;
+  let configuration: AppCatalogAppConfiguration = client.get_app_catalog_configuration(app_catalog_id).await?;
   println!("{}", serde_json::to_string_pretty(&configuration).unwrap());
 
-  let status: AllocationStatus = client.get_app_catalog_app_allocation_status(app_catalog_id).await?;
+  let status: AllocationStatus = client.get_app_catalog_configuration_allocation_status(app_catalog_id).await?;
   println!("{}", serde_json::to_string_pretty(&status).unwrap());
 
   Ok(())
