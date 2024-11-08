@@ -21,6 +21,7 @@ pub mod dsh_api_client_factory;
 pub mod dsh_api_tenant;
 pub mod platform;
 pub mod proxy;
+pub mod query_processor;
 pub mod secret;
 pub mod stream;
 pub mod topic;

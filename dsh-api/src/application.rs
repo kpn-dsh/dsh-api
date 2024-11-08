@@ -18,6 +18,7 @@
 //!
 //! ## Utility methods
 //! * [`find_applications(predicate) -> Vec<(String, Application)>`](DshApiClient::find_applications)
+//! * [`find_applications_that_use_env_value(query) -> Vec<String>`](DshApiClient::find_applications_that_use_env_value)
 //! * [`find_applications_with_secret_injection(secret) -> Vec<String>`](DshApiClient::find_applications_with_secret_injection)
 //! * [`list_application_allocation_statuses() -> Vec<(String, AllocationStatus)>`](DshApiClient::list_application_allocation_statuses)
 //! * [`list_application_ids() -> Vec<String>`](DshApiClient::list_application_ids)
@@ -27,6 +28,7 @@
 //! ## Utility functions
 //! * [`application_diff(baseline, sample) -> ApplicationDiff`](DshApiClient::application_diff)
 use crate::dsh_api_client::DshApiClient;
+use crate::query_processor::{Part, QueryProcessor};
 use crate::types::{AllocationStatus, Application, ApplicationSecret, ApplicationVolumes, HealthCheck, Metrics, PortMapping, Task, TaskStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
@@ -34,6 +36,10 @@ use crate::DshApiResult;
 use futures::future::try_join_all;
 use std::collections::HashMap;
 
+/// # Manage applications
+///
+/// Module that contains a function to manage applications.
+///
 /// ## API methods
 /// * [`create_application(application_id, application) -> ()`](DshApiClient::create_application)
 /// * [`delete_application(application_id) -> ()`](DshApiClient::delete_application)
@@ -320,7 +326,7 @@ impl DshApiClient<'_> {
   /// # List application ids with the corresponding allocation status
   ///
   /// ## Returns
-  /// * `Ok<Vec<(String, '['AllocationStatus']')>>` - list of application ids and allocation statuses
+  /// * `Ok<Vec<(String, `[`AllocationStatus`]`)>>` - list of application ids and allocation statuses
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_application_allocation_statuses(&self) -> DshApiResult<Vec<(String, AllocationStatus)>> {
     let application_ids: Vec<String> = self.list_application_ids().await?;
@@ -336,7 +342,7 @@ impl DshApiClient<'_> {
   /// # List all application configurations with their ids
   ///
   /// ## Returns
-  /// * `Ok<Vec<(String, '['Application']')>>` - list of application ids and configurations
+  /// * `Ok<Vec<(String, `[`Application`]`)>>` - list of application ids and configurations
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_applications(&self) -> DshApiResult<Vec<(String, Application)>> {
     self.find_applications(&|_| true).await
@@ -348,7 +354,7 @@ impl DshApiClient<'_> {
   /// * `predicate` - predicate that will be used to filter the applications
   ///
   /// ## Returns
-  /// * `Ok<Vec<(String, '['Application']')>>` - list of id/application pairs, ordered by id,
+  /// * `Ok<Vec<(String, `[`Application`]`)>>` - list of id/application pairs, ordered by id,
   ///   for which the predicate returned `true`
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn find_applications(&self, predicate: &dyn Fn(&Application) -> bool) -> DshApiResult<Vec<(String, Application)>> {
@@ -376,16 +382,16 @@ impl DshApiClient<'_> {
     Ok(application_ids)
   }
 
-  // Get secret injections from an application
-  //
-  // ## Parameters
-  // * `application` - reference to the `Application`
-  //
-  // ## Returns
-  // * `Vec(<String, Vec<String>)>` - list of tuples that describe the secret injections.
-  //   Each tuple consist of the secret id and the environment variables
-  //   that the secret is injected into.
-  // * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  /// Get secret injections from an application
+  ///
+  /// ## Parameters
+  /// * `application` - reference to the `Application`
+  ///
+  /// ## Returns
+  /// * `Vec(<String, Vec<String>)>` - list of tuples that describe the secret injections.
+  ///   Each tuple consist of the secret id and the environment variables
+  ///   that the secret is injected into.
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   fn all_secret_injections(application: &Application) -> Vec<(String, Vec<String>)> {
     let mut injections = Vec::<(String, Vec<String>)>::new();
     for application_secret in &application.secrets {
@@ -407,7 +413,7 @@ impl DshApiClient<'_> {
   /// List applications with secret injections
   ///
   /// ## Returns
-  /// * `Vec<(String, '['Application']', Vec(<String, Vec<String>)>)>` - list of tuples
+  /// * `Vec<(String, `[`Application`]`, Vec(<String, Vec<String>)>)>` - list of tuples
   ///   that describe the applications with secret injections.
   ///   Each tuple consist of the application id, the `Application` and a list of secret ids
   ///   with the environment variables that the secrets are injected into.
@@ -426,13 +432,44 @@ impl DshApiClient<'_> {
     )
   }
 
-  /// Find applications that use a secret
+  /// Find application that use an environment variable value
+  ///
+  /// ## Parameters
+  /// * `query_process` - `[`QueryProcessor`]` that is matched against all environment variables of all applications
+  ///
+  /// ## Returns
+  /// * `Vec<(String, `[`Application`]`, Vec<(String, Vec<`[`Part`]`>)>)>` - list of tuples
+  ///   that describe the matched environment variables.
+  ///   Each tuple consist of
+  ///   * `String` - id of the application that contains the value,
+  ///   * `Application` - the application data and
+  ///   * `Vec<(String, Vec<`[`Part`]`>)>` - list of environment variable key/value pairs that matched the query
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn find_applications_that_use_env_value(&self, query_processor: &dyn QueryProcessor) -> DshApiResult<Vec<(String, Application, Vec<(String, Vec<Part>)>)>> {
+    let mut matches: Vec<(String, Application, Vec<(String, Vec<Part>)>)> = vec![];
+    let applications: Vec<(String, Application)> = self.list_applications().await?;
+    for (application_id, application) in applications {
+      let mut matching_envs: Vec<(String, Vec<Part>)> = vec![];
+      for (key, value) in &application.env {
+        if let Some(parts) = query_processor.matching_parts(value.as_str()) {
+          matching_envs.push((key.to_string(), parts));
+        }
+      }
+      if !matching_envs.is_empty() {
+        matching_envs.sort_by(|(env_a, _), (env_b, _)| env_a.cmp(env_b));
+        matches.push((application_id, application, matching_envs));
+      }
+    }
+    Ok(matches)
+  }
+
+  /// Find applications that use a secret injection
   ///
   /// ## Parameters
   /// * `secret` - the secret that is matched against all applications
   ///
   /// ## Returns
-  /// * `Vec<(String, '['Application']', Vec<String>)>` - list of tuples
+  /// * `Vec<(String, `[`Application`]`, Vec<String>)>` - list of tuples
   ///   that describe the applications with secret injections.
   ///   Each tuple consist of the application id, the `Application` and a list of
   ///   environment variables that the secrets are injected into.
@@ -497,7 +534,7 @@ impl DshApiClient<'_> {
   /// * `sample` - sample application that will be compared against the baseline
   ///
   /// ## Returns
-  /// * `'['ApplicationDiff']'` - struct that describes the differences between the two `'['Application']'`s
+  /// * `[`ApplicationDiff`]` - struct that describes the differences between the two `[`Application`]`s
   pub fn application_diff(baseline: &Application, sample: &Application) -> ApplicationDiff {
     ApplicationDiff {
       cpus: if baseline.cpus == sample.cpus { None } else { Some((baseline.cpus, sample.cpus)) },
