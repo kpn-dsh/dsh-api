@@ -31,24 +31,33 @@
             Secret api token for the target tenant. 
             The placeholders <code>[platform]</code> and <code>[tenant]</code> 
             need to be substituted with the platform name and the tenant name in all capitals, 
-            with hyphens (<code>-</code>) replaced by underscores (<code>_</code>).
+            with hyphens (<code>-</code>) replaced by underscores (<code>_</code>).<br/>
             E.g. if the platform is <code>nplz</code> and the tenant name is 
             <code>greenbox-dev</code>, the environment variable must be
-            <code>DSH_API_SECRET_NPLZ_GREENBOX_DEV = "..."</code>.
+            <code>DSH_API_SECRET_NPLZ_GREENBOX_DEV</code>.
         </td>
     </tr>
     <tr valign="top">
-        <td><code>DSH_API_USER_[tenant]</code></td>
+        <td><code>DSH_API_GUID_[tenant]</code></td>
         <td>
             Group id and user id for the target tenant.
             The placeholder <code>[tenant]</code> needs to be substituted 
             with the tenant name in all capitals, with hyphens (<code>-</code>) 
-            replaced by underscores (<code>_</code>).
+            replaced by underscores (<code>_</code>).<br/>
             E.g. if the tenant name is <code>greenbox-dev</code>, the environment variable must be
-            <code>DSH_API_USER_GREENBOX_DEV = "1903:1903"</code>.
+            <code>DSH_API_GUID_GREENBOX_DEV</code>.
         </td>
     </tr>
 </table>
+
+E.g., for tenant `greenbox-dev` (gid/uid `1903`) at platform `nplz`, use:
+
+```bash
+> export DSH_API_PLATFORM=nplz && \
+  export DSH_API_TENANT=greenbox-dev && \
+  export DSH_API_GUID_GREENBOX_DEV=1903:1903 && \
+  export DSH_API_SECRET_NPLZ_GREENBOX_DEV=..
+```
 
 ## How to publish to Artifactory
 
@@ -86,9 +95,10 @@ Targets Cargo:
   test-<package>:        Run tests for a single cargo package
 >
 ```
+
 ## Coding guidelines
 
-Before pushing code to github, make sure that you adhere to the code formatting defined in 
+Before pushing code to github, make sure that you adhere to the code formatting defined in
 `rustfmt.toml`. The following command shoud return without any remarks:
 
 ```bash
