@@ -11,10 +11,10 @@
 //! * [`get_certificate_ids(&self) -> Vec<String>`](DshApiClient::get_certificate_ids)
 
 use crate::dsh_api_client::DshApiClient;
+use crate::types::{AllocationStatus, Certificate, CertificateStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_generated::types::{AllocationStatus, Certificate, CertificateStatus};
 
 /// # Manage certificates
 ///
@@ -48,7 +48,7 @@ impl DshApiClient<'_> {
           .put_certificate_configuration_by_tenant_by_id(self.tenant_name(), certificate_id, self.token(), &certificate)
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Delete certificate
@@ -70,7 +70,7 @@ impl DshApiClient<'_> {
           .delete_certificate_configuration_by_tenant_by_id(self.tenant_name(), certificate_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return certificate
@@ -97,7 +97,7 @@ impl DshApiClient<'_> {
           .get_certificate_by_tenant_by_id(self.tenant_name(), certificate_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return actual state of certificate
@@ -118,7 +118,7 @@ impl DshApiClient<'_> {
           .get_certificate_actual_by_tenant_by_id(self.tenant_name(), certificate_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return certificate allocation status
@@ -139,7 +139,7 @@ impl DshApiClient<'_> {
           .get_certificate_status_by_tenant_by_id(self.tenant_name(), certificate_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return certificate configuration
@@ -160,7 +160,7 @@ impl DshApiClient<'_> {
           .get_certificate_configuration_by_tenant_by_id(self.tenant_name(), certificate_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return certificate ids
@@ -173,7 +173,7 @@ impl DshApiClient<'_> {
   pub async fn get_certificate_ids(&self) -> DshApiResult<Vec<String>> {
     let mut certificate_ids: Vec<String> = self
       .process(self.generated_client.get_certificate_by_tenant(self.tenant_name(), self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
       .map(|certificate_ids| certificate_ids.iter().map(|certificate_id| certificate_id.to_string()).collect())?;
     certificate_ids.sort();
     Ok(certificate_ids)

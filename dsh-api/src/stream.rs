@@ -17,10 +17,10 @@ use std::collections::HashMap;
 use futures::future::join_all;
 
 use crate::dsh_api_client::DshApiClient;
+use crate::types::{InternalManagedStream, ManagedInternalStreamId, ManagedPublicStreamId, PublicManagedStream};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_generated::types::{InternalManagedStream, ManagedInternalStreamId, ManagedPublicStreamId, PublicManagedStream};
 
 /// # Manage Kafka streams
 ///
@@ -56,7 +56,7 @@ impl DshApiClient<'_> {
           .post_manage_stream_internal_configuration_by_manager_by_streamid(self.tenant_name(), &ManagedInternalStreamId::try_from(stream_id)?, self.token(), configuration)
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Create public stream
@@ -79,7 +79,7 @@ impl DshApiClient<'_> {
           .post_manage_stream_public_configuration_by_manager_by_streamid(self.tenant_name(), &ManagedPublicStreamId::try_from(stream_id)?, self.token(), configuration)
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Delete internal stream
@@ -101,7 +101,7 @@ impl DshApiClient<'_> {
           .delete_manage_stream_internal_configuration_by_manager_by_streamid(self.tenant_name(), &ManagedInternalStreamId::try_from(stream_id)?, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Delete public stream
@@ -123,7 +123,7 @@ impl DshApiClient<'_> {
           .delete_manage_stream_public_configuration_by_manager_by_streamid(self.tenant_name(), &ManagedPublicStreamId::try_from(stream_id)?, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return internal stream configuration
@@ -144,7 +144,7 @@ impl DshApiClient<'_> {
           .get_manage_stream_internal_configuration_by_manager_by_streamid(self.tenant_name(), &ManagedInternalStreamId::try_from(stream_id)?, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return internal stream configurations as a `HashMap`
@@ -185,7 +185,7 @@ impl DshApiClient<'_> {
           .get_manage_stream_public_configuration_by_manager_by_streamid(self.tenant_name(), &ManagedPublicStreamId::try_from(stream_id)?, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return public stream configurations as a `HashMap`
@@ -218,7 +218,7 @@ impl DshApiClient<'_> {
   pub async fn get_stream_ids(&self) -> DshApiResult<Vec<String>> {
     let mut stream_ids: Vec<String> = self
       .process(self.generated_client.get_manage_stream_by_manager(self.tenant_name(), self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
       .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
     stream_ids.sort();
     Ok(stream_ids)

@@ -13,11 +13,10 @@
 
 use crate::dsh_api_client::DshApiClient;
 #[allow(unused_imports)]
+use crate::types::{AllocationStatus, Empty, Secret};
+#[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-#[allow(unused_imports)]
-use dsh_api_generated::types::Empty;
-use dsh_api_generated::types::{AllocationStatus, Secret};
 
 /// # Manage secrets
 ///
@@ -46,7 +45,7 @@ impl DshApiClient<'_> {
   pub async fn create_secret(&self, secret: &Secret) -> DshApiResult<()> {
     self
       .process(self.generated_client.post_secret_by_tenant(self.tenant_name(), self.token(), secret).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Delete secret
@@ -68,7 +67,7 @@ impl DshApiClient<'_> {
           .delete_secret_configuration_by_tenant_by_id(self.tenant_name(), secret_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return secret
@@ -85,24 +84,8 @@ impl DshApiClient<'_> {
     self
       .process_string(self.generated_client.get_secret_by_tenant_by_id(self.tenant_name(), secret_id, self.token()).await)
       .await
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
-
-  // get_by_tenant! {
-  //   get_secret_actual_by_tenant_by_id,
-  //   secret_id,
-  //   Empty,
-  //   /// # Return actual state of secret
-  //   ///
-  //   /// `GET /allocation/{tenant}/secret/{id}/actual`
-  //   ///
-  //   /// ## Parameters
-  //   /// * `secret_id` - id of the requested secret
-  //   ///
-  //   /// ## Returns
-  //   /// * `Ok<``Empty`]`>` - indicates that secret is ok, but the actual return value will be empty
-  //   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  // }
 
   /// # Return actual state of secret
   ///
@@ -122,7 +105,7 @@ impl DshApiClient<'_> {
           .get_secret_actual_by_tenant_by_id(self.tenant_name(), secret_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return secret allocation status
@@ -143,7 +126,7 @@ impl DshApiClient<'_> {
           .get_secret_status_by_tenant_by_id(self.tenant_name(), secret_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return configuration of secret
@@ -165,7 +148,7 @@ impl DshApiClient<'_> {
           // .secret_get_by_tenant_secret_by_id_configuration(self.tenant_name(), secret_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return sorted list of secret names
@@ -178,7 +161,7 @@ impl DshApiClient<'_> {
   pub async fn get_secret_ids(&self) -> DshApiResult<Vec<String>> {
     let mut secret_ids: Vec<String> = self
       .process(self.generated_client.get_secret_by_tenant(self.tenant_name(), self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
       .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
     secret_ids.sort();
     Ok(secret_ids)
@@ -204,6 +187,6 @@ impl DshApiClient<'_> {
           .put_secret_by_tenant_by_id(self.tenant_name(), secret_id, self.token(), secret)
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 }

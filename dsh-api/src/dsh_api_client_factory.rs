@@ -7,8 +7,8 @@ use log::info;
 
 use crate::dsh_api_client::DshApiClient;
 use crate::dsh_api_tenant::{DshApiTenant, DEFAULT_DSH_API_TENANT};
+use crate::generated::Client as GeneratedClient;
 use crate::platform::{DshPlatform, DEFAULT_DSH_PLATFORM};
-use dsh_api_generated::generated::Client as GeneratedClient;
 
 #[derive(Debug)]
 pub struct DshApiClientFactory {
@@ -48,8 +48,8 @@ impl DshApiClientFactory {
     self.tenant.name()
   }
 
-  pub fn user(&self) -> &str {
-    self.tenant.user()
+  pub fn guid(&self) -> &str {
+    self.tenant.guid()
   }
 
   pub async fn client(&self) -> Result<DshApiClient, String> {

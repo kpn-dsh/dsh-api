@@ -7,9 +7,12 @@ use std::str::Utf8Error;
 use reqwest::Error as ReqwestError;
 use serde_json::Error as SerdeJsonError;
 
-pub mod app_catalog;
-pub mod app_catalog_app_configuration;
-pub mod app_catalog_manifest;
+pub use dsh_api_generated::generated;
+pub use dsh_api_generated::types;
+
+pub mod app;
+pub mod app_configuration;
+pub mod app_manifest;
 pub mod application;
 pub mod bucket;
 pub mod certificate;
@@ -66,6 +69,12 @@ impl From<String> for DshApiError {
   }
 }
 
+impl From<&str> for DshApiError {
+  fn from(value: &str) -> Self {
+    DshApiError::Unexpected(value.to_string())
+  }
+}
+
 impl From<DshApiError> for String {
   fn from(value: DshApiError) -> Self {
     value.to_string()
@@ -83,8 +92,8 @@ pub fn secret_environment_variable(platform_name: &str, tenant_name: &str) -> St
   )
 }
 
-pub fn user_environment_variable(tenant_name: &str) -> String {
-  format!("DSH_API_USER_{}", tenant_name.to_ascii_uppercase().replace('-', "_"))
+pub fn guid_environment_variable(tenant_name: &str) -> String {
+  format!("DSH_API_GUID_{}", tenant_name.to_ascii_uppercase().replace('-', "_"))
 }
 
 // API naming convention

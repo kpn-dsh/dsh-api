@@ -2,49 +2,66 @@
 //!
 //! Module that contains a function to manage applications.
 //!
+//! ## API methods
 //! * [`create_application(application_id, application) -> ()`](DshApiClient::create_application)
 //! * [`delete_application(application_id) -> ()`](DshApiClient::delete_application)
+//! * [`find_application_ids_with_derived_tasks() -> Vec<String>`](DshApiClient::find_application_ids_with_derived_tasks)
+//! * [`get_application(application_id) -> Application`](DshApiClient::get_application)
 //! * [`get_application_actual_configuration(application_id) -> Application`](DshApiClient::get_application_actual_configuration)
-//! * [`get_application_actual_configurations() -> HashMap<ApplicationId, Application>`](DshApiClient::get_application_actual_configurations)
+//! * [`get_application_actual_configurations() -> HashMap<String, Application>`](DshApiClient::get_application_actual_configurations)
 //! * [`get_application_allocation_status(application_id) -> AllocationStatus`](DshApiClient::get_application_allocation_status)
-//! * [`get_application_configuration(application_id) -> Application`](DshApiClient::get_application_configuration)
-//! * [`get_application_configurations() -> HashMap<ApplicationId, Application>`](DshApiClient::get_application_configurations)
-//! * [`get_application_derived_task_ids(application_id) -> Vec<TaskId>`](DshApiClient::get_application_derived_task_ids)
-//! * [`get_application_ids() -> Vec<ApplicationId>`](DshApiClient::get_application_ids)
-//! * [`get_application_ids_with_derived_tasks() -> Vec<ApplicationId>`](DshApiClient::get_application_ids_with_derived_tasks)
 //! * [`get_application_task(application_id, task_id) -> TaskStatus`](DshApiClient::get_application_task)
 //! * [`get_application_task_allocation_status(application_id, task_id) -> AllocationStatus`](DshApiClient::get_application_task_allocation_status)
 //! * [`get_application_task_state(application_id, task_id) -> Task`](DshApiClient::get_application_task_state)
-
-use std::collections::HashMap;
-
+//! * [`get_applications() -> HashMap<String, Application>`](DshApiClient::get_applications)
+//! * [`list_application_derived_task_ids(application_id) -> Vec<TaskId>`](DshApiClient::list_application_derived_task_ids)
+//!
+//! ## Utility methods
+//! * [`find_applications(predicate) -> Vec<(String, Application)>`](DshApiClient::find_applications)
+//! * [`find_applications_with_secret_injection(secret) -> Vec<String>`](DshApiClient::find_applications_with_secret_injection)
+//! * [`list_application_allocation_statuses() -> Vec<(String, AllocationStatus)>`](DshApiClient::list_application_allocation_statuses)
+//! * [`list_application_ids() -> Vec<String>`](DshApiClient::list_application_ids)
+//! * [`list_applications() -> Vec<(String, Application)>`](DshApiClient::list_applications)
+//! * [`list_applications_with_secret_injections() -> Vec<String>`](DshApiClient::list_applications_with_secret_injections)
+//!
+//! ## Utility functions
+//! * [`application_diff(baseline, sample) -> ApplicationDiff`](DshApiClient::application_diff)
 use crate::dsh_api_client::DshApiClient;
+use crate::types::{AllocationStatus, Application, ApplicationSecret, ApplicationVolumes, HealthCheck, Metrics, PortMapping, Task, TaskStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_generated::types::{AllocationStatus, Application, ApplicationSecret, ApplicationVolumes, HealthCheck, Metrics, PortMapping, Task, TaskStatus};
+use futures::future::try_join_all;
+use std::collections::HashMap;
 
-/// # Manage applications
-///
-/// Module that contains a function to manage applications.
-///
+/// ## API methods
 /// * [`create_application(application_id, application) -> ()`](DshApiClient::create_application)
 /// * [`delete_application(application_id) -> ()`](DshApiClient::delete_application)
+/// * [`find_application_ids_with_derived_tasks() -> Vec<String>`](DshApiClient::find_application_ids_with_derived_tasks)
+/// * [`get_application(application_id) -> Application`](DshApiClient::get_application)
 /// * [`get_application_actual_configuration(application_id) -> Application`](DshApiClient::get_application_actual_configuration)
-/// * [`get_application_actual_configurations() -> HashMap<ApplicationId, Application>`](DshApiClient::get_application_actual_configurations)
+/// * [`get_application_actual_configurations() -> HashMap<String, Application>`](DshApiClient::get_application_actual_configurations)
 /// * [`get_application_allocation_status(application_id) -> AllocationStatus`](DshApiClient::get_application_allocation_status)
-/// * [`get_application_configuration(application_id) -> Application`](DshApiClient::get_application_configuration)
-/// * [`get_application_configurations() -> HashMap<ApplicationId, Application>`](DshApiClient::get_application_configurations)
-/// * [`get_application_derived_task_ids(application_id) -> Vec<TaskId>`](DshApiClient::get_application_derived_task_ids)
-/// * [`get_application_ids() -> Vec<ApplicationId>`](DshApiClient::get_application_ids)
-/// * [`get_application_ids_with_derived_tasks() -> Vec<ApplicationId>`](DshApiClient::get_application_ids_with_derived_tasks)
 /// * [`get_application_task(application_id, task_id) -> TaskStatus`](DshApiClient::get_application_task)
 /// * [`get_application_task_allocation_status(application_id, task_id) -> AllocationStatus`](DshApiClient::get_application_task_allocation_status)
 /// * [`get_application_task_state(application_id, task_id) -> Task`](DshApiClient::get_application_task_state)
+/// * [`get_applications() -> HashMap<String, Application>`](DshApiClient::get_applications)
+/// * [`list_application_derived_task_ids(application_id) -> Vec<TaskId>`](DshApiClient::list_application_derived_task_ids)
+///
+/// ## Utility methods
+/// * [`find_applications(predicate) -> Vec<(String, Application)>`](DshApiClient::find_applications)
+/// * [`find_applications_with_secret_injection(secret) -> Vec<String>`](DshApiClient::find_applications_with_secret_injection)
+/// * [`list_application_allocation_statuses() -> Vec<(String, AllocationStatus)>`](DshApiClient::list_application_allocation_statuses)
+/// * [`list_application_ids() -> Vec<String>`](DshApiClient::list_application_ids)
+/// * [`list_applications() -> Vec<(String, Application)>`](DshApiClient::list_applications)
+/// * [`list_applications_with_secret_injections() -> Vec<String>`](DshApiClient::list_applications_with_secret_injections)
+///
+/// ## Utility functions
+/// * [`application_diff(baseline, sample) -> ApplicationDiff`](DshApiClient::application_diff)
 impl DshApiClient<'_> {
-  /// # Deploy application
+  /// # Create application
   ///
-  /// `PUT /allocation/{tenant}/application/{appid}/configuration`
+  /// API function: `PUT /allocation/{tenant}/application/{appid}/configuration`
   ///
   /// ## Parameters
   /// * `application_id` - application name used when deploying the application
@@ -63,12 +80,12 @@ impl DshApiClient<'_> {
           .put_application_configuration_by_tenant_by_appid(self.tenant_name(), application_id, self.token(), &configuration)
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
-  /// # Undeploy application
+  /// # Delete application
   ///
-  /// `DELETE /allocation/{tenant}/application/{appid}/configuration`
+  /// API function: `DELETE /allocation/{tenant}/application/{appid}/configuration`
   ///
   /// ## Parameters
   /// * `application_id` - application name of the application to undeploy
@@ -86,12 +103,12 @@ impl DshApiClient<'_> {
           .delete_application_configuration_by_tenant_by_appid(self.tenant_name(), application_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return configuration of deployed application
   ///
-  /// `GET /allocation/{tenant}/application/{appid}/actual`
+  /// API function: `GET /allocation/{tenant}/application/{appid}/actual`
   ///
   /// ## Parameters
   /// * `application_id` - application id of the requested application
@@ -107,12 +124,12 @@ impl DshApiClient<'_> {
           .get_application_actual_by_tenant_by_appid(self.tenant_name(), application_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return all deployed applications with their configurations
   ///
-  /// `GET /allocation/{tenant}/application/actual`
+  /// API function: `GET /allocation/{tenant}/application/actual`
   ///
   /// ## Returns
   /// * `Ok<HashMap<String, `[`Application`]`>>` - hashmap containing the application configurations
@@ -120,12 +137,12 @@ impl DshApiClient<'_> {
   pub async fn get_application_actual_configurations(&self) -> DshApiResult<HashMap<String, Application>> {
     self
       .process(self.generated_client.get_application_actual_by_tenant(self.tenant_name(), self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return allocation status of application
   ///
-  /// `GET /allocation/{tenant}/application/{appid}/status`
+  /// API function: `GET /allocation/{tenant}/application/{appid}/status`
   ///
   /// ## Parameters
   /// * `application_id` - application id of the requested application
@@ -141,12 +158,12 @@ impl DshApiClient<'_> {
           .get_application_status_by_tenant_by_appid(self.tenant_name(), application_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return application configuration
   ///
-  /// `GET /allocation/{tenant}/application/{appid}/configuration`
+  /// API function: `GET /allocation/{tenant}/application/{appid}/configuration`
   ///
   /// ## Parameters
   /// * `application_id` - application id of the requested application
@@ -154,7 +171,7 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<`[`Application`]`>` - application configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_application_configuration(&self, application_id: &str) -> DshApiResult<Application> {
+  pub async fn get_application(&self, application_id: &str) -> DshApiResult<Application> {
     self
       .process(
         self
@@ -162,17 +179,17 @@ impl DshApiClient<'_> {
           .get_application_configuration_by_tenant_by_appid(self.tenant_name(), application_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return all applications with their configuration
   ///
-  /// `GET /allocation/{tenant}/application/configuration`
+  /// API function: `GET /allocation/{tenant}/application/configuration`
   ///
   /// ## Returns
   /// * `Ok<HashMap<String, `[`Application`]`>>` - hashmap containing the application configurations
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_application_configurations(&self) -> DshApiResult<HashMap<String, Application>> {
+  pub async fn get_applications(&self) -> DshApiResult<HashMap<String, Application>> {
     self
       .process(
         self
@@ -180,12 +197,12 @@ impl DshApiClient<'_> {
           .get_application_configuration_by_tenant(self.tenant_name(), self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return all derived task ids for an application
   ///
-  /// `GET /allocation/{tenant}/task{appid}`
+  /// API function: `GET /allocation/{tenant}/task{appid}`
   ///
   /// ## Parameters
   /// * `application_id` - application name for which the tasks will be returned
@@ -193,7 +210,7 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<Vec<String>>` - vector containing names of all derived tasks for the application
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_application_derived_task_ids(&self, application_id: &str) -> DshApiResult<Vec<String>> {
+  pub async fn list_application_derived_task_ids(&self, application_id: &str) -> DshApiResult<Vec<String>> {
     let mut task_ids: Vec<String> = self
       .process(
         self
@@ -201,42 +218,23 @@ impl DshApiClient<'_> {
           .get_task_by_tenant_by_appid(self.tenant_name(), application_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
       .map(|task_ids| task_ids.iter().map(|task_id| task_id.to_string()).collect())?;
     task_ids.sort();
     Ok(task_ids)
   }
 
-  /// # Return all application ids
-  ///
-  /// If you also need the application configuration, use
-  /// [`get_application_configurations()`](Self::get_application_configurations) instead.
-  ///
-  /// ## Returns
-  /// * `Ok<Vec<String>>` - vector containing the sorted application ids
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_application_ids(&self) -> DshApiResult<Vec<String>> {
-    let mut application_ids: Vec<String> = self
-      .get_application_configurations()
-      .await?
-      .keys()
-      .map(|application_id| application_id.to_string())
-      .collect();
-    application_ids.sort();
-    Ok(application_ids)
-  }
-
   /// # Return ids of all applications that have derived tasks
   ///
-  /// `GET /allocation/{tenant}/task`
+  /// API function: `GET /allocation/{tenant}/task`
   ///
   /// ## Returns
   /// * `Ok<Vec<String>>` - vector containing names of all application that have derived tasks
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_application_ids_with_derived_tasks(&self) -> DshApiResult<Vec<String>> {
+  pub async fn find_application_ids_with_derived_tasks(&self) -> DshApiResult<Vec<String>> {
     let mut application_ids: Vec<String> = self
       .process(self.generated_client.get_task_by_tenant(self.tenant_name(), self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
       .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
     application_ids.sort();
     Ok(application_ids)
@@ -244,7 +242,7 @@ impl DshApiClient<'_> {
 
   /// # Return status of derived task
   ///
-  /// `GET /allocation/{tenant}/task{appid}/{id}`
+  /// API function: `GET /allocation/{tenant}/task{appid}/{id}`
   ///
   /// This method combines the results of the methods
   /// [`get_application_task_actual()`](DshApiClient::get_application_task_state) and
@@ -266,12 +264,12 @@ impl DshApiClient<'_> {
           .get_task_by_tenant_by_appid_by_id(self.tenant_name(), application_id, task_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return task allocation status
   ///
-  /// `GET /allocation/{tenant}/task{appid}/{id}/status`
+  /// API function: `GET /allocation/{tenant}/task{appid}/{id}/status`
   ///
   /// Note that the result of this method is also included in the result of the method
   /// [`get_application_task_actual()`](DshApiClient::get_application_task).
@@ -291,12 +289,12 @@ impl DshApiClient<'_> {
           .get_task_status_by_tenant_by_appid_by_id(self.tenant_name(), application_id, task_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return task actual state
   ///
-  /// `GET /allocation/{tenant}/task{appid}/{id}/actual`
+  /// API function: `GET /allocation/{tenant}/task{appid}/{id}/actual`
   ///
   /// Note that the result of this method is also included in the result of the method
   /// [`get_application_task_actual()`](DshApiClient::get_application_task).
@@ -316,10 +314,214 @@ impl DshApiClient<'_> {
           .get_task_actual_by_tenant_by_appid_by_id(self.tenant_name(), application_id, task_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
+  }
+
+  /// # List application ids with the corresponding allocation status
+  ///
+  /// ## Returns
+  /// * `Ok<Vec<(String, '['AllocationStatus']')>>` - list of application ids and allocation statuses
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn list_application_allocation_statuses(&self) -> DshApiResult<Vec<(String, AllocationStatus)>> {
+    let application_ids: Vec<String> = self.list_application_ids().await?;
+    let allocation_statuses = try_join_all(
+      application_ids
+        .iter()
+        .map(|application_id| self.get_application_allocation_status(application_id.as_str())),
+    )
+    .await?;
+    Ok(application_ids.into_iter().zip(allocation_statuses).collect::<Vec<_>>())
+  }
+
+  /// # List all application configurations with their ids
+  ///
+  /// ## Returns
+  /// * `Ok<Vec<(String, '['Application']')>>` - list of application ids and configurations
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn list_applications(&self) -> DshApiResult<Vec<(String, Application)>> {
+    self.find_applications(&|_| true).await
+  }
+
+  /// # Find all applications that match a predicate
+  ///
+  /// ## Parameters
+  /// * `predicate` - predicate that will be used to filter the applications
+  ///
+  /// ## Returns
+  /// * `Ok<Vec<(String, '['Application']')>>` - list of id/application pairs, ordered by id,
+  ///   for which the predicate returned `true`
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn find_applications(&self, predicate: &dyn Fn(&Application) -> bool) -> DshApiResult<Vec<(String, Application)>> {
+    let mut matching_applications: Vec<(String, Application)> = self
+      .get_applications()
+      .await?
+      .into_iter()
+      .filter(|(_, application)| predicate(application))
+      .collect::<Vec<_>>();
+    matching_applications.sort_by(|(id_a, _), (id_b, _)| id_a.cmp(id_b));
+    Ok(matching_applications)
+  }
+
+  /// # Return all application ids
+  ///
+  /// If you also need the application configuration, use
+  /// [`list_applications()`](Self::list_applications) instead.
+  ///
+  /// ## Returns
+  /// * `Ok<Vec<String>>` - vector containing the sorted application ids
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn list_application_ids(&self) -> DshApiResult<Vec<String>> {
+    let mut application_ids: Vec<String> = self.get_applications().await?.keys().map(|application_id| application_id.to_string()).collect();
+    application_ids.sort();
+    Ok(application_ids)
+  }
+
+  // Get secret injections from an application
+  //
+  // ## Parameters
+  // * `application` - reference to the `Application`
+  //
+  // ## Returns
+  // * `Vec(<String, Vec<String>)>` - list of tuples that describe the secret injections.
+  //   Each tuple consist of the secret id and the environment variables
+  //   that the secret is injected into.
+  // * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  fn all_secret_injections(application: &Application) -> Vec<(String, Vec<String>)> {
+    let mut injections = Vec::<(String, Vec<String>)>::new();
+    for application_secret in &application.secrets {
+      let mut env_injections = vec![];
+      for application_secret_injection in &application_secret.injections {
+        if let Some(env_injection) = application_secret_injection.get("env") {
+          env_injections.push(env_injection.to_string());
+        }
+      }
+      if !env_injections.is_empty() {
+        env_injections.sort();
+        injections.push((application_secret.name.clone(), env_injections));
+      }
+    }
+    injections.sort();
+    injections
+  }
+
+  /// List applications with secret injections
+  ///
+  /// ## Returns
+  /// * `Vec<(String, '['Application']', Vec(<String, Vec<String>)>)>` - list of tuples
+  ///   that describe the applications with secret injections.
+  ///   Each tuple consist of the application id, the `Application` and a list of secret ids
+  ///   with the environment variables that the secrets are injected into.
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn list_applications_with_secret_injections(&self) -> DshApiResult<Vec<(String, Application, Vec<(String, Vec<String>)>)>> {
+    Ok(
+      self
+        .find_applications(&|application| !application.secrets.is_empty())
+        .await?
+        .into_iter()
+        .map(|(id, application)| {
+          let injections = Self::all_secret_injections(&application);
+          (id, application, injections)
+        })
+        .collect::<Vec<_>>(),
+    )
+  }
+
+  /// Find applications that use a secret
+  ///
+  /// ## Parameters
+  /// * `secret` - the secret that is matched against all applications
+  ///
+  /// ## Returns
+  /// * `Vec<(String, '['Application']', Vec<String>)>` - list of tuples
+  ///   that describe the applications with secret injections.
+  ///   Each tuple consist of the application id, the `Application` and a list of
+  ///   environment variables that the secrets are injected into.
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn find_applications_with_secret_injection(&self, secret: &str) -> DshApiResult<Vec<(String, Application, Vec<String>)>> {
+    Ok(
+      self
+        .find_applications(&|application| !application.secrets.is_empty())
+        .await?
+        .into_iter()
+        .filter_map(|(id, application)| {
+          Self::all_secret_injections(&application)
+            .into_iter()
+            .find(|(secret_id, _)| secret_id == secret)
+            .map(|(_, a)| (id, application, a))
+        })
+        .collect::<Vec<_>>(),
+    )
+  }
+
+  /// Find applications with secret injections
+  ///
+  /// ## Parameters
+  /// * `application_id` - application name of the requested application
+  /// * `task_id` - id of the requested task
+  ///
+  /// ## Returns
+  /// * `Vec<(String, u64, HashMap<String, Vec<String>>)>` - application task allocation status
+  pub fn applications_with_secrets_injections(secrets: &[String], applications: &HashMap<String, Application>) -> Vec<(String, u64, HashMap<String, Vec<String>>)> {
+    let mut application_ids: Vec<String> = applications.keys().map(|p| p.to_string()).collect();
+    application_ids.sort();
+    let mut pairs: Vec<(String, u64, HashMap<String, Vec<String>>)> = vec![];
+    for application_id in application_ids {
+      let application = applications.get(&application_id).unwrap();
+      if !application.secrets.is_empty() {
+        let mut injections = HashMap::<String, Vec<String>>::new();
+        for application_secret in &application.secrets {
+          if secrets.contains(&application_secret.name) {
+            let mut env_injections = vec![];
+            for application_secret_injection in &application_secret.injections {
+              if let Some(env_injection) = application_secret_injection.get("env") {
+                env_injections.push(env_injection.to_string());
+              }
+            }
+            if !env_injections.is_empty() {
+              injections.insert(application_secret.name.clone(), env_injections);
+            }
+          }
+        }
+        if !injections.is_empty() {
+          pairs.push((application_id.clone(), application.instances, injections));
+        }
+      }
+    }
+    pairs
+  }
+
+  /// # Compare Applications
+  ///
+  /// ## Parameters
+  /// * `baseline` - baseline application to compare against
+  /// * `sample` - sample application that will be compared against the baseline
+  ///
+  /// ## Returns
+  /// * `'['ApplicationDiff']'` - struct that describes the differences between the two `'['Application']'`s
+  pub fn application_diff(baseline: &Application, sample: &Application) -> ApplicationDiff {
+    ApplicationDiff {
+      cpus: if baseline.cpus == sample.cpus { None } else { Some((baseline.cpus, sample.cpus)) },
+      env: if baseline.env == sample.env { None } else { Some((baseline.env.clone(), sample.env.clone())) },
+      exposed_ports: if baseline.exposed_ports == sample.exposed_ports.clone() { None } else { Some((baseline.exposed_ports.clone(), sample.exposed_ports.clone())) },
+      health_check: if baseline.health_check == sample.health_check { None } else { Some((baseline.health_check.clone(), sample.health_check.clone())) },
+      image: if baseline.image == sample.image.clone() { None } else { Some((baseline.image.clone(), sample.image.clone())) },
+      instances: if baseline.instances == sample.instances { None } else { Some((baseline.instances, sample.instances)) },
+      mem: if baseline.mem == sample.mem { None } else { Some((baseline.mem, sample.mem)) },
+      metrics: if baseline.metrics == sample.metrics { None } else { Some((baseline.metrics.clone(), sample.metrics.clone())) },
+      needs_token: if baseline.needs_token == sample.needs_token { None } else { Some((baseline.needs_token, sample.needs_token)) },
+      readable_streams: if baseline.readable_streams == sample.readable_streams { None } else { Some((baseline.readable_streams.clone(), sample.readable_streams.clone())) },
+      secrets: if baseline.secrets == sample.secrets { None } else { Some((baseline.secrets.clone(), sample.secrets.clone())) },
+      single_instance: if baseline.single_instance == sample.single_instance { None } else { Some((baseline.single_instance, sample.single_instance)) },
+      spread_group: if baseline.spread_group == sample.spread_group { None } else { Some((baseline.spread_group.clone(), sample.spread_group.clone())) },
+      topics: if baseline.topics == sample.topics { None } else { Some((baseline.topics.clone(), sample.topics.clone())) },
+      user: if baseline.user == sample.user { None } else { Some((baseline.user.clone(), sample.user.clone())) },
+      volumes: if baseline.volumes == sample.volumes { None } else { Some((baseline.volumes.clone(), sample.volumes.clone())) },
+      writable_streams: if baseline.writable_streams == sample.writable_streams { None } else { Some((baseline.writable_streams.clone(), sample.writable_streams.clone())) },
+    }
   }
 }
 
+/// Structure that contains the differences between two `Application`s
 #[derive(Debug)]
 pub struct ApplicationDiff {
   pub cpus: Option<(f64, f64)>,
@@ -342,6 +544,11 @@ pub struct ApplicationDiff {
 }
 
 impl ApplicationDiff {
+  /// Check if there are any differences
+  ///
+  /// ## Returns
+  /// * `true` - struct does not contain any differences
+  /// * `false` - struct does contain differences
   pub fn is_empty(&self) -> bool {
     self.cpus.is_none()
       && self.env.is_none()
@@ -362,6 +569,12 @@ impl ApplicationDiff {
       && self.writable_streams.is_none()
   }
 
+  /// List the differences
+  ///
+  /// If there are no differences, an empty list will be returned.
+  ///
+  /// ## Returns
+  /// * `Vec<(String, String)>` - list of key/value pairs describing all differences
   pub fn differences(&self) -> Vec<(String, String)> {
     vec![
       self.env.as_ref().map(|value| ("env".to_string(), format!("{:?} / {:?}", value.0, value.1))),
@@ -406,27 +619,5 @@ impl ApplicationDiff {
     .iter()
     .map(|p| p.to_owned().to_owned())
     .collect::<Vec<_>>()
-  }
-}
-
-pub fn application_diff(baseline: &Application, sample: &Application) -> ApplicationDiff {
-  ApplicationDiff {
-    cpus: if baseline.cpus == sample.cpus { None } else { Some((baseline.cpus, sample.cpus)) },
-    env: if baseline.env == sample.env { None } else { Some((baseline.env.clone(), sample.env.clone())) },
-    exposed_ports: if baseline.exposed_ports == sample.exposed_ports.clone() { None } else { Some((baseline.exposed_ports.clone(), sample.exposed_ports.clone())) },
-    health_check: if baseline.health_check == sample.health_check { None } else { Some((baseline.health_check.clone(), sample.health_check.clone())) },
-    image: if baseline.image == sample.image.clone() { None } else { Some((baseline.image.clone(), sample.image.clone())) },
-    instances: if baseline.instances == sample.instances { None } else { Some((baseline.instances, sample.instances)) },
-    mem: if baseline.mem == sample.mem { None } else { Some((baseline.mem, sample.mem)) },
-    metrics: if baseline.metrics == sample.metrics { None } else { Some((baseline.metrics.clone(), sample.metrics.clone())) },
-    needs_token: if baseline.needs_token == sample.needs_token { None } else { Some((baseline.needs_token, sample.needs_token)) },
-    readable_streams: if baseline.readable_streams == sample.readable_streams { None } else { Some((baseline.readable_streams.clone(), sample.readable_streams.clone())) },
-    secrets: if baseline.secrets == sample.secrets { None } else { Some((baseline.secrets.clone(), sample.secrets.clone())) },
-    single_instance: if baseline.single_instance == sample.single_instance { None } else { Some((baseline.single_instance, sample.single_instance)) },
-    spread_group: if baseline.spread_group == sample.spread_group { None } else { Some((baseline.spread_group.clone(), sample.spread_group.clone())) },
-    topics: if baseline.topics == sample.topics { None } else { Some((baseline.topics.clone(), sample.topics.clone())) },
-    user: if baseline.user == sample.user { None } else { Some((baseline.user.clone(), sample.user.clone())) },
-    volumes: if baseline.volumes == sample.volumes { None } else { Some((baseline.volumes.clone(), sample.volumes.clone())) },
-    writable_streams: if baseline.writable_streams == sample.writable_streams { None } else { Some((baseline.writable_streams.clone(), sample.writable_streams.clone())) },
   }
 }

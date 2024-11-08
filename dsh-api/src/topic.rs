@@ -11,10 +11,10 @@
 //! * [`get_topic_ids() -> Vec<String>`](DshApiClient::get_topic_ids)
 
 use crate::dsh_api_client::DshApiClient;
+use crate::types::{AllocationStatus, Topic, TopicStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_generated::types::{AllocationStatus, Topic, TopicStatus};
 
 /// # Manage Kafka topics
 ///
@@ -48,7 +48,7 @@ impl DshApiClient<'_> {
           .put_topic_configuration_by_tenant_by_id(self.tenant_name(), topic_id, self.token(), configuration)
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Delete topic
@@ -70,7 +70,7 @@ impl DshApiClient<'_> {
           .delete_topic_configuration_by_tenant_by_id(self.tenant_name(), topic_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return topic
@@ -92,7 +92,7 @@ impl DshApiClient<'_> {
   pub async fn get_topic(&self, topic_id: &str) -> DshApiResult<TopicStatus> {
     self
       .process(self.generated_client.get_topic_by_tenant_by_id(self.tenant_name(), topic_id, self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return topic allocation status
@@ -113,7 +113,7 @@ impl DshApiClient<'_> {
           .get_topic_status_by_tenant_by_id(self.tenant_name(), topic_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return topic configuration
@@ -134,7 +134,7 @@ impl DshApiClient<'_> {
           .get_topic_configuration_by_tenant_by_id(self.tenant_name(), topic_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return actual topic configuration
@@ -155,7 +155,7 @@ impl DshApiClient<'_> {
           .get_topic_actual_by_tenant_by_id(self.tenant_name(), topic_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return sorted list of topic names
@@ -168,7 +168,7 @@ impl DshApiClient<'_> {
   pub async fn get_topic_ids(&self) -> DshApiResult<Vec<String>> {
     let mut topic_ids: Vec<String> = self
       .process(self.generated_client.get_topic_by_tenant(self.tenant_name(), self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
       .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
     topic_ids.sort();
     Ok(topic_ids)

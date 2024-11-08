@@ -11,10 +11,10 @@
 //! * [`get_bucket_ids(&self) -> Vec<String>`](DshApiClient::get_bucket_ids)
 
 use crate::dsh_api_client::DshApiClient;
+use crate::types::{AllocationStatus, Bucket, BucketStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_generated::types::{AllocationStatus, Bucket, BucketStatus};
 
 /// # Manage buckets
 ///
@@ -48,7 +48,7 @@ impl DshApiClient<'_> {
           .put_bucket_configuration_by_tenant_by_id(self.tenant_name(), bucket_id, self.token(), &bucket)
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Delete bucket
@@ -70,7 +70,7 @@ impl DshApiClient<'_> {
           .delete_bucket_configuration_by_tenant_by_id(self.tenant_name(), bucket_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return bucket
@@ -92,7 +92,7 @@ impl DshApiClient<'_> {
   pub async fn get_bucket(&self, bucket_id: &str) -> DshApiResult<BucketStatus> {
     self
       .process_raw(self.generated_client.get_bucket_by_tenant_by_id(self.tenant_name(), bucket_id, self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return actual state of bucket
@@ -113,7 +113,7 @@ impl DshApiClient<'_> {
           .get_bucket_actual_by_tenant_by_id(self.tenant_name(), bucket_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return bucket allocation status
@@ -134,7 +134,7 @@ impl DshApiClient<'_> {
           .get_bucket_status_by_tenant_by_id(self.tenant_name(), bucket_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return bucket configuration
@@ -155,7 +155,7 @@ impl DshApiClient<'_> {
           .get_bucket_configuration_by_tenant_by_id(self.tenant_name(), bucket_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return bucket ids
@@ -168,7 +168,7 @@ impl DshApiClient<'_> {
   pub async fn get_bucket_ids(&self) -> DshApiResult<Vec<String>> {
     let mut bucket_ids: Vec<String> = self
       .process(self.generated_client.get_bucket_by_tenant(self.tenant_name(), self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
       .map(|bucket_ids| bucket_ids.iter().map(|bucket_id| bucket_id.to_string()).collect())?;
     bucket_ids.sort();
     Ok(bucket_ids)

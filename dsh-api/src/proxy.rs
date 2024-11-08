@@ -9,11 +9,11 @@
 
 use crate::dsh_api_client::DshApiClient;
 #[allow(unused_imports)]
+use crate::types::Empty;
+use crate::types::KafkaProxy;
+#[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-#[allow(unused_imports)]
-use dsh_api_generated::types::Empty;
-use dsh_api_generated::types::KafkaProxy;
 
 /// # Manage proxies
 ///
@@ -43,7 +43,7 @@ impl DshApiClient<'_> {
           .delete_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return proxy
@@ -64,7 +64,7 @@ impl DshApiClient<'_> {
           .get_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return sorted list of Kafka proxy ids
@@ -77,7 +77,7 @@ impl DshApiClient<'_> {
   pub async fn get_proxy_ids(&self) -> DshApiResult<Vec<String>> {
     let mut proxy_ids: Vec<String> = self
       .process(self.generated_client.get_kafkaproxy_by_tenant(self.tenant_name(), self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
       .map(|proxy_ids| proxy_ids.iter().map(|proxy_id| proxy_id.to_string()).collect())?;
     proxy_ids.sort();
     Ok(proxy_ids)
@@ -103,6 +103,6 @@ impl DshApiClient<'_> {
           .put_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token(), &proxy)
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 }

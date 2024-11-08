@@ -9,10 +9,10 @@ use reqwest::StatusCode as ReqwestStatusCode;
 use serde::Serialize;
 
 use crate::dsh_api_tenant::DshApiTenant;
+use crate::generated::Client as GeneratedClient;
 use crate::platform::DshPlatform;
+use crate::types::error::ConversionError;
 use crate::DshApiError;
-use dsh_api_generated::generated::Client as GeneratedClient;
-use dsh_api_generated::types::error::ConversionError;
 
 #[derive(Debug)]
 pub struct DshApiClient<'a> {
@@ -84,8 +84,8 @@ impl<'a> DshApiClient<'a> {
     self.tenant.platform()
   }
 
-  pub fn user(&self) -> &str {
-    self.tenant.user()
+  pub fn guid(&self) -> &str {
+    self.tenant.guid()
   }
 
   pub fn token(&self) -> &str {
