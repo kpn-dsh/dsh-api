@@ -2,55 +2,39 @@
 //!
 //! Module that contains functions to manage buckets.
 //!
-//! * [`create_bucket(bucket_id, bucket)`](DshApiClient::create_bucket)
+//! ## API methods
 //! * [`delete_bucket(bucket_id)`](DshApiClient::delete_bucket)
 //! * [`get_bucket(bucket_id) -> BucketStatus`](DshApiClient::get_bucket)
 //! * [`get_bucket_actual_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_actual_configuration)
 //! * [`get_bucket_allocation_status(bucket_id) -> AllocationStatus`](DshApiClient::get_bucket_allocation_status)
 //! * [`get_bucket_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_configuration)
-//! * [`get_bucket_ids(&self) -> Vec<String>`](DshApiClient::get_bucket_ids)
+//! * [`get_buckets() -> HashMap<bucket_id, bucket>`](DshApiClient::get_buckets)
+//! * [`list_bucket_ids() -> Vec<bucket_id>`](DshApiClient::list_bucket_ids)
+//! * [`list_buckets() -> Vec<(bucket_id, bucket)>`](DshApiClient::list_buckets)
+//! * [`update_bucket(bucket_id, bucket)`](DshApiClient::update_bucket)
 
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{AllocationStatus, Bucket, BucketStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
+use futures::future::try_join_all;
+use std::collections::HashMap;
 
 /// # Manage buckets
 ///
 /// Module that contains functions to manage buckets.
 ///
-/// * [`create_bucket(bucket_id, bucket)`](DshApiClient::create_bucket)
 /// * [`delete_bucket(bucket_id)`](DshApiClient::delete_bucket)
 /// * [`get_bucket(bucket_id) -> BucketStatus`](DshApiClient::get_bucket)
 /// * [`get_bucket_actual_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_actual_configuration)
 /// * [`get_bucket_allocation_status(bucket_id) -> AllocationStatus`](DshApiClient::get_bucket_allocation_status)
 /// * [`get_bucket_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_configuration)
-/// * [`get_bucket_ids(&self) -> Vec<String>`](DshApiClient::get_bucket_ids)
+/// * [`get_buckets() -> HashMap<bucket_id, bucket>`](DshApiClient::get_buckets)
+/// * [`list_bucket_ids() -> Vec<bucket_id>`](DshApiClient::list_bucket_ids)
+/// * [`list_buckets() -> Vec<(bucket_id, bucket)>`](DshApiClient::list_buckets)
+/// * [`update_bucket(bucket_id, bucket)`](DshApiClient::update_bucket)
 impl DshApiClient<'_> {
-  /// # Create bucket
-  ///
-  /// API function: `PUT /allocation/{tenant}/bucket/{id}/configuration`
-  ///
-  /// ## Parameters
-  /// * `bucket_id` - id of the bucket to update
-  /// * `bucket` - new value of the bucket
-  ///
-  /// ## Returns
-  /// * `Ok(())` - when DSH has properly received the request
-  ///              (note that this does not mean that the bucket has been successfully updated)
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn create_bucket(&self, bucket_id: &str, bucket: Bucket) -> DshApiResult<()> {
-    self
-      .process(
-        self
-          .generated_client
-          .put_bucket_configuration_by_tenant_by_id(self.tenant_name(), bucket_id, self.token(), &bucket)
-          .await,
-      )
-      .map(|(_, result)| result)
-  }
-
   /// # Delete bucket
   ///
   /// API function: `DELETE /allocation/{tenant}/bucket/{id}/configuration`
@@ -73,7 +57,7 @@ impl DshApiClient<'_> {
       .map(|(_, result)| result)
   }
 
-  /// # Return bucket
+  /// # Get bucket
   ///
   /// API function: `GET /allocation/{tenant}/bucket/{id}`
   ///
@@ -158,19 +142,65 @@ impl DshApiClient<'_> {
       .map(|(_, result)| result)
   }
 
-  /// # Return bucket ids
+  /// # Return list of bucket ids
   ///
   /// API function: `GET /allocation/{tenant}/bucket`
   ///
   /// ## Returns
   /// * `Ok<Vec<String>` - bucket ids
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_bucket_ids(&self) -> DshApiResult<Vec<String>> {
+  pub async fn list_bucket_ids(&self) -> DshApiResult<Vec<String>> {
     let mut bucket_ids: Vec<String> = self
       .process(self.generated_client.get_bucket_by_tenant(self.tenant_name(), self.token()).await)
       .map(|(_, result)| result)
       .map(|bucket_ids| bucket_ids.iter().map(|bucket_id| bucket_id.to_string()).collect())?;
     bucket_ids.sort();
     Ok(bucket_ids)
+  }
+
+  /// Return a list of all buckets
+  ///
+  /// ## Returns
+  /// * `Vec<(String, `[`BucketStatus`]`)>` - list of tuples that describe the buckets,
+  ///   ordered by bucket id. Each tuple consist of
+  ///   * `String` - id of the bucket,
+  ///   * `BucketStatus` - the bucket data.
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn list_buckets(&self) -> DshApiResult<Vec<(String, BucketStatus)>> {
+    let bucket_ids: Vec<String> = self.list_bucket_ids().await?;
+    let bucket_statuses = try_join_all(bucket_ids.iter().map(|bucket_id| self.get_bucket(bucket_id.as_str()))).await?;
+    Ok(bucket_ids.into_iter().zip(bucket_statuses).collect::<Vec<_>>())
+  }
+
+  /// Return a map of all bucket ids and buckets
+  ///
+  /// ## Returns
+  /// * `HashMap<String, `[`BucketStatus`]`>` - `HashMap` that maps all bucket ids to buckets.
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn get_buckets(&self) -> DshApiResult<HashMap<String, BucketStatus>> {
+    Ok(self.list_buckets().await?.into_iter().collect())
+  }
+
+  /// # Update bucket
+  ///
+  /// API function: `PUT /allocation/{tenant}/bucket/{id}/configuration`
+  ///
+  /// ## Parameters
+  /// * `bucket_id` - id of the bucket to update
+  /// * `bucket` - new value of the bucket
+  ///
+  /// ## Returns
+  /// * `Ok(())` - when DSH has properly received the request
+  ///              (note that this does not mean that the bucket has been successfully updated)
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn update_bucket(&self, bucket_id: &str, bucket: Bucket) -> DshApiResult<()> {
+    self
+      .process(
+        self
+          .generated_client
+          .put_bucket_configuration_by_tenant_by_id(self.tenant_name(), bucket_id, self.token(), &bucket)
+          .await,
+      )
+      .map(|(_, result)| result)
   }
 }

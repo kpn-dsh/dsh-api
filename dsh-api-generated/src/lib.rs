@@ -1,5 +1,5 @@
 pub use crate::generated::types;
-use crate::types::{AllocationStatus, Application, Notification, Task, TaskStatus};
+use crate::types::{AllocationStatus, Application, Bucket, BucketStatus, Notification, Task, TaskStatus};
 use std::fmt::{Display, Formatter};
 
 pub mod generated {
@@ -12,8 +12,6 @@ pub mod generated {
 // AppCatalogManifest
 // ApplicationSecret
 // ApplicationVolumes
-// Bucket
-// BucketStatus
 // Certificate
 // CertificateStatus
 // Empty
@@ -33,7 +31,11 @@ pub mod generated {
 
 impl Display for AllocationStatus {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "AllocationStatus(provisioned: {}", self.provisioned)?;
+    if self.provisioned {
+      write!(f, "AllocationStatus(provisioned")?;
+    } else {
+      write!(f, "AllocationStatus(")?;
+    }
     if let Some(ref derived_from) = self.derived_from {
       write!(f, ", derived from: {}", derived_from)?;
     }
@@ -60,6 +62,32 @@ impl Display for Application {
       "Application(instances: {}, cpus: {}, mem: {}, token: {}, single: {}, image: {})",
       self.instances, self.cpus, self.mem, self.needs_token, self.single_instance, self.image
     )
+  }
+}
+
+impl Display for Bucket {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "Bucket(")?;
+    match (self.encrypted, self.versioned) {
+      (false, false) => write!(f, "")?,
+      (false, true) => write!(f, "versioned")?,
+      (true, false) => write!(f, "encrypted")?,
+      (true, true) => write!(f, "encrypted, versioned")?,
+    }
+    write!(f, ")")
+  }
+}
+
+impl Display for BucketStatus {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "BucketStatus(status: {}", self.status)?;
+    if let Some(ref actual) = self.actual {
+      write!(f, ", actual: {}", actual)?;
+    }
+    if let Some(ref configuration) = self.configuration {
+      write!(f, ", configuration: {}", configuration)?;
+    }
+    write!(f, ")")
   }
 }
 
