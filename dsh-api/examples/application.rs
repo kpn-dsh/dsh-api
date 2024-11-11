@@ -1,7 +1,7 @@
 use crate::common::print_header;
 use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
 use dsh_api::query_processor::{parts_to_terminal_string, Part, RegexQueryProcessor};
-use dsh_api_generated::types::{AllocationStatus, Application, Task, TaskStatus};
+use dsh_api::types::{AllocationStatus, Application, Task, TaskStatus};
 use std::collections::HashMap;
 
 #[path = "common.rs"]
