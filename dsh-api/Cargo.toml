@@ -1,16 +1,17 @@
 # dsh-api
 [package]
 name = "dsh-api"
+description = "DSH Resource Management Api Client"
+keywords = ["kpn", "dsh", "rest", "api", "client"]
 
 authors.workspace = true
-description.workspace = true
 edition.workspace = true
 publish.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
-dsh-api-macros = { path = "../dsh-api-macros" }
+#dsh-api-macros = { path = "../dsh-api-macros" }
 dsh-api-generated = { path = "../dsh-api-generated" }
 chrono = { version = "0.4", features = ["serde"] }
 dsh_sdk = { version = "0.4", features = ["rest-token-fetcher"], default-features = false }
