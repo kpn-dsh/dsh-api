@@ -12,15 +12,20 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum DshPlatform {
   /// Test and development landing zone, KPN internal (non-production).
+  #[serde(rename = "nplz")]
   NpLz,
   /// Proof of concept platform (non-production).
+  #[serde(rename = "poc")]
   Poc,
   /// Production platform.
+  #[serde(rename = "prod")]
   Prod,
   /// Azure production platform.
+  #[serde(rename = "prodaz")]
   ProdAz,
   // TODO ProdCp,
   /// Production landing zone, KPN internal
+  #[serde(rename = "prodlz")]
   ProdLz,
 }
 
