@@ -3,13 +3,13 @@
 use std::env;
 use std::fmt::{Display, Formatter};
 
+use crate::PLATFORM_ENVIRONMENT_VARIABLE;
 use dsh_sdk::Platform as SdkPlatform;
 use lazy_static::lazy_static;
 use log::info;
+use serde::{Deserialize, Serialize};
 
-use crate::PLATFORM_ENVIRONMENT_VARIABLE;
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum DshPlatform {
   /// Test and development landing zone, KPN internal (non-production).
   NpLz,
