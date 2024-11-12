@@ -12,7 +12,6 @@ mod common;
 // find_application_ids_with_derived_tasks *
 // get_application *
 // get_application_actual_configuration *
-// get_application_actual_configurations *
 // get_application_allocation_status *
 // get_application_task *
 // get_application_task_allocation_status *
@@ -61,7 +60,7 @@ async fn main() -> Result<(), String> {
 
   #[cfg(feature = "actual")]
   {
-    print_header("get_application_actual_configurations");
+    print_header("get_applications_actual");
     let applications_actual: HashMap<String, Application> = client.get_applications_actual().await?;
     println!("{}", applications_actual.len());
     for (application_id, application) in applications_actual {
