@@ -4,6 +4,22 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.2.0]
+
+### Added
+
+* Feature 'actual' enables/disables actual configurations.
+* Query processor capability.
+* Display implementations for some types.
+
+### Changed
+
+* Some naming.
+
+### Removed
+
+* Macros.
+
 ## [0.1.0] - 2024-10-29
 
 ### Added
