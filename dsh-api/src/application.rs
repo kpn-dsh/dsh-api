@@ -3,16 +3,13 @@
 //! Module that contains a function to manage applications.
 //!
 //! ## API methods
-//! * [`create_application(application_id, application) -> ()`](DshApiClient::create_application)
-//! * [`delete_application(application_id) -> ()`](DshApiClient::delete_application)
+//! * [`create_application(application_id, application)`](DshApiClient::create_application)
+//! * [`delete_application(application_id)`](DshApiClient::delete_application)
 //! * [`find_application_ids_with_derived_tasks() -> Vec<String>`](DshApiClient::find_application_ids_with_derived_tasks)
 //! * [`get_application(application_id) -> Application`](DshApiClient::get_application)
-//! * [`get_application_actual_configuration(application_id) -> Application`](DshApiClient::get_application_actual_configuration)
-//! * [`get_application_actual_configurations() -> HashMap<String, Application>`](DshApiClient::get_application_actual_configurations)
 //! * [`get_application_allocation_status(application_id) -> AllocationStatus`](DshApiClient::get_application_allocation_status)
 //! * [`get_application_task(application_id, task_id) -> TaskStatus`](DshApiClient::get_application_task)
 //! * [`get_application_task_allocation_status(application_id, task_id) -> AllocationStatus`](DshApiClient::get_application_task_allocation_status)
-//! * [`get_application_task_state(application_id, task_id) -> Task`](DshApiClient::get_application_task_state)
 //! * [`get_applications() -> HashMap<String, Application>`](DshApiClient::get_applications)
 //! * [`list_application_derived_task_ids(application_id) -> Vec<TaskId>`](DshApiClient::list_application_derived_task_ids)
 //!
@@ -27,9 +24,16 @@
 //!
 //! ## Utility functions
 //! * [`application_diff(baseline, sample) -> ApplicationDiff`](DshApiClient::application_diff)
+#![cfg_attr(feature = "actual", doc = "")]
+#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#![cfg_attr(feature = "actual", doc = r##"* [`get_application_actual(application_id) -> Application`](DshApiClient::get_application_actual)"##)]
+#![cfg_attr(feature = "actual", doc = r##"* [`get_applications_actual() -> HashMap<String, Application>`](DshApiClient::get_applications_actual)"##)]
+#![cfg_attr(feature = "actual", doc = r##"* [`get_application_task_state(application_id, task_id) -> Task`](DshApiClient::get_application_task_state)"##)]
 use crate::dsh_api_client::DshApiClient;
 use crate::query_processor::{Part, QueryProcessor};
-use crate::types::{AllocationStatus, Application, ApplicationSecret, ApplicationVolumes, HealthCheck, Metrics, PortMapping, Task, TaskStatus};
+#[cfg(feature = "actual")]
+use crate::types::Task;
+use crate::types::{AllocationStatus, Application, ApplicationSecret, ApplicationVolumes, HealthCheck, Metrics, PortMapping, TaskStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
@@ -41,16 +45,13 @@ use std::collections::HashMap;
 /// Module that contains a function to manage applications.
 ///
 /// ## API methods
-/// * [`create_application(application_id, application) -> ()`](DshApiClient::create_application)
-/// * [`delete_application(application_id) -> ()`](DshApiClient::delete_application)
+/// * [`create_application(application_id, application)`](DshApiClient::create_application)
+/// * [`delete_application(application_id)`](DshApiClient::delete_application)
 /// * [`find_application_ids_with_derived_tasks() -> Vec<String>`](DshApiClient::find_application_ids_with_derived_tasks)
 /// * [`get_application(application_id) -> Application`](DshApiClient::get_application)
-/// * [`get_application_actual_configuration(application_id) -> Application`](DshApiClient::get_application_actual_configuration)
-/// * [`get_application_actual_configurations() -> HashMap<String, Application>`](DshApiClient::get_application_actual_configurations)
 /// * [`get_application_allocation_status(application_id) -> AllocationStatus`](DshApiClient::get_application_allocation_status)
 /// * [`get_application_task(application_id, task_id) -> TaskStatus`](DshApiClient::get_application_task)
 /// * [`get_application_task_allocation_status(application_id, task_id) -> AllocationStatus`](DshApiClient::get_application_task_allocation_status)
-/// * [`get_application_task_state(application_id, task_id) -> Task`](DshApiClient::get_application_task_state)
 /// * [`get_applications() -> HashMap<String, Application>`](DshApiClient::get_applications)
 /// * [`list_application_derived_task_ids(application_id) -> Vec<TaskId>`](DshApiClient::list_application_derived_task_ids)
 ///
@@ -64,6 +65,11 @@ use std::collections::HashMap;
 ///
 /// ## Utility functions
 /// * [`application_diff(baseline, sample) -> ApplicationDiff`](DshApiClient::application_diff)
+#[cfg_attr(feature = "actual", doc = "")]
+#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#[cfg_attr(feature = "actual", doc = r##"* [`get_application_actual(application_id) -> Application`](DshApiClient::get_application_actual)"##)]
+#[cfg_attr(feature = "actual", doc = r##"* [`get_applications_actual() -> HashMap<String, Application>`](DshApiClient::get_applications_actual)"##)]
+#[cfg_attr(feature = "actual", doc = r##"* [`get_application_task_state(application_id, task_id) -> Task`](DshApiClient::get_application_task_state)"##)]
 impl DshApiClient<'_> {
   /// # Create application
   ///
@@ -122,7 +128,8 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<`[`Application`]`>` - application configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_application_actual_configuration(&self, application_id: &str) -> DshApiResult<Application> {
+  #[cfg(feature = "actual")]
+  pub async fn get_application_actual(&self, application_id: &str) -> DshApiResult<Application> {
     self
       .process(
         self
@@ -140,7 +147,8 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<HashMap<String, `[`Application`]`>>` - hashmap containing the application configurations
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_application_actual_configurations(&self) -> DshApiResult<HashMap<String, Application>> {
+  #[cfg(feature = "actual")]
+  pub async fn get_applications_actual(&self) -> DshApiResult<HashMap<String, Application>> {
     self
       .process(self.generated_client.get_application_actual_by_tenant(self.tenant_name(), self.token()).await)
       .map(|(_, result)| result)
@@ -250,11 +258,6 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/task{appid}/{id}`
   ///
-  /// This method combines the results of the methods
-  /// [`get_application_task_actual()`](DshApiClient::get_application_task_state) and
-  /// [`get_application_task_allocation_status()`](DshApiClient::get_application_task_allocation_status)
-  /// into one method call.
-  ///
   /// ## Parameters
   /// * `application_id` - application name of the requested application
   /// * `task_id` - id of the requested task
@@ -276,9 +279,6 @@ impl DshApiClient<'_> {
   /// # Return task allocation status
   ///
   /// API function: `GET /allocation/{tenant}/task{appid}/{id}/status`
-  ///
-  /// Note that the result of this method is also included in the result of the method
-  /// [`get_application_task_actual()`](DshApiClient::get_application_task).
   ///
   /// ## Parameters
   /// * `application_id` - application name of the requested application
@@ -302,9 +302,6 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/task{appid}/{id}/actual`
   ///
-  /// Note that the result of this method is also included in the result of the method
-  /// [`get_application_task_actual()`](DshApiClient::get_application_task).
-  ///
   /// ## Parameters
   /// * `application_id` - application name of the requested application
   /// * `task_id` - id of the requested task
@@ -312,6 +309,7 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<`[`Task`]`>` - actual application task status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  #[cfg(feature = "actual")]
   pub async fn get_application_task_state(&self, application_id: &str, task_id: &str) -> DshApiResult<Task> {
     self
       .process(
@@ -446,6 +444,7 @@ impl DshApiClient<'_> {
   ///   * `Vec<(String, Vec<`[`Part`]`>)>` - list of environment variable key/value pairs that matched the query
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn find_applications_that_use_env_value(&self, query_processor: &dyn QueryProcessor) -> DshApiResult<Vec<(String, Application, Vec<(String, Vec<Part>)>)>> {
+    #[allow(clippy::type_complexity)]
     let mut matches: Vec<(String, Application, Vec<(String, Vec<Part>)>)> = vec![];
     let applications: Vec<(String, Application)> = self.list_applications().await?;
     for (application_id, application) in applications {

@@ -2,13 +2,16 @@
 //!
 //! Module that contains functions to manage volumes.
 //!
-//! * [`create_volume(volume_id, configuration) -> ()`](DshApiClient::create_volume)
-//! * [`delete_volume(volume_id) -> ()`](DshApiClient::delete_volume)
-//! * [`get_volume(volume_id) -> volumeStatus`](DshApiClient::get_volume)
+//! ## API methods
+//! * [`create_volume(volume_id, configuration)`](DshApiClient::create_volume)
+//! * [`delete_volume(volume_id)`](DshApiClient::delete_volume)
+//! * [`get_volume(volume_id) -> VolumeStatus`](DshApiClient::get_volume)
 //! * [`get_volume_allocation_status(volume_id) -> AllocationStatus`](DshApiClient::get_volume_allocation_status)
-//! * [`get_volume_configuration(volume_id) -> volume`](DshApiClient::get_volume_configuration)
-//! * [`get_volume_actual_configuration(volume_id) -> volume`](DshApiClient::get_volume_actual_configuration)
+//! * [`get_volume_configuration(volume_id) -> Volume`](DshApiClient::get_volume_configuration)
 //! * [`get_volume_ids() -> Vec<String>`](DshApiClient::get_volume_ids)
+#![cfg_attr(feature = "actual", doc = "")]
+#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#![cfg_attr(feature = "actual", doc = r##"* [`get_volume_actual_configuration(volume_id) -> Volume`](DshApiClient::get_volume_actual_configuration)"##)]
 
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{AllocationStatus, Volume, VolumeStatus};
@@ -20,13 +23,16 @@ use crate::DshApiResult;
 ///
 /// Module that contains functions to manage volumes.
 ///
-/// * [`create_volume(volume_id, configuration) -> ()`](DshApiClient::create_volume)
-/// * [`delete_volume(volume_id) -> ()`](DshApiClient::delete_volume)
-/// * [`get_volume(volume_id) -> volumeStatus`](DshApiClient::get_volume)
+/// ## API methods
+/// * [`create_volume(volume_id, configuration)`](DshApiClient::create_volume)
+/// * [`delete_volume(volume_id)`](DshApiClient::delete_volume)
+/// * [`get_volume(volume_id) -> VolumeStatus`](DshApiClient::get_volume)
 /// * [`get_volume_allocation_status(volume_id) -> AllocationStatus`](DshApiClient::get_volume_allocation_status)
-/// * [`get_volume_configuration(volume_id) -> volume`](DshApiClient::get_volume_configuration)
-/// * [`get_volume_actual_configuration(volume_id) -> volume`](DshApiClient::get_volume_actual_configuration)
+/// * [`get_volume_configuration(volume_id) -> Volume`](DshApiClient::get_volume_configuration)
 /// * [`get_volume_ids() -> Vec<String>`](DshApiClient::get_volume_ids)
+#[cfg_attr(feature = "actual", doc = "")]
+#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#[cfg_attr(feature = "actual", doc = r##"* [`get_volume_actual_configuration(volume_id) -> Volume`](DshApiClient::get_volume_actual_configuration)"##)]
 impl DshApiClient<'_> {
   /// # Create volume
   ///
@@ -76,12 +82,6 @@ impl DshApiClient<'_> {
   /// # Return volume
   ///
   /// API function: `GET /allocation/{tenant}/volume/{id}`
-  ///
-  /// This method combines the results of the methods
-  /// [`get_volume_allocation_status()`](DshApiClient::get_volume_allocation_status),
-  /// [`get_volume_configuration()`](DshApiClient::get_volume_configuration) and
-  /// [`get_volume_configuration_actual()`](DshApiClient::get_volume_actual_configuration)
-  /// into one method call.
   ///
   /// ## Parameters
   /// * `volume_id` - name of the requested volume
@@ -147,6 +147,7 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<`[`Volume`]`>` - volume configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  #[cfg(feature = "actual")]
   pub async fn get_volume_actual_configuration(&self, volume_id: &str) -> DshApiResult<Volume> {
     self
       .process(

@@ -1,5 +1,5 @@
 use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-use dsh_api::types::{AllocationStatus, Task};
+use dsh_api::types::AllocationStatus;
 
 const SERVICE_ID: &str = "consentfilter-test002";
 const TASK_ID: &str = "8f4b5747-lnmj4-00000000";
@@ -30,8 +30,12 @@ async fn main() -> Result<(), String> {
   );
 
   // Return task state
-  let state: Task = client.get_application_task_state(&application_id, &task_id).await?;
-  println!("task state {}, {}\n{}", application_id, task_id, serde_json::to_string_pretty(&state).unwrap());
+  #[cfg(feature = "actual")]
+  {
+    use dsh_api::types::Task;
+    let state: Task = client.get_application_task_state(&application_id, &task_id).await?;
+    println!("task state {}, {}\n{}", application_id, task_id, serde_json::to_string_pretty(&state).unwrap());
+  }
 
   Ok(())
 }

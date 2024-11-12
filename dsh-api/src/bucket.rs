@@ -5,13 +5,17 @@
 //! ## API methods
 //! * [`delete_bucket(bucket_id)`](DshApiClient::delete_bucket)
 //! * [`get_bucket(bucket_id) -> BucketStatus`](DshApiClient::get_bucket)
-//! * [`get_bucket_actual_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_actual_configuration)
 //! * [`get_bucket_allocation_status(bucket_id) -> AllocationStatus`](DshApiClient::get_bucket_allocation_status)
 //! * [`get_bucket_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_configuration)
-//! * [`get_buckets() -> HashMap<bucket_id, bucket>`](DshApiClient::get_buckets)
 //! * [`list_bucket_ids() -> Vec<bucket_id>`](DshApiClient::list_bucket_ids)
-//! * [`list_buckets() -> Vec<(bucket_id, bucket)>`](DshApiClient::list_buckets)
 //! * [`update_bucket(bucket_id, bucket)`](DshApiClient::update_bucket)
+//!
+//! ## Utility methods
+//! * [`get_buckets() -> HashMap<bucket_id, bucket>`](DshApiClient::get_buckets)
+//! * [`list_buckets() -> Vec<(bucket_id, bucket)>`](DshApiClient::list_buckets)
+#![cfg_attr(feature = "actual", doc = "")]
+#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#![cfg_attr(feature = "actual", doc = r##"* [`get_bucket_actual_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_actual_configuration)"##)]
 
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{AllocationStatus, Bucket, BucketStatus};
@@ -25,15 +29,20 @@ use std::collections::HashMap;
 ///
 /// Module that contains functions to manage buckets.
 ///
+/// ## API methods
 /// * [`delete_bucket(bucket_id)`](DshApiClient::delete_bucket)
 /// * [`get_bucket(bucket_id) -> BucketStatus`](DshApiClient::get_bucket)
-/// * [`get_bucket_actual_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_actual_configuration)
 /// * [`get_bucket_allocation_status(bucket_id) -> AllocationStatus`](DshApiClient::get_bucket_allocation_status)
 /// * [`get_bucket_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_configuration)
-/// * [`get_buckets() -> HashMap<bucket_id, bucket>`](DshApiClient::get_buckets)
 /// * [`list_bucket_ids() -> Vec<bucket_id>`](DshApiClient::list_bucket_ids)
-/// * [`list_buckets() -> Vec<(bucket_id, bucket)>`](DshApiClient::list_buckets)
 /// * [`update_bucket(bucket_id, bucket)`](DshApiClient::update_bucket)
+///
+/// ## Utility methods
+/// * [`get_buckets() -> HashMap<bucket_id, bucket>`](DshApiClient::get_buckets)
+/// * [`list_buckets() -> Vec<(bucket_id, bucket)>`](DshApiClient::list_buckets)
+#[cfg_attr(feature = "actual", doc = "")]
+#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#[cfg_attr(feature = "actual", doc = r##"* [`get_bucket_actual_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_actual_configuration)"##)]
 impl DshApiClient<'_> {
   /// # Delete bucket
   ///
@@ -61,12 +70,6 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/bucket/{id}`
   ///
-  /// This method combines the results of the methods
-  /// [`get_bucket_actual()`](DshApiClient::get_bucket_actual_configuration),
-  /// [`get_bucket_allocation_status()`](DshApiClient::get_bucket_allocation_status) and
-  /// [`get_bucket_configuration()`](DshApiClient::get_bucket_configuration)
-  /// into one method call.
-  ///
   /// ## Parameters
   /// * `bucket_id` - id of the requested bucket
   ///
@@ -89,6 +92,7 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<`[`Bucket`]`>` - indicates that bucket is ok
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  #[cfg(feature = "actual")]
   pub async fn get_bucket_actual_configuration(&self, bucket_id: &str) -> DshApiResult<Bucket> {
     self
       .process(

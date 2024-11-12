@@ -31,12 +31,15 @@ async fn main() -> Result<(), String> {
   let deployed_app: AppCatalogAppConfiguration = client.get_app_catalog_configuration(app_catalog_id).await?;
   println!("{}", serde_json::to_string_pretty(&deployed_app).unwrap());
 
-  let deployed_apps: HashMap<String, AppCatalogApp> = client.get_app_actual_configurations().await?;
-  let mut keys = deployed_apps.keys().into_iter().map(|k| k.to_string()).collect::<Vec<String>>();
-  keys.sort();
-  for key in keys {
-    let app = app_catalog_apps.get(&key).unwrap();
-    println!("{} -> {}", key, app.manifest_urn);
+  #[cfg(feature = "actual")]
+  {
+    let deployed_apps: HashMap<String, AppCatalogApp> = client.get_app_actual_configurations().await?;
+    let mut keys = deployed_apps.keys().into_iter().map(|k| k.to_string()).collect::<Vec<String>>();
+    keys.sort();
+    for key in keys {
+      let app = app_catalog_apps.get(&key).unwrap();
+      println!("{} -> {}", key, app.manifest_urn);
+    }
   }
 
   Ok(())

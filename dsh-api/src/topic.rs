@@ -2,13 +2,16 @@
 //!
 //! Module that contains functions to manage Kafka topics.
 //!
-//! * [`create_topic(topic_id, configuration) -> ()`](DshApiClient::create_topic)
-//! * [`delete_topic(topic_id) -> ()`](DshApiClient::delete_topic)
+//! ## API methods
+//! * [`create_topic(topic_id, configuration)`](DshApiClient::create_topic)
+//! * [`delete_topic(topic_id)`](DshApiClient::delete_topic)
 //! * [`get_topic(topic_id) -> TopicStatus`](DshApiClient::get_topic)
 //! * [`get_topic_allocation_status(topic_id) -> AllocationStatus`](DshApiClient::get_topic_allocation_status)
 //! * [`get_topic_configuration(topic_id) -> Topic`](DshApiClient::get_topic_configuration)
-//! * [`get_topic_actual_configuration(topic_id) -> Topic`](DshApiClient::get_topic_actual_configuration)
 //! * [`get_topic_ids() -> Vec<String>`](DshApiClient::get_topic_ids)
+#![cfg_attr(feature = "actual", doc = "")]
+#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#![cfg_attr(feature = "actual", doc = r##"* [`get_topic_actual_configuration(topic_id) -> Topic`](DshApiClient::get_topic_actual_configuration)"##)]
 
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{AllocationStatus, Topic, TopicStatus};
@@ -20,13 +23,16 @@ use crate::DshApiResult;
 ///
 /// Module that contains functions to manage Kafka topics.
 ///
-/// * [`create_topic(topic_id, configuration) -> ()`](DshApiClient::create_topic)
-/// * [`delete_topic(topic_id) -> ()`](DshApiClient::delete_topic)
+/// ## API methods
+/// * [`create_topic(topic_id, configuration)`](DshApiClient::create_topic)
+/// * [`delete_topic(topic_id)`](DshApiClient::delete_topic)
 /// * [`get_topic(topic_id) -> TopicStatus`](DshApiClient::get_topic)
 /// * [`get_topic_allocation_status(topic_id) -> AllocationStatus`](DshApiClient::get_topic_allocation_status)
 /// * [`get_topic_configuration(topic_id) -> Topic`](DshApiClient::get_topic_configuration)
-/// * [`get_topic_actual_configuration(topic_id) -> Topic`](DshApiClient::get_topic_actual_configuration)
 /// * [`get_topic_ids() -> Vec<String>`](DshApiClient::get_topic_ids)
+#[cfg_attr(feature = "actual", doc = "")]
+#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#[cfg_attr(feature = "actual", doc = r##"* [`get_topic_actual_configuration(topic_id) -> Topic`](DshApiClient::get_topic_actual_configuration)"##)]
 impl DshApiClient<'_> {
   /// # Create topic
   ///
@@ -76,12 +82,6 @@ impl DshApiClient<'_> {
   /// # Return topic
   ///
   /// API function: `GET /allocation/{tenant}/topic/{id}`
-  ///
-  /// This method combines the results of the methods
-  /// [`get_topic_allocation_status()`](DshApiClient::get_topic_allocation_status),
-  /// [`get_topic_configuration()`](DshApiClient::get_topic_configuration) and
-  /// [`get_topic_configuration_actual()`](DshApiClient::get_topic_actual_configuration)
-  /// into one method call.
   ///
   /// ## Parameters
   /// * `topic_id` - name of the requested topic
@@ -147,6 +147,7 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<`[`Topic`]`>` - topic configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  #[cfg(feature = "actual")]
   pub async fn get_topic_actual_configuration(&self, topic_id: &str) -> DshApiResult<Topic> {
     self
       .process(

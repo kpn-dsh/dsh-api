@@ -2,17 +2,19 @@
 //!
 //! Module that contains functions to manage secrets.
 //!
-//! * [`create_secret(secret) -> ()`](DshApiClient::create_secret)
-//! * [`delete_secret(secret_id) -> ()`](DshApiClient::delete_secret)
+//! ## API methods
+//! * [`create_secret(secret)`](DshApiClient::create_secret)
+//! * [`delete_secret(secret_id)`](DshApiClient::delete_secret)
 //! * [`get_secret(secret_id) -> ByteStream`](DshApiClient::get_secret)
-//! * [`get_secret_actual_configuration(secret_id) -> Empty`](DshApiClient::get_secret_actual_configuration)
 //! * [`get_secret_allocation_status(secret_id) -> AllocationStatus`](DshApiClient::get_secret_allocation_status)
 //! * [`get_secret_configuration(secret_id) -> Empty`](DshApiClient::get_secret_configuration)
 //! * [`get_secret_ids() -> Vec<String>`](DshApiClient::get_secret_ids)
-//! * [`update_secret(secret_id, secret) -> ()`](DshApiClient::update_secret)
+//! * [`update_secret(secret_id, secret)`](DshApiClient::update_secret)
+#![cfg_attr(feature = "actual", doc = "")]
+#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#![cfg_attr(feature = "actual", doc = r##"* [`get_secret_actual_configuration(secret_id) -> Empty`](DshApiClient::get_secret_actual_configuration)"##)]
 
 // TODO Special treatment for system secrets
-
 use crate::dsh_api_client::DshApiClient;
 #[allow(unused_imports)]
 use crate::types::{AllocationStatus, Empty, Secret};
@@ -24,14 +26,17 @@ use crate::DshApiResult;
 ///
 /// Module that contains functions to manage secrets.
 ///
-/// * [`create_secret(secret) -> ()`](DshApiClient::create_secret)
-/// * [`delete_secret(secret_id) -> ()`](DshApiClient::delete_secret)
+/// ## API methods
+/// * [`create_secret(secret)`](DshApiClient::create_secret)
+/// * [`delete_secret(secret_id)`](DshApiClient::delete_secret)
 /// * [`get_secret(secret_id) -> ByteStream`](DshApiClient::get_secret)
-/// * [`get_secret_actual_configuration(secret_id) -> Empty`](DshApiClient::get_secret_actual_configuration)
 /// * [`get_secret_allocation_status(secret_id) -> AllocationStatus`](DshApiClient::get_secret_allocation_status)
 /// * [`get_secret_configuration(secret_id) -> Empty`](DshApiClient::get_secret_configuration)
 /// * [`get_secret_ids() -> Vec<String>`](DshApiClient::get_secret_ids)
-/// * [`update_secret(secret_id, secret) -> ()`](DshApiClient::update_secret)
+/// * [`update_secret(secret_id, secret)`](DshApiClient::update_secret)
+#[cfg_attr(feature = "actual", doc = "")]
+#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#[cfg_attr(feature = "actual", doc = r##"* [`get_secret_actual_configuration(secret_id) -> Empty`](DshApiClient::get_secret_actual_configuration)"##)]
 impl DshApiClient<'_> {
   /// # Create secret
   ///
@@ -99,6 +104,7 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<`[`Empty`]`>` - indicates that secret is ok, but the actual return value will be empty
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  #[cfg(feature = "actual")]
   pub async fn get_secret_actual_configuration(&self, secret_id: &str) -> DshApiResult<Empty> {
     self
       .process(
@@ -139,7 +145,7 @@ impl DshApiClient<'_> {
   /// * `secret_id` - id of the requested secret
   ///
   /// ## Returns
-  /// * `Ok<`[`Empty`]`>` - indicates that secret is ok, but the actual return value will be empty
+  /// * `Ok<`[`Empty`]`>` - indicates that secret is ok, but the return value will be empty
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_secret_configuration(&self, secret_id: &str) -> DshApiResult<Empty> {
     self

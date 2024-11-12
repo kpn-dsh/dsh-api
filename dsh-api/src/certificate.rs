@@ -2,13 +2,16 @@
 //!
 //! Module that contains functions to manage certificates.
 //!
+//! ## API methods
 //! * [`create_certificate(certificate_id, certificate)`](DshApiClient::create_certificate)
 //! * [`delete_certificate(certificate_id)`](DshApiClient::delete_certificate)
-//! * [`get_certificate(certificate_id) -> certificateStatus`](DshApiClient::get_certificate)
-//! * [`get_certificate_actual_configuration(certificate_id) -> certificate`](DshApiClient::get_certificate_actual_configuration)
+//! * [`get_certificate(certificate_id) -> CertificateStatus`](DshApiClient::get_certificate)
 //! * [`get_certificate_allocation_status(certificate_id) -> AllocationStatus`](DshApiClient::get_certificate_allocation_status)
-//! * [`get_certificate_configuration(certificate_id) -> certificate`](DshApiClient::get_certificate_configuration)
+//! * [`get_certificate_configuration(certificate_id) -> Certificate`](DshApiClient::get_certificate_configuration)
 //! * [`get_certificate_ids(&self) -> Vec<String>`](DshApiClient::get_certificate_ids)
+#![cfg_attr(feature = "actual", doc = "")]
+#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#![cfg_attr(feature = "actual", doc = r##"* [`get_certificate_actual_configuration(certificate_id) -> Certificate`](DshApiClient::get_certificate_actual_configuration)"##)]
 
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{AllocationStatus, Certificate, CertificateStatus};
@@ -20,13 +23,16 @@ use crate::DshApiResult;
 ///
 /// Module that contains functions to manage certificates.
 ///
+/// ## API methods
 /// * [`create_certificate(certificate_id, certificate)`](DshApiClient::create_certificate)
 /// * [`delete_certificate(certificate_id)`](DshApiClient::delete_certificate)
-/// * [`get_certificate(certificate_id) -> certificateStatus`](DshApiClient::get_certificate)
-/// * [`get_certificate_actual_configuration(certificate_id) -> certificate`](DshApiClient::get_certificate_actual_configuration)
+/// * [`get_certificate(certificate_id) -> CertificateStatus`](DshApiClient::get_certificate)
 /// * [`get_certificate_allocation_status(certificate_id) -> AllocationStatus`](DshApiClient::get_certificate_allocation_status)
-/// * [`get_certificate_configuration(certificate_id) -> certificate`](DshApiClient::get_certificate_configuration)
+/// * [`get_certificate_configuration(certificate_id) -> Certificate`](DshApiClient::get_certificate_configuration)
 /// * [`get_certificate_ids(&self) -> Vec<String>`](DshApiClient::get_certificate_ids)
+#[cfg_attr(feature = "actual", doc = "")]
+#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#[cfg_attr(feature = "actual", doc = r##"* [`get_certificate_actual_configuration(certificate_id) -> Certificate`](DshApiClient::get_certificate_actual_configuration)"##)]
 impl DshApiClient<'_> {
   /// # Create certificate
   ///
@@ -77,12 +83,6 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/certificate/{id}`
   ///
-  /// This method combines the results of the methods
-  /// [`get_certificate_actual()`](DshApiClient::get_certificate_actual_configuration),
-  /// [`get_certificate_allocation_status()`](DshApiClient::get_certificate_allocation_status) and
-  /// [`get_certificate_configuration()`](DshApiClient::get_certificate_configuration)
-  /// into one method call.
-  ///
   /// ## Parameters
   /// * `certificate_id` - id of the requested certificate
   ///
@@ -110,6 +110,7 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<`[`Certificate`]`>` - indicates that certificate is ok
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  #[cfg(feature = "actual")]
   pub async fn get_certificate_actual_configuration(&self, certificate_id: &str) -> DshApiResult<Certificate> {
     self
       .process(

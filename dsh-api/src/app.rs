@@ -4,8 +4,6 @@
 //! easily configured apps that you can select from the App Catalog.
 //!
 //! ## API methods
-//! * [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)
-//! * [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)
 //! * [`get_app_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_configuration)
 //! * [`get_app_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_configurations)
 //!
@@ -15,7 +13,10 @@
 //!
 //! ## Utility functions
 //! * [`application_from_app(app) -> (String, &Application)`](DshApiClient::application_from_app)
-
+#![cfg_attr(feature = "actual", doc = "")]
+#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#![cfg_attr(feature = "actual", doc = r##"* [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)"##)]
+#![cfg_attr(feature = "actual", doc = r##"* [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)"##)]
 use crate::dsh_api_client::DshApiClient;
 use std::collections::HashMap;
 
@@ -30,8 +31,6 @@ use crate::DshApiResult;
 /// easily configured apps that you can select from the App Catalog.
 ///
 /// ## API methods
-/// * [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)
-/// * [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)
 /// * [`get_app_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_configuration)
 /// * [`get_app_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_configurations)
 ///
@@ -41,6 +40,10 @@ use crate::DshApiResult;
 ///
 /// ## Utility functions
 /// * [`application_from_app(app) -> (String, &Application)`](DshApiClient::application_from_app)
+#[cfg_attr(feature = "actual", doc = "")]
+#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
+#[cfg_attr(feature = "actual", doc = r##"* [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)"]"##)]
+#[cfg_attr(feature = "actual", doc = r##"* [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)"##)]
 impl DshApiClient<'_> {
   /// # Return actual configuration of deployed App
   ///
@@ -52,6 +55,7 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<`[`AppCatalogApp`]`>` - app configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  #[cfg(feature = "actual")]
   pub async fn get_app_actual_configuration(&self, app_id: &str) -> DshApiResult<AppCatalogApp> {
     self
       .process(
@@ -70,6 +74,7 @@ impl DshApiClient<'_> {
   /// ## Returns
   /// * `Ok<HashMap<String, `[`AppCatalogApp`]`>>` - hashmap containing the app configurations
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  #[cfg(feature = "actual")]
   pub async fn get_app_actual_configurations(&self) -> DshApiResult<HashMap<String, AppCatalogApp>> {
     self
       .process(self.generated_client.get_appcatalogapp_actual_by_tenant(self.tenant_name(), self.token()).await)

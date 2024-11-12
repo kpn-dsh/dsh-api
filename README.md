@@ -59,6 +59,24 @@ E.g., for tenant `greenbox-dev` (gid/uid `1903`) at platform `nplz`, use:
   export DSH_API_SECRET_NPLZ_GREENBOX_DEV=..
 ```
 
+## Features
+
+The following features are defined:
+
+<table>
+    <tr valign="top">
+        <th align="left">feature</th>
+        <th align="left">description</th>
+    </tr>
+    <tr valign="top">
+        <td><code>actual</code></td>
+        <td>
+            When this feature is enabled the library will include all the "actual" 
+            method versions of the REST API. By default, these methods will not be included.
+        </td>
+    </tr>
+</table>
+
 ## How to publish to Artifactory
 
 On the KPN Artifactory we have a Cargo repository dedicated

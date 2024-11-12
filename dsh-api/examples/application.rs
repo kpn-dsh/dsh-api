@@ -1,7 +1,7 @@
 use crate::common::print_header;
 use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-use dsh_api::query_processor::{parts_to_terminal_string, Part, RegexQueryProcessor};
-use dsh_api::types::{AllocationStatus, Application, Task, TaskStatus};
+use dsh_api::query_processor::{parts_to_ansi_formatted_string, Part, RegexQueryProcessor};
+use dsh_api::types::{AllocationStatus, Application, TaskStatus};
 use std::collections::HashMap;
 
 #[path = "common.rs"]
@@ -52,15 +52,21 @@ async fn main() -> Result<(), String> {
   let application: Application = client.get_application(APPLICATION_ID).await?;
   println!("{} -> {}", APPLICATION_ID, application);
 
-  print_header("get_application_actual_configuration");
-  let application: Application = client.get_application_actual_configuration(APPLICATION_ID).await?;
-  println!("{} -> {}", APPLICATION_ID, application);
+  #[cfg(feature = "actual")]
+  {
+    print_header("get_application_actual_configuration");
+    let application: Application = client.get_application_actual(APPLICATION_ID).await?;
+    println!("{} -> {}", APPLICATION_ID, application);
+  }
 
-  print_header("get_application_actual_configurations");
-  let applications_actual: HashMap<String, Application> = client.get_application_actual_configurations().await?;
-  println!("{}", applications_actual.len());
-  for (application_id, application) in applications_actual {
-    println!("{} -> {}", application_id, application);
+  #[cfg(feature = "actual")]
+  {
+    print_header("get_application_actual_configurations");
+    let applications_actual: HashMap<String, Application> = client.get_applications_actual().await?;
+    println!("{}", applications_actual.len());
+    for (application_id, application) in applications_actual {
+      println!("{} -> {}", application_id, application);
+    }
   }
 
   print_header("get_application_allocation_status");
@@ -75,9 +81,13 @@ async fn main() -> Result<(), String> {
   let allocation_status: AllocationStatus = client.get_application_task_allocation_status(APPLICATION_ID, TASK_ID).await?;
   println!("({}, {}) -> {}", APPLICATION_ID, TASK_ID, allocation_status);
 
-  print_header("get_application_task_state");
-  let task: Task = client.get_application_task_state(APPLICATION_ID, TASK_ID).await?;
-  println!("({}, {}) -> {}", APPLICATION_ID, TASK_ID, task);
+  #[cfg(feature = "actual")]
+  {
+    use dsh_api::types::Task;
+    print_header("get_application_task_state");
+    let task: Task = client.get_application_task_state(APPLICATION_ID, TASK_ID).await?;
+    println!("({}, {}) -> {}", APPLICATION_ID, TASK_ID, task);
+  }
 
   print_header("get_applications");
   let applications: HashMap<String, Application> = client.get_applications().await?;
@@ -145,7 +155,7 @@ async fn main() -> Result<(), String> {
   for (application_id, application, matches) in applications {
     println!("{} -> {}", application_id, application.cpus);
     for (key, parts) in matches {
-      println!("  {} -> {}", key, parts_to_terminal_string(&parts));
+      println!("  {} -> {}", key, parts_to_ansi_formatted_string(&parts));
     }
   }
 
