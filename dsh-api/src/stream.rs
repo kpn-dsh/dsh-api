@@ -2,10 +2,11 @@
 //!
 //! Module that contains functions to manage internal and public Kafka streams.
 //!
-//! * [`create_internal_stream(stream_id, configuration) -> ()`](DshApiClient::create_internal_stream)
-//! * [`create_public_stream(stream_id, configuration) -> ()`](DshApiClient::create_public_stream)
-//! * [`delete_internal_stream(stream_id) -> ()`](DshApiClient::delete_internal_stream)
-//! * [`delete_public_stream(stream_id) -> ()`](DshApiClient::delete_public_stream)
+//! ## API methods
+//! * [`create_internal_stream(stream_id, configuration)`](DshApiClient::create_internal_stream)
+//! * [`create_public_stream(stream_id, configuration)`](DshApiClient::create_public_stream)
+//! * [`delete_internal_stream(stream_id)`](DshApiClient::delete_internal_stream)
+//! * [`delete_public_stream(stream_id)`](DshApiClient::delete_public_stream)
 //! * [`get_internal_stream(stream_id) -> InternalManagedStream`](DshApiClient::get_internal_stream)
 //! * [`get_internal_streams() -> Vec<InternalManagedStream>`](DshApiClient::get_internal_streams)
 //! * [`get_public_stream(stream_id) -> PublicManagedStream`](DshApiClient::get_public_stream)
@@ -26,10 +27,11 @@ use crate::DshApiResult;
 ///
 /// Module that contains functions to manage Kafka streams.
 ///
-/// * [`create_internal_stream(stream_id, configuration) -> ()`](DshApiClient::create_internal_stream)
-/// * [`create_public_stream(stream_id, configuration) -> ()`](DshApiClient::create_public_stream)
-/// * [`delete_internal_stream(stream_id) -> ()`](DshApiClient::delete_internal_stream)
-/// * [`delete_public_stream(stream_id) -> ()`](DshApiClient::delete_public_stream)
+/// ## API methods
+/// * [`create_internal_stream(stream_id, configuration)`](DshApiClient::create_internal_stream)
+/// * [`create_public_stream(stream_id, configuration)`](DshApiClient::create_public_stream)
+/// * [`delete_internal_stream(stream_id)`](DshApiClient::delete_internal_stream)
+/// * [`delete_public_stream(stream_id)`](DshApiClient::delete_public_stream)
 /// * [`get_internal_stream(stream_id) -> InternalManagedStream`](DshApiClient::get_internal_stream)
 /// * [`get_internal_streams() -> Vec<InternalManagedStream>`](DshApiClient::get_internal_streams)
 /// * [`get_public_stream(stream_id) -> PublicManagedStream`](DshApiClient::get_public_stream)

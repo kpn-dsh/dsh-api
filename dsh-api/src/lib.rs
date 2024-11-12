@@ -7,7 +7,8 @@ use std::str::Utf8Error;
 use reqwest::Error as ReqwestError;
 use serde_json::Error as SerdeJsonError;
 
-pub use dsh_api_generated::generated;
+pub(crate) use dsh_api_generated::generated;
+/// # Types generated from openapi file
 pub use dsh_api_generated::types;
 
 pub mod app;

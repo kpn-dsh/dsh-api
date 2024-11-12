@@ -2,10 +2,11 @@
 //!
 //! Module that contains functions to manage Kafka proxies.
 //!
-//! * [`delete_proxy(proxy_id) -> ()`](DshApiClient::delete_proxy)
+//! ## API methods
+//! * [`delete_proxy(proxy_id)`](DshApiClient::delete_proxy)
 //! * [`get_proxy(proxy_id) -> Proxy`](DshApiClient::get_proxy)
 //! * [`get_proxy_ids() -> Vec<String>`](DshApiClient::get_proxy_ids)
-//! * [`update_proxy(proxy_id, proxy) -> ()`](DshApiClient::update_proxy)
+//! * [`update_proxy(proxy_id, proxy)`](DshApiClient::update_proxy)
 
 use crate::dsh_api_client::DshApiClient;
 #[allow(unused_imports)]
@@ -19,10 +20,11 @@ use crate::DshApiResult;
 ///
 /// Module that contains functions to manage Kafka proxies.
 ///
-/// * [`delete_proxy(proxy_id) -> ()`](DshApiClient::delete_proxy)
+/// ## API methods
+/// * [`delete_proxy(proxy_id)`](DshApiClient::delete_proxy)
 /// * [`get_proxy(proxy_id) -> Proxy`](DshApiClient::get_proxy)
 /// * [`get_proxy_ids() -> Vec<String>`](DshApiClient::get_proxy_ids)
-/// * [`update_proxy(proxy_id, proxy) -> ()`](DshApiClient::update_proxy)
+/// * [`update_proxy(proxy_id, proxy)`](DshApiClient::update_proxy)
 impl DshApiClient<'_> {
   /// # Delete proxy
   ///
