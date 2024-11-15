@@ -1,5 +1,63 @@
 #![doc(html_favicon_url = "https://teamkpn.kpnnet.org/static/images/favicon.svg")]
 #![doc(html_logo_url = "https://teamkpn.kpnnet.org/static/images/favicon.svg")]
+//! # DSH Resource Management API
+//!
+//! This crate contains functions and definitions that provide support for using the functions
+//! of the DSH Resource Management API. The crate was originally developed as part of the
+//! [dcli](https://github.com/kpn-dsh/dcli) tool, but has now been promoted to a separate library.
+//!
+//! ## Examples
+//!
+//! The first minimal example will print a list of all the applications that are deployed
+//! in a tenant environment. This example requires that the tenant's name, group id, user id,
+//! platform and API secret are configured via [environment variables](dsh_api_client_factory).
+//!
+//! ```no_run
+//! use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+//!
+//! # async fn hide() -> Result<(), String> {
+//! let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+//! for (application_id, application) in client.list_applications()? {
+//!   println!("{} -> {}", application_id, application);
+//! }
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! In the next, more elaborate example, these tenant parameters are given explicitly.
+//! This example will list all the applications in the tenant environment that have been
+//! configured to require a token in order to access the Kafka broker.
+//! This is accomplished via the `find_applications()`
+//! methods, that returns a list of all applications for which the provided predicate
+//! evaluates to `true`.
+//!
+//!
+//! ```no_run
+//! use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+//! use dsh_api::dsh_api_tenant::DshApiTenant;
+//! use dsh_api::platform::DshPlatform;
+//! use dsh_api::types::Application;
+//!
+//! # async fn hide() -> Result<(), String> {
+//! let tenant = DshApiTenant::new(
+//!   "greenbox".to_string(),
+//!   "2067:2067".to_string(),
+//!   DshPlatform::NpLz
+//! );
+//! let secret = "...".to_string();
+//! let client_factory = DshApiClientFactory::create(tenant, secret)?;
+//! let client = client_factory.client().await?;
+//! let predicate = |application: &Application| application.needs_token;
+//! let applications = client.find_applications(&predicate).await?;
+//! for (_, application) in applications {
+//!   println!("{}", application);
+//! }
+//! # Ok(())
+//! # }
+//! ```
+//!
+//!
+//!
 
 use std::fmt::{Display, Formatter};
 use std::str::Utf8Error;
@@ -7,7 +65,15 @@ use std::str::Utf8Error;
 use reqwest::Error as ReqwestError;
 use serde_json::Error as SerdeJsonError;
 
+#[cfg_attr(feature = "generated", doc = "## Functions generated from openapi file")]
+#[cfg(feature = "generated")]
+pub use dsh_api_generated::generated;
+
+#[cfg(not(feature = "generated"))]
 pub(crate) use dsh_api_generated::generated;
+
+pub use dsh_api_generated::display;
+
 /// # Types generated from openapi file
 pub use dsh_api_generated::types;
 

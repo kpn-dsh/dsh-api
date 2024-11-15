@@ -1,4 +1,4 @@
-//! Defines DSH platforms and their properties
+//! # Defines DSH platforms and their properties
 
 use std::env;
 use std::fmt::{Display, Formatter};
