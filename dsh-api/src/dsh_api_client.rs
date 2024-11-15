@@ -40,6 +40,16 @@ impl<'a> DshApiClient<'a> {
     self.generated_client.api_version()
   }
 
+  pub(crate) fn response_wrapper<T>(progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
+  where
+    T: Serialize,
+  {
+    match progenitor_response {
+      Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => Ok((DshApiResponseStatus::from(response.status()), response.into_inner())),
+      Err(progenitor_error) => Err(DshApiError::from(progenitor_error)),
+    }
+  }
+
   pub(crate) fn process<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
   where
     T: Serialize,
