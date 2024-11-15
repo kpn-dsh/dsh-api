@@ -10,8 +10,8 @@
 //! * [`get_topic_configuration(topic_id) -> Topic`](DshApiClient::get_topic_configuration)
 //! * [`get_topic_ids() -> Vec<String>`](DshApiClient::get_topic_ids)
 #![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#![cfg_attr(feature = "actual", doc = r##"* [`get_topic_actual_configuration(topic_id) -> Topic`](DshApiClient::get_topic_actual_configuration)"##)]
+#![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#![cfg_attr(feature = "actual", doc = "* [`get_topic_actual_configuration(topic_id) -> Topic`](DshApiClient::get_topic_actual_configuration)")]
 
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{AllocationStatus, Topic, TopicStatus};
@@ -31,8 +31,8 @@ use crate::DshApiResult;
 /// * [`get_topic_configuration(topic_id) -> Topic`](DshApiClient::get_topic_configuration)
 /// * [`get_topic_ids() -> Vec<String>`](DshApiClient::get_topic_ids)
 #[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#[cfg_attr(feature = "actual", doc = r##"* [`get_topic_actual_configuration(topic_id) -> Topic`](DshApiClient::get_topic_actual_configuration)"##)]
+#[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#[cfg_attr(feature = "actual", doc = "* [`get_topic_actual_configuration(topic_id) -> Topic`](DshApiClient::get_topic_actual_configuration)")]
 impl DshApiClient<'_> {
   /// # Create topic
   ///

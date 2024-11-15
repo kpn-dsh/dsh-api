@@ -14,8 +14,8 @@
 //! * [`get_buckets() -> HashMap<bucket_id, bucket>`](DshApiClient::get_buckets)
 //! * [`list_buckets() -> Vec<(bucket_id, bucket)>`](DshApiClient::list_buckets)
 #![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#![cfg_attr(feature = "actual", doc = r##"* [`get_bucket_actual_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_actual_configuration)"##)]
+#![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#![cfg_attr(feature = "actual", doc = "* [`get_bucket_actual_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_actual_configuration)")]
 
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{AllocationStatus, Bucket, BucketStatus};
@@ -41,8 +41,8 @@ use std::collections::HashMap;
 /// * [`get_buckets() -> HashMap<bucket_id, bucket>`](DshApiClient::get_buckets)
 /// * [`list_buckets() -> Vec<(bucket_id, bucket)>`](DshApiClient::list_buckets)
 #[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#[cfg_attr(feature = "actual", doc = r##"* [`get_bucket_actual_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_actual_configuration)"##)]
+#[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#[cfg_attr(feature = "actual", doc = "* [`get_bucket_actual_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_actual_configuration)")]
 impl DshApiClient<'_> {
   /// # Delete bucket
   ///

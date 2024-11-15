@@ -10,8 +10,8 @@
 //! * [`get_certificate_configuration(certificate_id) -> Certificate`](DshApiClient::get_certificate_configuration)
 //! * [`get_certificate_ids(&self) -> Vec<String>`](DshApiClient::get_certificate_ids)
 #![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#![cfg_attr(feature = "actual", doc = r##"* [`get_certificate_actual_configuration(certificate_id) -> Certificate`](DshApiClient::get_certificate_actual_configuration)"##)]
+#![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#![cfg_attr(feature = "actual", doc = "* [`get_certificate_actual_configuration(certificate_id) -> Certificate`](DshApiClient::get_certificate_actual_configuration)")]
 
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{AllocationStatus, Certificate, CertificateStatus};
@@ -31,8 +31,8 @@ use crate::DshApiResult;
 /// * [`get_certificate_configuration(certificate_id) -> Certificate`](DshApiClient::get_certificate_configuration)
 /// * [`get_certificate_ids(&self) -> Vec<String>`](DshApiClient::get_certificate_ids)
 #[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#[cfg_attr(feature = "actual", doc = r##"* [`get_certificate_actual_configuration(certificate_id) -> Certificate`](DshApiClient::get_certificate_actual_configuration)"##)]
+#[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#[cfg_attr(feature = "actual", doc = "* [`get_certificate_actual_configuration(certificate_id) -> Certificate`](DshApiClient::get_certificate_actual_configuration)")]
 impl DshApiClient<'_> {
   /// # Create certificate
   ///

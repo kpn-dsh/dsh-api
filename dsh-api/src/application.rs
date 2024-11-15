@@ -25,10 +25,10 @@
 //! ## Utility functions
 //! * [`application_diff(baseline, sample) -> ApplicationDiff`](DshApiClient::application_diff)
 #![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#![cfg_attr(feature = "actual", doc = r##"* [`get_application_actual(application_id) -> Application`](DshApiClient::get_application_actual)"##)]
-#![cfg_attr(feature = "actual", doc = r##"* [`get_applications_actual() -> HashMap<String, Application>`](DshApiClient::get_applications_actual)"##)]
-#![cfg_attr(feature = "actual", doc = r##"* [`get_application_task_state(application_id, task_id) -> Task`](DshApiClient::get_application_task_state)"##)]
+#![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#![cfg_attr(feature = "actual", doc = "* [`get_application_actual(application_id) -> Application`](DshApiClient::get_application_actual)")]
+#![cfg_attr(feature = "actual", doc = "* [`get_applications_actual() -> HashMap<String, Application>`](DshApiClient::get_applications_actual)")]
+#![cfg_attr(feature = "actual", doc = "* [`get_application_task_state(application_id, task_id) -> Task`](DshApiClient::get_application_task_state)")]
 use crate::dsh_api_client::DshApiClient;
 use crate::query_processor::{Part, QueryProcessor};
 #[cfg(feature = "actual")]
@@ -66,10 +66,10 @@ use std::collections::HashMap;
 /// ## Utility functions
 /// * [`application_diff(baseline, sample) -> ApplicationDiff`](DshApiClient::application_diff)
 #[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#[cfg_attr(feature = "actual", doc = r##"* [`get_application_actual(application_id) -> Application`](DshApiClient::get_application_actual)"##)]
-#[cfg_attr(feature = "actual", doc = r##"* [`get_applications_actual() -> HashMap<String, Application>`](DshApiClient::get_applications_actual)"##)]
-#[cfg_attr(feature = "actual", doc = r##"* [`get_application_task_state(application_id, task_id) -> Task`](DshApiClient::get_application_task_state)"##)]
+#[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#[cfg_attr(feature = "actual", doc = "* [`get_application_actual(application_id) -> Application`](DshApiClient::get_application_actual)")]
+#[cfg_attr(feature = "actual", doc = "* [`get_applications_actual() -> HashMap<String, Application>`](DshApiClient::get_applications_actual)")]
+#[cfg_attr(feature = "actual", doc = "* [`get_application_task_state(application_id, task_id) -> Task`](DshApiClient::get_application_task_state)")]
 impl DshApiClient<'_> {
   /// # Create application
   ///

@@ -14,9 +14,9 @@
 //! ## Utility functions
 //! * [`application_from_app(app) -> (String, &Application)`](DshApiClient::application_from_app)
 #![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#![cfg_attr(feature = "actual", doc = r##"* [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)"##)]
-#![cfg_attr(feature = "actual", doc = r##"* [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)"##)]
+#![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#![cfg_attr(feature = "actual", doc = "* [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)")]
+#![cfg_attr(feature = "actual", doc = "* [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)")]
 use crate::dsh_api_client::DshApiClient;
 use std::collections::HashMap;
 
@@ -41,9 +41,9 @@ use crate::DshApiResult;
 /// ## Utility functions
 /// * [`application_from_app(app) -> (String, &Application)`](DshApiClient::application_from_app)
 #[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#[cfg_attr(feature = "actual", doc = r##"* [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)"]"##)]
-#[cfg_attr(feature = "actual", doc = r##"* [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)"##)]
+#[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#[cfg_attr(feature = "actual", doc = "* [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)")]
+#[cfg_attr(feature = "actual", doc = "* [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)")]
 impl DshApiClient<'_> {
   /// # Return actual configuration of deployed App
   ///

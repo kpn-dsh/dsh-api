@@ -11,8 +11,8 @@
 //! * [`get_secret_ids() -> Vec<String>`](DshApiClient::get_secret_ids)
 //! * [`update_secret(secret_id, secret)`](DshApiClient::update_secret)
 #![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#![cfg_attr(feature = "actual", doc = r##"* [`get_secret_actual_configuration(secret_id) -> Empty`](DshApiClient::get_secret_actual_configuration)"##)]
+#![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#![cfg_attr(feature = "actual", doc = "* [`get_secret_actual_configuration(secret_id) -> Empty`](DshApiClient::get_secret_actual_configuration)")]
 
 // TODO Special treatment for system secrets
 use crate::dsh_api_client::DshApiClient;
@@ -35,8 +35,8 @@ use crate::DshApiResult;
 /// * [`get_secret_ids() -> Vec<String>`](DshApiClient::get_secret_ids)
 /// * [`update_secret(secret_id, secret)`](DshApiClient::update_secret)
 #[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#[cfg_attr(feature = "actual", doc = r##"* [`get_secret_actual_configuration(secret_id) -> Empty`](DshApiClient::get_secret_actual_configuration)"##)]
+#[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#[cfg_attr(feature = "actual", doc = "* [`get_secret_actual_configuration(secret_id) -> Empty`](DshApiClient::get_secret_actual_configuration)")]
 impl DshApiClient<'_> {
   /// # Create secret
   ///

@@ -10,8 +10,8 @@
 //! * [`get_volume_configuration(volume_id) -> Volume`](DshApiClient::get_volume_configuration)
 //! * [`get_volume_ids() -> Vec<String>`](DshApiClient::get_volume_ids)
 #![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#![cfg_attr(feature = "actual", doc = r##"* [`get_volume_actual_configuration(volume_id) -> Volume`](DshApiClient::get_volume_actual_configuration)"##)]
+#![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#![cfg_attr(feature = "actual", doc = "* [`get_volume_actual_configuration(volume_id) -> Volume`](DshApiClient::get_volume_actual_configuration)")]
 
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{AllocationStatus, Volume, VolumeStatus};
@@ -31,8 +31,8 @@ use crate::DshApiResult;
 /// * [`get_volume_configuration(volume_id) -> Volume`](DshApiClient::get_volume_configuration)
 /// * [`get_volume_ids() -> Vec<String>`](DshApiClient::get_volume_ids)
 #[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = r##"## Actual configuration methods"##)]
-#[cfg_attr(feature = "actual", doc = r##"* [`get_volume_actual_configuration(volume_id) -> Volume`](DshApiClient::get_volume_actual_configuration)"##)]
+#[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#[cfg_attr(feature = "actual", doc = "* [`get_volume_actual_configuration(volume_id) -> Volume`](DshApiClient::get_volume_actual_configuration)")]
 impl DshApiClient<'_> {
   /// # Create volume
   ///
