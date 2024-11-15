@@ -104,7 +104,8 @@ async fn main() -> Result<(), String> {
   }
 
   print_header("find_applications");
-  let applications: Vec<(String, Application)> = client.find_applications(&|application| application.needs_token).await?;
+  let predicate = |application: &Application| application.needs_token;
+  let applications: Vec<(String, Application)> = client.find_applications(&predicate).await?;
   println!("{} applications need token", applications.len());
   for (application_id, application) in applications {
     println!("{} -> {}", application_id, application);

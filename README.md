@@ -75,6 +75,15 @@ The following features are defined:
             method versions of the REST API. By default, these methods will not be included.
         </td>
     </tr>
+    <tr valign="top">
+        <td><code>generated</code></td>
+        <td>
+            When this feature is enabled the library will re-export the functions 
+            generated from the REST API. By default, these methods will not be re-exported.
+            Note that the generated functions can also be added explicitly 
+            to the dependencies section in <code>Cargo.toml</code>.
+        </td>
+    </tr>
 </table>
 
 ## How to publish to Artifactory
