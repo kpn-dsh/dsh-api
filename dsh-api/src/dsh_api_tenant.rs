@@ -1,7 +1,8 @@
-use std::env;
-
+//! # Target tenant
 use lazy_static::lazy_static;
 use log::info;
+use std::env;
+use std::fmt::{Display, Formatter};
 
 use crate::platform::DshPlatform;
 use crate::{guid_environment_variable, TENANT_ENVIRONMENT_VARIABLE};
@@ -202,6 +203,12 @@ impl Default for DshApiTenant {
     let platform = DshPlatform::default();
     info!("default dsh api client for {}@{} created", tenant_name, platform);
     DshApiTenant::new(tenant_name, guid, platform)
+  }
+}
+
+impl Display for DshApiTenant {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}:{}@{}", self.name, self.guid, self.platform)
   }
 }
 
