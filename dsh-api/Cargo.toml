@@ -12,6 +12,7 @@ version.workspace = true
 
 [features]
 actual = []
+generated = []
 
 [dependencies]
 #dsh-api-macros = { path = "../dsh-api-macros" }
