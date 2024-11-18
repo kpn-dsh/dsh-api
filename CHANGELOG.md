@@ -15,6 +15,8 @@ All notable changes to the DSH Api Client project will be documented in this fil
 ### Changed
 
 * Some naming.
+* Improved documentation.
+* Changed type of guid to u16.
 
 ### Removed
 

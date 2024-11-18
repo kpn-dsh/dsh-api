@@ -138,7 +138,7 @@ impl DshApiClientFactory {
   }
 
   /// # Returns the group and user id of the factories tenant
-  pub fn guid(&self) -> &str {
+  pub fn guid(&self) -> u16 {
     self.tenant.guid()
   }
 

@@ -12,7 +12,7 @@
 //! in a tenant environment. This example requires that the tenant's name, group id, user id,
 //! platform and API secret are configured via [environment variables](dsh_api_client_factory).
 //!
-//! ```no_run
+//! ```ignore
 //! use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
 //!
 //! # async fn hide() -> Result<(), String> {
@@ -32,7 +32,7 @@
 //! evaluates to `true`.
 //!
 //!
-//! ```no_run
+//! ```ignore
 //! use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 //! use dsh_api::dsh_api_tenant::DshApiTenant;
 //! use dsh_api::platform::DshPlatform;
@@ -59,6 +59,7 @@
 //!
 //!
 
+use std::error::Error as StdError;
 use std::fmt::{Display, Formatter};
 use std::str::Utf8Error;
 
@@ -98,48 +99,61 @@ pub mod volume;
 pub enum DshApiError {
   NotAuthorized,
   NotFound,
-  Unexpected(String),
+  Unexpected(String, Option<Box<dyn StdError + Send + Sync>>),
 }
 
 pub type DshApiResult<T> = Result<T, DshApiError>;
+
+impl StdError for DshApiError {
+  fn source(&self) -> Option<&(dyn StdError + 'static)> {
+    match self {
+      DshApiError::NotAuthorized => None,
+      DshApiError::NotFound => None,
+      DshApiError::Unexpected(_, source) => source.as_deref()?.source(),
+    }
+  }
+}
 
 impl Display for DshApiError {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
       DshApiError::NotAuthorized => write!(f, "not authorized"),
       DshApiError::NotFound => write!(f, "not found"),
-      DshApiError::Unexpected(message) => write!(f, "unexpected error ({})", message),
+      DshApiError::Unexpected(message, cause) => match cause {
+        Some(cause) => write!(f, "unexpected error ({})", cause),
+        None => write!(f, "unexpected error ({})", message),
+      },
     }
   }
 }
 
 impl From<SerdeJsonError> for DshApiError {
   fn from(error: SerdeJsonError) -> Self {
-    DshApiError::Unexpected(error.to_string())
+    DshApiError::Unexpected(error.to_string(), Some(Box::new(error)))
   }
 }
 
 impl From<ReqwestError> for DshApiError {
   fn from(error: ReqwestError) -> Self {
-    DshApiError::Unexpected(error.to_string())
+    DshApiError::Unexpected(error.to_string(), Some(Box::new(error)))
   }
 }
 
 impl From<Utf8Error> for DshApiError {
   fn from(error: Utf8Error) -> Self {
-    DshApiError::Unexpected(error.to_string())
+    DshApiError::Unexpected(error.to_string(), Some(Box::new(error)))
   }
 }
 
 impl From<String> for DshApiError {
   fn from(value: String) -> Self {
-    DshApiError::Unexpected(value)
+    DshApiError::Unexpected(value, None)
   }
 }
 
 impl From<&str> for DshApiError {
   fn from(value: &str) -> Self {
-    DshApiError::Unexpected(value.to_string())
+    DshApiError::Unexpected(value.to_string(), None)
   }
 }
 
@@ -150,18 +164,33 @@ impl From<DshApiError> for String {
 }
 
 pub const PLATFORM_ENVIRONMENT_VARIABLE: &str = "DSH_API_PLATFORM";
+pub const SECRET_ENVIRONMENT_VARIABLE_PREFIX: &str = "DSH_API_SECRET";
+pub const GUID_ENVIRONMENT_VARIABLE_PREFIX: &str = "DSH_API_GUID";
 pub const TENANT_ENVIRONMENT_VARIABLE: &str = "DSH_API_TENANT";
 
 pub fn secret_environment_variable(platform_name: &str, tenant_name: &str) -> String {
   format!(
-    "DSH_API_SECRET_{}_{}",
+    "{}_{}_{}",
+    SECRET_ENVIRONMENT_VARIABLE_PREFIX,
     platform_name.to_ascii_uppercase().replace('-', "_"),
     tenant_name.to_ascii_uppercase().replace('-', "_")
   )
 }
 
 pub fn guid_environment_variable(tenant_name: &str) -> String {
-  format!("DSH_API_GUID_{}", tenant_name.to_ascii_uppercase().replace('-', "_"))
+  format!("{}_{}", GUID_ENVIRONMENT_VARIABLE_PREFIX, tenant_name.to_ascii_uppercase().replace('-', "_"))
+}
+
+#[test]
+fn test_dsh_api_error_is_send() {
+  fn assert_send<T: StdError + Send>() {}
+  assert_send::<DshApiError>();
+}
+
+#[test]
+fn test_dsh_api_error_is_sync() {
+  fn assert_sync<T: Sync>() {}
+  assert_sync::<DshApiError>();
 }
 
 // API naming convention

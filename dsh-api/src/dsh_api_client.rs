@@ -40,7 +40,7 @@ impl<'a> DshApiClient<'a> {
     self.generated_client.api_version()
   }
 
-  pub(crate) fn response_wrapper<T>(progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
+  pub(crate) fn _response_wrapper<T>(progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
   where
     T: Serialize,
   {
@@ -94,7 +94,7 @@ impl<'a> DshApiClient<'a> {
     self.tenant.platform()
   }
 
-  pub fn guid(&self) -> &str {
+  pub fn guid(&self) -> u16 {
     self.tenant.guid()
   }
 
@@ -129,28 +129,37 @@ impl From<ReqwestStatusCode> for DshApiResponseStatus {
 
 impl From<ConversionError> for DshApiError {
   fn from(value: ConversionError) -> Self {
-    DshApiError::Unexpected(value.to_string())
+    DshApiError::Unexpected(value.to_string(), None)
   }
 }
 
 impl From<ProgenitorError> for DshApiError {
   fn from(progenitor_error: ProgenitorError) -> Self {
-    match progenitor_error {
-      ProgenitorError::InvalidRequest(string) => DshApiError::Unexpected(format!("invalid request ({})", string)),
-      ProgenitorError::CommunicationError(reqwest_error) => DshApiError::Unexpected(format!("communication error (reqwest error: {})", reqwest_error)),
-      ProgenitorError::InvalidUpgrade(reqwest_error) => DshApiError::Unexpected(format!("invalid upgrade (reqwest error: {})", reqwest_error)),
-      ProgenitorError::ErrorResponse(progenitor_response_value) => DshApiError::Unexpected(format!("error response (progenitor response value: {:?})", progenitor_response_value)),
-      ProgenitorError::ResponseBodyError(reqwest_error) => DshApiError::Unexpected(format!("response body error (reqwest error: {})", reqwest_error)),
-      ProgenitorError::InvalidResponsePayload(_bytes, json_error) => DshApiError::Unexpected(format!("invalid response payload (json error: {})", json_error)),
+    match &progenitor_error {
+      ProgenitorError::InvalidRequest(string) => DshApiError::Unexpected(format!("invalid request ({})", string), Some(Box::new(progenitor_error))),
+      ProgenitorError::CommunicationError(reqwest_error) => {
+        DshApiError::Unexpected(format!("communication error (reqwest error: {})", reqwest_error), Some(Box::new(progenitor_error)))
+      }
+      ProgenitorError::InvalidUpgrade(reqwest_error) => DshApiError::Unexpected(format!("invalid upgrade (reqwest error: {})", reqwest_error), Some(Box::new(progenitor_error))),
+      ProgenitorError::ErrorResponse(progenitor_response_value) => DshApiError::Unexpected(
+        format!("error response (progenitor response value: {:?})", progenitor_response_value),
+        Some(Box::new(progenitor_error)),
+      ),
+      ProgenitorError::ResponseBodyError(reqwest_error) => {
+        DshApiError::Unexpected(format!("response body error (reqwest error: {})", reqwest_error), Some(Box::new(progenitor_error)))
+      }
+      ProgenitorError::InvalidResponsePayload(_bytes, json_error) => {
+        DshApiError::Unexpected(format!("invalid response payload (json error: {})", json_error), Some(Box::new(progenitor_error)))
+      }
       ProgenitorError::UnexpectedResponse(reqwest_response) => match reqwest_response.status() {
         ReqwestStatusCode::NOT_FOUND => DshApiError::NotFound,
         ReqwestStatusCode::UNAUTHORIZED | ReqwestStatusCode::FORBIDDEN | ReqwestStatusCode::METHOD_NOT_ALLOWED => DshApiError::NotAuthorized,
-        other_status_code => DshApiError::Unexpected(format!(
-          "unexpected response (status: {}, reqwest response: {:?})",
-          other_status_code, reqwest_response
-        )),
+        other_status_code => DshApiError::Unexpected(
+          format!("unexpected response (status: {}, reqwest response: {:?})", other_status_code, reqwest_response),
+          Some(Box::new(progenitor_error)),
+        ),
       },
-      ProgenitorError::PreHookError(string) => DshApiError::Unexpected(format!("pre-hook error ({})", string)),
+      ProgenitorError::PreHookError(string) => DshApiError::Unexpected(format!("pre-hook error ({})", string), Some(Box::new(progenitor_error))),
     }
   }
 }
