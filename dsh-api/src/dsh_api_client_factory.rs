@@ -43,6 +43,7 @@ use crate::dsh_api_client::DshApiClient;
 use crate::dsh_api_tenant::{DshApiTenant, DEFAULT_DSH_API_TENANT};
 use crate::generated::Client as GeneratedClient;
 use crate::platform::{DshPlatform, DEFAULT_DSH_PLATFORM};
+use crate::DshApiError;
 use dsh_sdk::RestTokenFetcherBuilder;
 use dsh_sdk::{Platform as SdkPlatform, RestTokenFetcher};
 use lazy_static::lazy_static;
@@ -97,9 +98,9 @@ impl DshApiClientFactory {
   /// ```no_run
   /// use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   /// use dsh_api::dsh_api_tenant::DshApiTenant;
-  /// use dsh_api::platform::DshPlatform;
   ///
-  /// # async fn hide() -> Result<(), String> {
+  /// # use dsh_api::DshApiError;
+  /// # async fn hide() -> Result<(), DshApiError> {
   /// let secret = "...".to_string();
   /// let tenant = DshApiTenant::from_tenant("greenbox".to_string())?;
   /// let client_factory = DshApiClientFactory::create(tenant, secret)?;
@@ -108,7 +109,7 @@ impl DshApiClientFactory {
   /// # Ok(())
   /// # }
   /// ```
-  pub fn create(tenant: DshApiTenant, secret: String) -> Result<Self, String> {
+  pub fn create(tenant: DshApiTenant, secret: String) -> Result<Self, DshApiError> {
     match RestTokenFetcherBuilder::new(SdkPlatform::from(tenant.platform()))
       .tenant_name(tenant.name().clone())
       .client_secret(secret)
@@ -118,7 +119,10 @@ impl DshApiClientFactory {
         let generated_client = GeneratedClient::new(tenant.platform().endpoint_rest_api().as_str());
         Ok(DshApiClientFactory { token_fetcher, generated_client, tenant })
       }
-      Err(e) => Err(format!("could not create token fetcher ({})", e)),
+      Err(rest_token_error) => Err(DshApiError::Unexpected(
+        format!("could not create token fetcher ({})", rest_token_error),
+        Some(Box::new(rest_token_error)),
+      )),
     }
   }
 
@@ -154,7 +158,8 @@ impl DshApiClientFactory {
   /// ```no_run
   /// use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   ///
-  /// # async fn hide() -> Result<(), String> {
+  /// # use dsh_api::DshApiError;
+  /// # async fn hide() -> Result<(), DshApiError> {
   /// let client_factory = DshApiClientFactory::new();
   /// match client_factory.client().await {
   ///   Ok(client) => println!("rest api version is {}", client.api_version()),
@@ -163,11 +168,8 @@ impl DshApiClientFactory {
   /// # Ok(())
   /// # }
   /// ```
-  pub async fn client(&self) -> Result<DshApiClient, String> {
-    match self.token_fetcher.get_token().await {
-      Ok(token) => Ok(DshApiClient::new(token, &self.generated_client, &self.tenant)),
-      Err(e) => Err(format!("could not create token ({})", e)),
-    }
+  pub async fn client(&self) -> Result<DshApiClient, DshApiError> {
+    Ok(DshApiClient::new(self.token_fetcher.get_token().await?, &self.generated_client, &self.tenant))
   }
 }
 
@@ -202,8 +204,8 @@ lazy_static! {
   /// ## Examples
   /// ```no_run
   /// use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-  ///
-  /// # async fn hide() -> Result<(), String> {
+  /// # use dsh_api::DshApiError;
+  /// # async fn hide() -> Result<(), DshApiError> {
   /// let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
   /// let client = client_factory.client().await?;
   /// println!("rest api version is {}", client.api_version());
@@ -216,11 +218,11 @@ lazy_static! {
   pub static ref DEFAULT_DSH_API_CLIENT_FACTORY: DshApiClientFactory = DshApiClientFactory::default();
 }
 
-pub fn get_secret_from_platform_and_tenant(platform_name: &str, tenant_name: &str) -> Result<String, String> {
+pub fn get_secret_from_platform_and_tenant(platform_name: &str, tenant_name: &str) -> Result<String, DshApiError> {
   let secret_env = format!(
     "DSH_API_SECRET_{}_{}",
     platform_name.to_ascii_uppercase().replace('-', "_"),
     tenant_name.to_ascii_uppercase().replace('-', "_")
   );
-  env::var(&secret_env).map_err(|_| format!("environment variable {} not set", secret_env))
+  env::var(&secret_env).map_err(|_| DshApiError::Configuration(format!("environment variable {} not set", secret_env)))
 }

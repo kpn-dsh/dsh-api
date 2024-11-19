@@ -15,7 +15,8 @@
 //! ```ignore
 //! use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
 //!
-//! # async fn hide() -> Result<(), String> {
+//! # use dsh_api::DshApiError;
+//! # async fn hide() -> Result<(), DshApiError> {
 //! let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
 //! for (application_id, application) in client.list_applications()? {
 //!   println!("{} -> {}", application_id, application);
@@ -38,7 +39,8 @@
 //! use dsh_api::platform::DshPlatform;
 //! use dsh_api::types::Application;
 //!
-//! # async fn hide() -> Result<(), String> {
+//! # use dsh_api::DshApiError;
+//! # async fn hide() -> Result<(), DshApiError> {
 //! let tenant = DshApiTenant::new(
 //!   "greenbox".to_string(),
 //!   "2067:2067".to_string(),
@@ -55,20 +57,17 @@
 //! # Ok(())
 //! # }
 //! ```
-//!
-//!
-//!
-
-use std::error::Error as StdError;
-use std::fmt::{Display, Formatter};
-use std::str::Utf8Error;
-
-use reqwest::Error as ReqwestError;
-use serde_json::Error as SerdeJsonError;
 
 #[cfg_attr(feature = "generated", doc = "## Functions generated from openapi file")]
 #[cfg(feature = "generated")]
 pub use dsh_api_generated::generated;
+use dsh_sdk::error::DshRestTokenError;
+use log::{debug, error};
+use reqwest::Error as ReqwestError;
+use serde_json::Error as SerdeJsonError;
+use std::error::Error as StdError;
+use std::fmt::{Display, Formatter};
+use std::str::Utf8Error;
 
 #[cfg(not(feature = "generated"))]
 pub(crate) use dsh_api_generated::generated;
@@ -97,6 +96,7 @@ pub mod volume;
 
 #[derive(Debug)]
 pub enum DshApiError {
+  Configuration(String),
   NotAuthorized,
   NotFound,
   Unexpected(String, Option<Box<dyn StdError + Send + Sync>>),
@@ -107,6 +107,7 @@ pub type DshApiResult<T> = Result<T, DshApiError>;
 impl StdError for DshApiError {
   fn source(&self) -> Option<&(dyn StdError + 'static)> {
     match self {
+      DshApiError::Configuration(_) => None,
       DshApiError::NotAuthorized => None,
       DshApiError::NotFound => None,
       DshApiError::Unexpected(_, source) => source.as_deref()?.source(),
@@ -117,6 +118,7 @@ impl StdError for DshApiError {
 impl Display for DshApiError {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
+      DshApiError::Configuration(message) => write!(f, "{}", message),
       DshApiError::NotAuthorized => write!(f, "not authorized"),
       DshApiError::NotFound => write!(f, "not found"),
       DshApiError::Unexpected(message, cause) => match cause {
@@ -130,6 +132,27 @@ impl Display for DshApiError {
 impl From<SerdeJsonError> for DshApiError {
   fn from(error: SerdeJsonError) -> Self {
     DshApiError::Unexpected(error.to_string(), Some(Box::new(error)))
+  }
+}
+
+impl From<DshRestTokenError> for DshApiError {
+  fn from(error: DshRestTokenError) -> Self {
+    match error {
+      DshRestTokenError::UnknownClientId => DshApiError::Unexpected("unknown client id".to_string(), Some(Box::new(error))),
+      DshRestTokenError::UnknownClientSecret => DshApiError::Unexpected("unknown client secret".to_string(), Some(Box::new(error))),
+      DshRestTokenError::FailureTokenFetch(_) => DshApiError::Unexpected("could not fetch token".to_string(), Some(Box::new(error))),
+      DshRestTokenError::StatusCode { status_code, ref error_body } => {
+        if status_code == 401 {
+          DshApiError::NotAuthorized
+        } else {
+          let message = format!("unexpected error fetching token (status code {})", status_code);
+          error!("{}", message);
+          debug!("{:?}", error_body);
+          DshApiError::Unexpected(message, Some(Box::new(error)))
+        }
+      }
+      _ => DshApiError::Unexpected(format!("unrecognized error ({})", error), Some(Box::new(error))),
+    }
   }
 }
 

@@ -1,13 +1,9 @@
 //! # Enums, traits and structs used by the various find methods.
-//!
-//!
-//!
-//!
 use std::fmt::{Display, Formatter};
 
-use regex::Regex;
-
 use crate::query_processor::Part::{Matching, NonMatching};
+use crate::DshApiError;
+use regex::Regex;
 
 /// # Represents a part of a matched query.
 #[derive(Debug, PartialEq)]
@@ -52,10 +48,6 @@ impl Part {
   pub fn matching(value: impl Into<String>) -> Part {
     Matching(value.into())
   }
-
-  // pub fn matching<S: AsRef<str>>(value: S) -> Part {
-  //   Matching(value.as_ref().to_string())
-  // }
 
   /// # Create a `Part::NonMatching`
   ///
@@ -153,7 +145,7 @@ pub struct ExactMatchQueryProcessor<'a> {
 }
 
 impl<'a> ExactMatchQueryProcessor<'a> {
-  pub fn create(pattern: &'a str) -> Result<Self, String> {
+  pub fn create(pattern: &'a str) -> Result<Self, DshApiError> {
     Ok(Self { pattern })
   }
 }
@@ -193,10 +185,10 @@ pub struct RegexQueryProcessor {
 }
 
 impl RegexQueryProcessor {
-  pub fn create(pattern: &str) -> Result<Self, String> {
+  pub fn create(pattern: &str) -> Result<Self, DshApiError> {
     match Regex::new(pattern) {
       Ok(regex) => Ok(Self { regex }),
-      Err(error) => Err(error.to_string()),
+      Err(error) => Err(DshApiError::Configuration(error.to_string())),
     }
   }
 }

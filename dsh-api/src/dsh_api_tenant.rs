@@ -1,6 +1,6 @@
 //! # Target tenant
 use crate::platform::DshPlatform;
-use crate::{guid_environment_variable, TENANT_ENVIRONMENT_VARIABLE};
+use crate::{guid_environment_variable, DshApiError, TENANT_ENVIRONMENT_VARIABLE};
 use lazy_static::lazy_static;
 use log::info;
 use std::env;
@@ -52,19 +52,24 @@ impl DshApiTenant {
   /// ## Parameters
   /// * `tenant_name` - tenant's name
   ///
+  /// ## Returns
+  /// * `Ok(tenant)` - tenant object
+  /// * `Err(error)` - error containing a configuration error
+  ///
   /// ## Examples
   ///
   /// ```no_run
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
   /// # use dsh_api::platform::DshPlatform;
-  /// # fn main() -> Result<(), String> {
+  /// # use dsh_api::DshApiError;
+  /// # fn main() -> Result<(), DshApiError> {
   /// let tenant_name = String::from("greenbox-dev");
   /// let dsh_api_tenant = DshApiTenant::from_tenant(tenant_name)?;
   /// println!("target platform: {}", dsh_api_tenant.platform());
   /// # Ok(())
   /// # }
   /// ```
-  pub fn from_tenant(tenant_name: String) -> Result<Self, String> {
+  pub fn from_tenant(tenant_name: String) -> Result<Self, DshApiError> {
     let guid = guid_from_tenant_name(tenant_name.as_str())?;
     let platform = DshPlatform::default();
     Ok(DshApiTenant::new(tenant_name, guid, platform))
@@ -81,12 +86,17 @@ impl DshApiTenant {
   /// * `tenant_name` - tenant's name
   /// * `platform` - target platform for the api
   ///
+  /// ## Returns
+  /// * `Ok(tenant)` - tenant object
+  /// * `Err(error)` - error containing a configuration error
+  ///
   /// ## Examples
   ///
   /// ```no_run
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
   /// # use dsh_api::platform::DshPlatform;
-  /// # fn main() -> Result<(), String> {
+  /// # use dsh_api::DshApiError;
+  /// # fn main() -> Result<(), DshApiError> {
   /// let tenant_name = String::from("greenbox-dev");
   /// let platform = DshPlatform::NpLz;
   /// let dsh_api_tenant = DshApiTenant::from_tenant_and_platform(tenant_name, platform)?;
@@ -94,7 +104,7 @@ impl DshApiTenant {
   /// # Ok(())
   /// # }
   /// ```
-  pub fn from_tenant_and_platform(tenant_name: String, platform: DshPlatform) -> Result<Self, String> {
+  pub fn from_tenant_and_platform(tenant_name: String, platform: DshPlatform) -> Result<Self, DshApiError> {
     let guid = guid_from_tenant_name(tenant_name.as_str())?;
     Ok(DshApiTenant::new(tenant_name, guid, platform))
   }
@@ -110,12 +120,17 @@ impl DshApiTenant {
   /// ## Parameters
   /// * `platform` - target platform for the api
   ///
+  /// ## Returns
+  /// * `Ok(tenant)` - tenant object
+  /// * `Err(error)` - error containing a configuration error
+  ///
   /// ## Examples
   ///
   /// ```no_run
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
   /// # use dsh_api::platform::DshPlatform;
-  /// # fn main() -> Result<(), String> {
+  /// # use dsh_api::DshApiError;
+  /// # fn main() -> Result<(), DshApiError> {
   /// let tenant_name = String::from("greenbox-dev");
   /// let platform = DshPlatform::NpLz;
   /// let dsh_api_tenant = DshApiTenant::from_tenant_and_platform(tenant_name, platform)?;
@@ -123,10 +138,10 @@ impl DshApiTenant {
   /// # Ok(())
   /// # }
   /// ```
-  pub fn from_platform(platform: DshPlatform) -> Result<Self, String> {
+  pub fn from_platform(platform: DshPlatform) -> Result<Self, DshApiError> {
     let tenant_name = match env::var(TENANT_ENVIRONMENT_VARIABLE) {
       Ok(name) => name,
-      Err(_) => return Err(format!("environment variable {} not set", TENANT_ENVIRONMENT_VARIABLE)),
+      Err(_) => return Err(DshApiError::Configuration(format!("environment variable {} not set", TENANT_ENVIRONMENT_VARIABLE))),
     };
     let guid = guid_from_tenant_name(tenant_name.as_str())?;
     Ok(DshApiTenant::new(tenant_name, guid, platform))
@@ -203,18 +218,18 @@ lazy_static! {
   pub static ref DEFAULT_DSH_API_TENANT: DshApiTenant = DshApiTenant::default();
 }
 
-pub fn get_default_tenant_name() -> Result<String, String> {
-  env::var(TENANT_ENVIRONMENT_VARIABLE).map_err(|_| format!("environment variable {} not set", TENANT_ENVIRONMENT_VARIABLE))
+pub fn get_default_tenant_name() -> Result<String, DshApiError> {
+  env::var(TENANT_ENVIRONMENT_VARIABLE).map_err(|_| DshApiError::Configuration(format!("environment variable {} not set", TENANT_ENVIRONMENT_VARIABLE)))
 }
 
-fn guid_from_tenant_name(tenant_name: &str) -> Result<u16, String> {
+fn guid_from_tenant_name(tenant_name: &str) -> Result<u16, DshApiError> {
   let guid_env = guid_environment_variable(tenant_name);
   match env::var(&guid_env) {
     Ok(guid) => match parse_and_validate_guid(guid) {
       Ok(guid) => Ok(guid),
-      Err(error) => Err(format!("{} in environment variable {}", error, guid_env)),
+      Err(error) => Err(DshApiError::Configuration(format!("{} in environment variable {}", error, guid_env))),
     },
-    Err(_) => Err(format!("environment variable {} not set", guid_env)),
+    Err(_) => Err(DshApiError::Configuration(format!("environment variable {} not set", guid_env))),
   }
 }
 
@@ -229,21 +244,22 @@ fn guid_from_tenant_name(tenant_name: &str) -> Result<u16, String> {
 ///
 /// ## Examples
 /// ```rust
-/// # fn main() -> Result<(), String> {
+/// use dsh_api::DshApiError;
+/// # fn main() -> Result<(), DshApiError> {
 /// # use dsh_api::dsh_api_tenant::parse_and_validate_guid;
 /// let guid = parse_and_validate_guid("1903".to_string())?;
 /// assert_eq!(1903, guid);
 /// # Ok(())
 /// # }
-pub fn parse_and_validate_guid(guid: String) -> Result<u16, String> {
+pub fn parse_and_validate_guid(guid: String) -> Result<u16, DshApiError> {
   match guid.parse::<u16>() {
     Ok(guid) => {
       if guid > 0 && guid < 60000 {
         Ok(guid)
       } else {
-        Err(format!("guid {} not in range (1 <= guid < 60000)", guid))
+        Err(DshApiError::Configuration(format!("guid {} not in range (1 <= guid < 60000)", guid)))
       }
     }
-    Err(_) => Err(format!("could not parse guid '{}'", guid)),
+    Err(_) => Err(DshApiError::Configuration(format!("could not parse guid '{}'", guid))),
   }
 }
