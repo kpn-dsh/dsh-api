@@ -16,12 +16,12 @@ pub struct DshApiTenant {
 impl DshApiTenant {
   /// # Create new dsh api tenant
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `name` - tenant's name
   /// * `guid` - tenant's group and user id (must be the same on DSH)
   /// * `platform` - target platform for the api
   ///
-  /// ## Examples
+  /// # Examples
   ///
   /// ```no_run
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
@@ -49,14 +49,14 @@ impl DshApiTenant {
   /// The function will return an `Error<String>` if the environment variables are not set
   /// or contains illegal values.
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `tenant_name` - tenant's name
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(tenant)` - tenant object
   /// * `Err(error)` - error containing a configuration error
   ///
-  /// ## Examples
+  /// # Examples
   ///
   /// ```no_run
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
@@ -82,15 +82,15 @@ impl DshApiTenant {
   /// environment variable `DSH_API_GUID_[TENANT]`.
   /// The function will return an `Error<String>` if the environment variable is not set.
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `tenant_name` - tenant's name
   /// * `platform` - target platform for the api
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(tenant)` - tenant object
   /// * `Err(error)` - error containing a configuration error
   ///
-  /// ## Examples
+  /// # Examples
   ///
   /// ```no_run
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
@@ -117,14 +117,14 @@ impl DshApiTenant {
   /// `DSH_API_GUID_[TENANT]`.
   /// The function will return an `Error<String>` if the environment variables are not set.
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `platform` - target platform for the api
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(tenant)` - tenant object
   /// * `Err(error)` - error containing a configuration error
   ///
-  /// ## Examples
+  /// # Examples
   ///
   /// ```no_run
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
@@ -147,6 +147,24 @@ impl DshApiTenant {
     Ok(DshApiTenant::new(tenant_name, guid, platform))
   }
 
+  /// Returns the default tenant
+  ///
+  /// This method will read the tenant name, guid and platform form the respective
+  /// environment variables and will create a`DshApiTenant` if possible. It will return an
+  /// `Error<String>` when one or more of these the environment variables is not set or
+  /// contains an undefined value.
+  ///
+  /// # Returns
+  /// * `Ok<DshPlatform>` - when the environment variables are provided and contain valid values
+  /// * `Error<String>` - when one or more of the environment variables is not set or
+  ///   contains an undefined value
+  pub fn try_default() -> Result<Self, String> {
+    let tenant_name = get_default_tenant_name()?;
+    let guid = guid_from_tenant_name(tenant_name.as_str())?;
+    let platform = DshPlatform::try_default()?;
+    Ok(DshApiTenant::new(tenant_name, guid, platform))
+  }
+
   pub fn platform(&self) -> &DshPlatform {
     &self.platform
   }
@@ -163,7 +181,7 @@ impl DshApiTenant {
     self.platform.app_domain(&self.name)
   }
 
-  pub fn console_url(&self) -> Option<String> {
+  pub fn console_url(&self) -> Option<&str> {
     self.platform.console_url()
   }
 
@@ -175,36 +193,40 @@ impl DshApiTenant {
     self.platform.monitoring_url(&self.name)
   }
 
-  pub fn public_vhosts_domain(&self) -> Option<String> {
+  pub fn public_vhosts_domain(&self) -> Option<&str> {
     self.platform.public_vhosts_domain()
   }
 
-  pub fn realm(&self) -> String {
+  pub fn realm(&self) -> &str {
     self.platform.realm()
   }
 
-  pub fn endpoint_rest_access_token(&self) -> String {
+  pub fn endpoint_rest_access_token(&self) -> &str {
     self.platform.endpoint_rest_access_token()
   }
 
-  pub fn endpoint_rest_api(&self) -> String {
+  pub fn endpoint_rest_api(&self) -> &str {
     self.platform.endpoint_rest_api()
   }
 }
 
 impl Default for DshApiTenant {
+  /// Returns the default tenant
+  ///
+  /// This method will read the tenant name, guid and platform form the respective
+  /// environment variables and will create a`DshApiTenant` if possible.
+  ///
+  /// # Panics
+  /// This method will panic if the environment variable is not set or
+  /// if it contains an invalid platform name.
   fn default() -> Self {
-    let tenant_name = match get_default_tenant_name() {
-      Ok(name) => name,
+    match Self::try_default() {
+      Ok(dsh_api_tenant) => {
+        info!("default dsh api tenant {} created", dsh_api_tenant);
+        dsh_api_tenant
+      }
       Err(error) => panic!("{}", error),
-    };
-    let guid = match guid_from_tenant_name(tenant_name.as_str()) {
-      Ok(guid) => guid,
-      Err(error) => panic!("{}", error),
-    };
-    let platform = DshPlatform::default();
-    info!("default dsh api client for {}@{} created", tenant_name, platform);
-    DshApiTenant::new(tenant_name, guid, platform)
+    }
   }
 }
 
@@ -218,31 +240,16 @@ lazy_static! {
   pub static ref DEFAULT_DSH_API_TENANT: DshApiTenant = DshApiTenant::default();
 }
 
-pub fn get_default_tenant_name() -> Result<String, DshApiError> {
-  env::var(TENANT_ENVIRONMENT_VARIABLE).map_err(|_| DshApiError::Configuration(format!("environment variable {} not set", TENANT_ENVIRONMENT_VARIABLE)))
-}
-
-fn guid_from_tenant_name(tenant_name: &str) -> Result<u16, DshApiError> {
-  let guid_env = guid_environment_variable(tenant_name);
-  match env::var(&guid_env) {
-    Ok(guid) => match parse_and_validate_guid(guid) {
-      Ok(guid) => Ok(guid),
-      Err(error) => Err(DshApiError::Configuration(format!("{} in environment variable {}", error, guid_env))),
-    },
-    Err(_) => Err(DshApiError::Configuration(format!("environment variable {} not set", guid_env))),
-  }
-}
-
 /// # Parse and validate guid string
 ///
-/// ## Parameters
+/// # Parameters
 /// * `guid` - Guid string
 ///
-/// ## Returns
+/// # Returns
 /// `OK(guid)` - when the guid is valid
 /// `Err(message)` - when the guid is invalid
 ///
-/// ## Examples
+/// # Examples
 /// ```rust
 /// use dsh_api::DshApiError;
 /// # fn main() -> Result<(), DshApiError> {
@@ -261,5 +268,20 @@ pub fn parse_and_validate_guid(guid: String) -> Result<u16, DshApiError> {
       }
     }
     Err(_) => Err(DshApiError::Configuration(format!("could not parse guid '{}'", guid))),
+  }
+}
+
+fn get_default_tenant_name() -> Result<String, DshApiError> {
+  env::var(TENANT_ENVIRONMENT_VARIABLE).map_err(|_| DshApiError::Configuration(format!("environment variable {} not set", TENANT_ENVIRONMENT_VARIABLE)))
+}
+
+fn guid_from_tenant_name(tenant_name: &str) -> Result<u16, DshApiError> {
+  let guid_env = guid_environment_variable(tenant_name);
+  match env::var(&guid_env) {
+    Ok(guid) => match parse_and_validate_guid(guid) {
+      Ok(guid) => Ok(guid),
+      Err(error) => Err(DshApiError::Configuration(format!("{} in environment variable {}", error, guid_env))),
+    },
+    Err(_) => Err(DshApiError::Configuration(format!("environment variable {} not set", guid_env))),
   }
 }
