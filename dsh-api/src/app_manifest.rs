@@ -2,10 +2,10 @@
 //!
 //! Module that contains a function to query the App Catalog for all manifest files.
 //!
-//! ## API methods
+//! # API Methods
 //! * [`list_app_catalog_manifests() -> Vec<AppCatalogManifest>`](DshApiClient::list_app_catalog_manifests)
 //!
-//! ## Utility methods
+//! # Utility methods
 //! * [`list_app_catalog_manifest_ids() -> Vec<String>`](DshApiClient::list_app_catalog_manifest_ids)
 //! * [`list_app_catalog_manifest_ids_with_versions() -> Vec<(String, Vec<String>)>`](DshApiClient::list_app_catalog_manifest_ids_with_versions)
 //! * [`list_app_catalog_manifests_with_versions() -> Vec<(String, Vec<String>)>`](DshApiClient::list_app_catalog_manifests_with_versions)
@@ -36,10 +36,10 @@ pub const VERSION: &str = "version";
 ///
 /// Module that contains a function to query the App Catalog for all manifest files.
 ///
-/// ## API methods
+/// # API Methods
 /// * [`list_app_catalog_manifests() -> Vec<AppCatalogManifest>`](DshApiClient::list_app_catalog_manifests)
 ///
-/// ## Utility methods
+/// # Utility methods
 /// * [`list_app_catalog_manifest_ids() -> Vec<String>`](DshApiClient::list_app_catalog_manifest_ids)
 /// * [`list_app_catalog_manifest_ids_with_versions() -> Vec<(String, Vec<String>)>`](DshApiClient::list_app_catalog_manifest_ids_with_versions)
 /// * [`list_app_catalog_manifests_with_versions() -> Vec<(String, Vec<String>)>`](DshApiClient::list_app_catalog_manifests_with_versions)
@@ -48,7 +48,7 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /appcatalog/{tenant}/manifest`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec`[`AppCatalogManifest`]`>` - vector containing all app manifests
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_app_catalog_manifests(&self) -> DshApiResult<Vec<AppCatalogManifest>> {
@@ -59,7 +59,7 @@ impl DshApiClient<'_> {
 
   /// # Return sorted list of all App Catalog manifest ids
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<String>>` - vector containing all manifest ids
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_app_catalog_manifest_ids(&self) -> DshApiResult<Vec<String>> {
@@ -81,7 +81,7 @@ impl DshApiClient<'_> {
 
   /// # Return list of all App Catalog manifest ids with available version numbers
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<(String, Vec<String>)>>` - vector containing pairs of ids and versions
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_app_catalog_manifest_ids_with_versions(&self) -> DshApiResult<Vec<(String, Vec<String>)>> {
@@ -108,7 +108,7 @@ impl DshApiClient<'_> {
 
   /// # Return list of all App Catalog manifests with available manifest versions
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<(String, Vec<(String, Manifest)>)>>` - vector containing pairs of ids and versions
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_app_catalog_manifests_with_versions(&self) -> DshApiResult<Vec<(String, Vec<(String, Manifest)>)>> {

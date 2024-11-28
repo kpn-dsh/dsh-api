@@ -2,7 +2,7 @@
 //!
 //! Module that contains functions to configure apps you start from the App Catalog.
 //!
-//! ## API methods
+//! # API Methods
 //! * [`create_app_catalog_configuration(app_id, configuration)`](DshApiClient::create_app_catalog_configuration)
 //! * [`delete_app_catalog_configuration(app_id)`](DshApiClient::delete_app_catalog_configuration)
 //! * [`get_app_catalog_configuration_allocation_status(app_id) -> AllocationStatus`](DshApiClient::get_app_catalog_configuration_allocation_status)
@@ -18,7 +18,7 @@ use crate::DshApiResult;
 ///
 /// Module that contains functions to configure apps you start from the App Catalog.
 ///
-/// ## API methods
+/// # API Methods
 /// * [`create_app_catalog_configuration(app_id, configuration)`](DshApiClient::create_app_catalog_configuration)
 /// * [`delete_app_catalog_configuration(app_id)`](DshApiClient::delete_app_catalog_configuration)
 /// * [`get_app_catalog_configuration_allocation_status(app_id) -> AllocationStatus`](DshApiClient::get_app_catalog_configuration_allocation_status)
@@ -28,11 +28,11 @@ impl DshApiClient<'_> {
   ///
   /// API function: `PUT /appcatalog/{tenant}/appcatalogapp/{appcatalogappid}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `app_catalog_id` - id of the app that must be deleted
   /// * `configuration` - configuration of the app that must created or updated
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the app has been successfully deleted)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -51,10 +51,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `DELETE /appcatalog/{tenant}/appcatalogapp/{appcatalogappid}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `app_catalog_id` - id of the app that must be deleted
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the app has been successfully deleted)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -73,10 +73,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /appcatalog/{tenant}/appcatalogapp/{appcatalogappid}/status`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `app_catalog_id` - id of the requested app
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`AllocationStatus`]`>` - app status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_app_catalog_configuration_allocation_status(&self, app_catalog_id: &str) -> DshApiResult<AllocationStatus> {
@@ -94,10 +94,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /appcatalog/{tenant}/appcatalogapp/{appcatalogappid}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `app_catalog_id` - id of the requested app
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`AppCatalogAppConfiguration`]`>` - app configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_app_catalog_configuration(&self, app_catalog_id: &str) -> DshApiResult<AppCatalogAppConfiguration> {

@@ -2,7 +2,7 @@
 //!
 //! Module that contains functions to manage Kafka topics.
 //!
-//! ## API methods
+//! # API Methods
 //! * [`create_topic(topic_id, configuration)`](DshApiClient::create_topic)
 //! * [`delete_topic(topic_id)`](DshApiClient::delete_topic)
 //! * [`get_topic(topic_id) -> TopicStatus`](DshApiClient::get_topic)
@@ -23,7 +23,7 @@ use crate::DshApiResult;
 ///
 /// Module that contains functions to manage Kafka topics.
 ///
-/// ## API methods
+/// # API Methods
 /// * [`create_topic(topic_id, configuration)`](DshApiClient::create_topic)
 /// * [`delete_topic(topic_id)`](DshApiClient::delete_topic)
 /// * [`get_topic(topic_id) -> TopicStatus`](DshApiClient::get_topic)
@@ -38,11 +38,11 @@ impl DshApiClient<'_> {
   ///
   /// API function: `PUT /allocation/{tenant}/topic/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `topic_id` - name of the created topic
   /// * `configuration` - configuration for the created topic
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the topic has been successfully created)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -61,10 +61,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `DELETE /allocation/{tenant}/topic/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `topic_id` - name of the topic to delete
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the topic has been successfully deleted)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -83,10 +83,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/topic/{id}`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `topic_id` - name of the requested topic
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`TopicStatus`]`>` - topic status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_topic(&self, topic_id: &str) -> DshApiResult<TopicStatus> {
@@ -99,10 +99,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/topic/{id}/status`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `topic_id` - name of the requested topic
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`AllocationStatus`]`>` - topic allocation status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_topic_allocation_status(&self, topic_id: &str) -> DshApiResult<AllocationStatus> {
@@ -120,10 +120,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/topic/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `topic_id` - name of the requested topic
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`Topic`]`>` - topic configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_topic_configuration(&self, topic_id: &str) -> DshApiResult<Topic> {
@@ -141,10 +141,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/topic/{id}/actual`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `topic_id` - name of the requested topic
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`Topic`]`>` - topic configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   #[cfg(feature = "actual")]
@@ -163,7 +163,7 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/topic`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<String>>` - list of topic names
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_topic_ids(&self) -> DshApiResult<Vec<String>> {

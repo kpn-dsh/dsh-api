@@ -22,16 +22,16 @@ pub enum Part {
 pub trait QueryProcessor: Send + Sync {
   /// # Returns a description of the query
   ///
-  /// ## Returns
+  /// # Returns
   /// * a `String` describing the query processor
   fn describe(&self) -> String;
 
   /// # Applies query to string
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `haystack` - `String` that will be searched for parts that match the query
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(Vec<Part>)` - when the `haystack` contains one or more parts that match the query
   /// * `None` - when the `haystack` did not match the query
   fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>>;
@@ -40,10 +40,10 @@ pub trait QueryProcessor: Send + Sync {
 impl Part {
   /// # Create a `Part::Matching`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// `value` - the value of this `Part::Matching`
   ///
-  /// ## Returns
+  /// # Returns
   /// The created instance.
   pub fn matching(value: impl Into<String>) -> Part {
     Matching(value.into())
@@ -51,10 +51,10 @@ impl Part {
 
   /// # Create a `Part::NonMatching`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// `value` - the value of this `Part::NonMatching`
   ///
-  /// ## Returns
+  /// # Returns
   /// The created instance.
   pub fn non_matching(value: impl Into<String>) -> Part {
     NonMatching(value.into())
@@ -75,13 +75,13 @@ impl Display for Part {
 /// For a `NonMatching` part this method will return the literal inner `String`. For a `Matching`
 /// part the returned `String` will be wrapped in an ANSI escape code for a bold type face.
 ///
-/// ## Parameters
+/// # Parameters
 /// `part` - The `Part` to generate the formatted string from
 ///
-/// ## Returns
+/// # Returns
 /// String representation of this `Part`
 ///
-/// ## Example
+/// # Examples
 /// ```
 /// use dsh_api::query_processor::{part_to_ansi_formatted_string, Part};
 ///
@@ -102,12 +102,12 @@ pub fn part_to_ansi_formatted_string(part: &Part) -> String {
 /// This method will generate a `String` representation from a `&[Part]` slice, where the
 /// `Matching` parts will be wrapped in an ANSI escape code for a bold type face.
 ///
-/// ## Parameters
+/// # Parameters
 /// `parts` - The `Part`s to generate the formatted string from
 ///
-/// ## Returns
+/// # Returns
 /// String representation of this `&[Part]` slice
-/// ## Example
+/// # Examples
 /// ```
 /// use dsh_api::query_processor::{parts_to_ansi_formatted_string, Part};
 ///
@@ -127,7 +127,7 @@ pub fn parts_to_ansi_formatted_string(parts: &[Part]) -> String {
 
 /// # Query processor implementation for exact matches
 ///
-/// ## Example
+/// # Examples
 /// This example will demonstrate how to create and use a `QueryProcessor` that will performa an
 /// exact match on the `haystack` string.
 /// Note that the `matching_parts` method can only return `None` when no match was found,
@@ -166,7 +166,7 @@ impl QueryProcessor for ExactMatchQueryProcessor<'_> {
 
 /// # Query processor implementation based on regular expressions
 ///
-/// ## Example
+/// # Examples
 /// ```
 /// use dsh_api::query_processor::{Part, QueryProcessor, RegexQueryProcessor};
 ///

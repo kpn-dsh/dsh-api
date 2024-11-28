@@ -2,7 +2,7 @@
 //!
 //! Module that contains functions to manage volumes.
 //!
-//! ## API methods
+//! # API methods
 //! * [`create_volume(volume_id, configuration)`](DshApiClient::create_volume)
 //! * [`delete_volume(volume_id)`](DshApiClient::delete_volume)
 //! * [`get_volume(volume_id) -> VolumeStatus`](DshApiClient::get_volume)
@@ -23,7 +23,7 @@ use crate::DshApiResult;
 ///
 /// Module that contains functions to manage volumes.
 ///
-/// ## API methods
+/// # API methods
 /// * [`create_volume(volume_id, configuration)`](DshApiClient::create_volume)
 /// * [`delete_volume(volume_id)`](DshApiClient::delete_volume)
 /// * [`get_volume(volume_id) -> VolumeStatus`](DshApiClient::get_volume)
@@ -38,11 +38,11 @@ impl DshApiClient<'_> {
   ///
   /// API function: `PUT /allocation/{tenant}/volume/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `volume_id` - name of the created volume
   /// * `configuration` - configuration for the created volume
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the volume has been successfully created)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -61,10 +61,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `DELETE /allocation/{tenant}/volume/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `volume_id` - name of the volume to delete
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the volume has been successfully deleted)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -83,10 +83,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/volume/{id}`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `volume_id` - name of the requested volume
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`VolumeStatus`]`>` - volume status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_volume(&self, volume_id: &str) -> DshApiResult<VolumeStatus> {
@@ -99,10 +99,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/volume/{id}/status`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `volume_id` - name of the requested volume
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`AllocationStatus`]`>` - volume allocation status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_volume_allocation_status(&self, volume_id: &str) -> DshApiResult<AllocationStatus> {
@@ -120,10 +120,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/volume/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `volume_id` - name of the requested volume
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`Volume`]`>` - volume configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_volume_configuration(&self, volume_id: &str) -> DshApiResult<Volume> {
@@ -141,10 +141,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/volume/{id}/actual`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `volume_id` - name of the requested volume
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`Volume`]`>` - volume configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   #[cfg(feature = "actual")]
@@ -163,7 +163,7 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/volume`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<String>>` - list of volume names
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_volume_ids(&self) -> DshApiResult<Vec<String>> {

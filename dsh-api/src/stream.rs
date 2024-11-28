@@ -2,7 +2,7 @@
 //!
 //! Module that contains functions to manage internal and public Kafka streams.
 //!
-//! ## API methods
+//! # API Methods
 //! * [`create_internal_stream(stream_id, configuration)`](DshApiClient::create_internal_stream)
 //! * [`create_public_stream(stream_id, configuration)`](DshApiClient::create_public_stream)
 //! * [`delete_internal_stream(stream_id)`](DshApiClient::delete_internal_stream)
@@ -27,7 +27,7 @@ use crate::DshApiResult;
 ///
 /// Module that contains functions to manage Kafka streams.
 ///
-/// ## API methods
+/// # API Methods
 /// * [`create_internal_stream(stream_id, configuration)`](DshApiClient::create_internal_stream)
 /// * [`create_public_stream(stream_id, configuration)`](DshApiClient::create_public_stream)
 /// * [`delete_internal_stream(stream_id)`](DshApiClient::delete_internal_stream)
@@ -42,11 +42,11 @@ impl DshApiClient<'_> {
   ///
   /// API function: `POST /manage/{manager}/stream/internal/{streamId}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `stream_id` - name of the internal created stream
   /// * `configuration` - configuration for the created internal stream
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the stream has been successfully created)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -65,11 +65,11 @@ impl DshApiClient<'_> {
   ///
   /// API function: `POST /manage/{manager}/stream/public/{streamId}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `stream_id` - name of the public created stream
   /// * `configuration` - configuration for the created public stream
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the stream has been successfully created)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -88,10 +88,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `DELETE /manage/{manager}/stream/internal/{streamId}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `stream_id` - name of the internal stream to delete
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the stream has been successfully deleted)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -110,10 +110,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `DELETE /manage/{manager}/stream/public/{streamId}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `stream_id` - name of the public stream to delete
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the stream has been successfully deleted)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -132,10 +132,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /manage/{manager}/stream/internal/{streamId}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `stream_id` - name of the requested internal stream
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`InternalManagedStream`]`>` - internal stream configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_internal_stream(&self, stream_id: &str) -> DshApiResult<InternalManagedStream> {
@@ -154,7 +154,7 @@ impl DshApiClient<'_> {
   /// API function: `GET /manage/{manager}/stream`
   /// API function: `GET /manage/{manager}/stream/internal/{streamId}/configuration`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<HashMap<>>` - internal stream configurations
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_internal_streams(&self) -> DshApiResult<HashMap<String, InternalManagedStream>> {
@@ -173,10 +173,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /manage/{manager}/stream/public/{streamId}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `stream_id` - name of the requested public stream
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`PublicManagedStream`]`>` - public stream configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_public_stream(&self, stream_id: &str) -> DshApiResult<PublicManagedStream> {
@@ -195,7 +195,7 @@ impl DshApiClient<'_> {
   /// API function: `GET /manage/{manager}/stream`
   /// API function: `GET /manage/{manager}/stream/public/{streamId}/configuration`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<HashMap<>>` - public stream configurations
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_public_streams(&self) -> DshApiResult<HashMap<String, PublicManagedStream>> {
@@ -214,7 +214,7 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /manage/{manager}/stream`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<String>>` - list of stream names
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_stream_ids(&self) -> DshApiResult<Vec<String>> {

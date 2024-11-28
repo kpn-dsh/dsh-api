@@ -2,7 +2,7 @@
 //!
 //! Module that contains functions to manage Kafka proxies.
 //!
-//! ## API methods
+//! # API Methods
 //! * [`delete_proxy(proxy_id)`](DshApiClient::delete_proxy)
 //! * [`get_proxy(proxy_id) -> Proxy`](DshApiClient::get_proxy)
 //! * [`get_proxy_ids() -> Vec<String>`](DshApiClient::get_proxy_ids)
@@ -20,7 +20,7 @@ use crate::DshApiResult;
 ///
 /// Module that contains functions to manage Kafka proxies.
 ///
-/// ## API methods
+/// # API Methods
 /// * [`delete_proxy(proxy_id)`](DshApiClient::delete_proxy)
 /// * [`get_proxy(proxy_id) -> Proxy`](DshApiClient::get_proxy)
 /// * [`get_proxy_ids() -> Vec<String>`](DshApiClient::get_proxy_ids)
@@ -30,10 +30,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `DELETE /allocation/{tenant}/kafkaproxy/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `proxy_id` - id of the proxy to delete
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the proxy has been successfully deleted)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -52,10 +52,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/kafkaproxy/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `proxy_id` - id of the requested proxy
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<KafkaProxy>` - proxy
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_proxy(&self, proxy_id: &str) -> DshApiResult<KafkaProxy> {
@@ -73,7 +73,7 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/kafkaproxy`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<String>>` - list of proxy ids
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_proxy_ids(&self) -> DshApiResult<Vec<String>> {
@@ -89,11 +89,11 @@ impl DshApiClient<'_> {
   ///
   /// API function: `PUT /allocation/{tenant}/kafkaproxy/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `proxy_id` - id of the proxy to update
   /// * `proxy` - new configuration of the proxy
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the proxy has been successfully updated)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH

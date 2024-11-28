@@ -2,7 +2,7 @@
 //!
 //! Module that contains functions to manage buckets.
 //!
-//! ## API methods
+//! # API methods
 //! * [`delete_bucket(bucket_id)`](DshApiClient::delete_bucket)
 //! * [`get_bucket(bucket_id) -> BucketStatus`](DshApiClient::get_bucket)
 //! * [`get_bucket_allocation_status(bucket_id) -> AllocationStatus`](DshApiClient::get_bucket_allocation_status)
@@ -10,7 +10,7 @@
 //! * [`list_bucket_ids() -> Vec<bucket_id>`](DshApiClient::list_bucket_ids)
 //! * [`update_bucket(bucket_id, bucket)`](DshApiClient::update_bucket)
 //!
-//! ## Utility methods
+//! # Utility methods
 //! * [`get_buckets() -> HashMap<bucket_id, bucket>`](DshApiClient::get_buckets)
 //! * [`list_buckets() -> Vec<(bucket_id, bucket)>`](DshApiClient::list_buckets)
 #![cfg_attr(feature = "actual", doc = "")]
@@ -29,7 +29,7 @@ use std::collections::HashMap;
 ///
 /// Module that contains functions to manage buckets.
 ///
-/// ## API methods
+/// # API methods
 /// * [`delete_bucket(bucket_id)`](DshApiClient::delete_bucket)
 /// * [`get_bucket(bucket_id) -> BucketStatus`](DshApiClient::get_bucket)
 /// * [`get_bucket_allocation_status(bucket_id) -> AllocationStatus`](DshApiClient::get_bucket_allocation_status)
@@ -37,7 +37,7 @@ use std::collections::HashMap;
 /// * [`list_bucket_ids() -> Vec<bucket_id>`](DshApiClient::list_bucket_ids)
 /// * [`update_bucket(bucket_id, bucket)`](DshApiClient::update_bucket)
 ///
-/// ## Utility methods
+/// # Utility methods
 /// * [`get_buckets() -> HashMap<bucket_id, bucket>`](DshApiClient::get_buckets)
 /// * [`list_buckets() -> Vec<(bucket_id, bucket)>`](DshApiClient::list_buckets)
 #[cfg_attr(feature = "actual", doc = "")]
@@ -48,10 +48,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `DELETE /allocation/{tenant}/bucket/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `bucket_id` - id of the bucket to delete
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the bucket has been successfully deleted)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -70,10 +70,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/bucket/{id}`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `bucket_id` - id of the requested bucket
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`BucketStatus`]`>` - bucket
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_bucket(&self, bucket_id: &str) -> DshApiResult<BucketStatus> {
@@ -86,10 +86,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/bucket/{id}/actual`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `bucket_id` - id of the requested bucket
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`Bucket`]`>` - indicates that bucket is ok
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   #[cfg(feature = "actual")]
@@ -108,10 +108,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/bucket/{id}/status`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `bucket_id` - id of the requested bucket
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`AllocationStatus`]`>` - allocation status of the bucket
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_bucket_allocation_status(&self, bucket_id: &str) -> DshApiResult<AllocationStatus> {
@@ -129,10 +129,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/bucket/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `bucket_id` - id of the requested bucket
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`Bucket`]`>` - indicates that bucket is ok
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_bucket_configuration(&self, bucket_id: &str) -> DshApiResult<Bucket> {
@@ -150,7 +150,7 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/bucket`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<String>` - bucket ids
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_bucket_ids(&self) -> DshApiResult<Vec<String>> {
@@ -164,7 +164,7 @@ impl DshApiClient<'_> {
 
   /// Return a list of all buckets
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Vec<(String, `[`BucketStatus`]`)>` - list of tuples that describe the buckets,
   ///   ordered by bucket id. Each tuple consist of
   ///   * `String` - id of the bucket,
@@ -178,7 +178,7 @@ impl DshApiClient<'_> {
 
   /// Return a map of all bucket ids and buckets
   ///
-  /// ## Returns
+  /// # Returns
   /// * `HashMap<String, `[`BucketStatus`]`>` - `HashMap` that maps all bucket ids to buckets.
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_buckets(&self) -> DshApiResult<HashMap<String, BucketStatus>> {
@@ -189,11 +189,11 @@ impl DshApiClient<'_> {
   ///
   /// API function: `PUT /allocation/{tenant}/bucket/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `bucket_id` - id of the bucket to update
   /// * `bucket` - new value of the bucket
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the bucket has been successfully updated)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
