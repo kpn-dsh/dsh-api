@@ -6,7 +6,9 @@
 //! of the DSH Resource Management API. The crate was originally developed as part of the
 //! [dcli](https://github.com/kpn-dsh/dcli) tool, but has now been promoted to a separate library.
 //!
-//! ## Examples
+//! # Examples
+//!
+//! ## Minimal example
 //!
 //! The first minimal example will print a list of all the applications that are deployed
 //! in a tenant environment. This example requires that the tenant's name, group id, user id,
@@ -24,6 +26,8 @@
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! ## More elaborate example
 //!
 //! In the next, more elaborate example, these tenant parameters are given explicitly.
 //! This example will list all the applications in the tenant environment that have been
@@ -94,6 +98,33 @@ pub mod stream;
 pub mod topic;
 pub mod volume;
 
+/// # Enumeration that denotes an injection of a resource
+#[derive(Debug)]
+pub enum Injection {
+  /// Environment variable injection, where the value is the name of the environment variable.
+  EnvVar(String),
+}
+
+/// # Enumeration that denotes where a resource has been used
+///
+/// There are a number of methods that return where a certain resource (e.g. a secret,
+/// a volume or an environment variable) has been used.
+/// This enum represents one usage of the resource.
+#[derive(Debug)]
+pub enum UsedBy {
+  /// Resource is used in an [`AppCatalogApp`](types::AppCatalogApp).
+  /// * Id of the `AppCatalogApp`.
+  /// * Application resource.
+  /// * Number of instances.
+  /// * Injections.
+  App(String, String, u64, Vec<Injection>),
+  /// Resource is used in an [`Application`](types::Application).
+  /// * Application id.
+  /// * Number of instances.
+  /// * Injections.
+  Application(String, u64, Vec<Injection>),
+}
+
 #[derive(Debug)]
 pub enum DshApiError {
   Configuration(String),
@@ -103,6 +134,35 @@ pub enum DshApiError {
 }
 
 pub type DshApiResult<T> = Result<T, DshApiError>;
+
+impl Display for Injection {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Injection::EnvVar(environment_variable) => write!(f, "{}", environment_variable),
+    }
+  }
+}
+
+impl Display for UsedBy {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      UsedBy::App(app_id, application_resource, instances, injections) => {
+        write!(f, "app: {}, application: {}, instances: {}", app_id, application_resource, instances)?;
+        if !injections.is_empty() {
+          write!(f, ", {}", injections.iter().map(|inj| inj.to_string()).collect::<Vec<_>>().join(", "))?
+        }
+        Ok(())
+      }
+      UsedBy::Application(application_id, instances, usage_locations) => {
+        write!(f, "application: {}, instances: {}", application_id, instances)?;
+        if !usage_locations.is_empty() {
+          write!(f, ", {}", usage_locations.iter().map(|inj| inj.to_string()).collect::<Vec<_>>().join(", "))?
+        }
+        Ok(())
+      }
+    }
+  }
+}
 
 impl StdError for DshApiError {
   fn source(&self) -> Option<&(dyn StdError + 'static)> {
@@ -186,11 +246,36 @@ impl From<DshApiError> for String {
   }
 }
 
+/// Environment variable used to define the target platform.
 pub const PLATFORM_ENVIRONMENT_VARIABLE: &str = "DSH_API_PLATFORM";
-pub const SECRET_ENVIRONMENT_VARIABLE_PREFIX: &str = "DSH_API_SECRET";
-pub const GUID_ENVIRONMENT_VARIABLE_PREFIX: &str = "DSH_API_GUID";
+/// Environment variable used to define the target tenant.
 pub const TENANT_ENVIRONMENT_VARIABLE: &str = "DSH_API_TENANT";
 
+pub(crate) const SECRET_ENVIRONMENT_VARIABLE_PREFIX: &str = "DSH_API_SECRET";
+pub(crate) const GUID_ENVIRONMENT_VARIABLE_PREFIX: &str = "DSH_API_GUID";
+
+/// # Create target secret environment variable
+///
+/// This function creates the environment variable used to define the target's secret
+/// from the platform name and the tenant name. The format of the environment variable is
+/// `DSH_API_SECRET_[platform_name]_[tenant_name]`,
+/// where the `platform_name` and the `tenant_name` will be converted to uppercase and
+/// `-` will be replaced by `_`.
+///
+/// # Parameters
+/// * `platform_name` - target's platform name
+/// * `tenant_name` - target's tenant name
+///
+/// # Returns
+/// Target secret environment variable.
+///
+/// # Example
+/// ```
+/// use dsh_api::secret_environment_variable;
+///
+/// let env_var = secret_environment_variable("nplz", "greenbox-dev");
+/// assert_eq!(env_var, "DSH_API_SECRET_NPLZ_GREENBOX_DEV".to_string());
+/// ```
 pub fn secret_environment_variable(platform_name: &str, tenant_name: &str) -> String {
   format!(
     "{}_{}_{}",
@@ -200,6 +285,27 @@ pub fn secret_environment_variable(platform_name: &str, tenant_name: &str) -> St
   )
 }
 
+/// # Create target guid environment variable
+///
+/// This function creates the environment variable used to define the target's guid
+/// from the tenant name. The format of the environment variable is
+/// `DSH_API_GUID_[tenant_name]`,
+/// where the `tenant_name` will be converted to uppercase and
+/// `-` will be replaced by `_`.
+///
+/// # Parameters
+/// * `tenant_name` - target's tenant name
+///
+/// # Returns
+/// Target guid environment variable.
+///
+/// # Example
+/// ```
+/// use dsh_api::guid_environment_variable;
+///
+/// let env_var = guid_environment_variable("greenbox-dev");
+/// assert_eq!(env_var, "DSH_API_GUID_GREENBOX_DEV".to_string());
+/// ```
 pub fn guid_environment_variable(tenant_name: &str) -> String {
   format!("{}_{}", GUID_ENVIRONMENT_VARIABLE_PREFIX, tenant_name.to_ascii_uppercase().replace('-', "_"))
 }
