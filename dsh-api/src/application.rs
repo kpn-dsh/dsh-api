@@ -2,33 +2,35 @@
 //!
 //! Module that contains a function to manage applications.
 //!
-//! ## API methods
+//! # API Methods
 //! * [`create_application(application_id, application)`](DshApiClient::create_application)
 //! * [`delete_application(application_id)`](DshApiClient::delete_application)
-//! * [`find_application_ids_with_derived_tasks() -> Vec<String>`](DshApiClient::find_application_ids_with_derived_tasks)
-//! * [`get_application(application_id) -> Application`](DshApiClient::get_application)
-//! * [`get_application_allocation_status(application_id) -> AllocationStatus`](DshApiClient::get_application_allocation_status)
-//! * [`get_application_task(application_id, task_id) -> TaskStatus`](DshApiClient::get_application_task)
-//! * [`get_application_task_allocation_status(application_id, task_id) -> AllocationStatus`](DshApiClient::get_application_task_allocation_status)
-//! * [`get_applications() -> HashMap<String, Application>`](DshApiClient::get_applications)
-//! * [`list_application_derived_task_ids(application_id) -> Vec<TaskId>`](DshApiClient::list_application_derived_task_ids)
+//! * [`find_application_ids_with_derived_tasks() -> [id]`](DshApiClient::find_application_ids_with_derived_tasks)
+//! * [`get_application(application_id) -> application`](DshApiClient::get_application)
+//! * [`get_application_allocation_status(application_id) -> allocation_status`](DshApiClient::get_application_allocation_status)
+//! * [`get_application_task(application_id, task_id) -> task_status`](DshApiClient::get_application_task)
+//! * [`get_application_task_allocation_status(application_id, task_id) -> allocation_status`](DshApiClient::get_application_task_allocation_status)
+//! * [`get_applications() -> map<id, application>`](DshApiClient::get_applications)
+//! * [`list_application_derived_task_ids(application_id) -> [task_id]`](DshApiClient::list_application_derived_task_ids)
 //!
-//! ## Utility methods
-//! * [`find_applications(predicate) -> Vec<(String, Application)>`](DshApiClient::find_applications)
-//! * [`find_applications_that_use_env_value(query) -> Vec<String>`](DshApiClient::find_applications_that_use_env_value)
-//! * [`find_applications_with_secret_injection(secret) -> Vec<String>`](DshApiClient::find_applications_with_secret_injection)
-//! * [`list_application_allocation_statuses() -> Vec<(String, AllocationStatus)>`](DshApiClient::list_application_allocation_statuses)
-//! * [`list_application_ids() -> Vec<String>`](DshApiClient::list_application_ids)
-//! * [`list_applications() -> Vec<(String, Application)>`](DshApiClient::list_applications)
-//! * [`list_applications_with_secret_injections() -> Vec<String>`](DshApiClient::list_applications_with_secret_injections)
+//! # Utility methods
+//! * [`find_applications(predicate) -> [(id, application)]`](DshApiClient::find_applications)
+//! * [`find_applications_that_use_env_value(query) -> [(id, application, envs)]`](DshApiClient::find_applications_that_use_env_value)
+//! * [`find_applications_with_secret_injections(secret) -> [(id, application, injections)]`](DshApiClient::find_applications_with_secret_injections)
+//! * [`list_application_allocation_statuses() -> [(id, allocation_status)]`](DshApiClient::list_application_allocation_statuses)
+//! * [`list_application_ids() -> [id]`](DshApiClient::list_application_ids)
+//! * [`list_applications() -> [(id, application)]`](DshApiClient::list_applications)
+//! * [`list_applications_with_secret_injections() -> [(id, application, injections)]`](DshApiClient::list_applications_with_secret_injections)
 //!
-//! ## Utility functions
+//! # Utility functions
 //! * [`application_diff(baseline, sample) -> ApplicationDiff`](DshApiClient::application_diff)
+//! * [`applications_with_secret_injections(secret, applications) -> [(id, application, injections)]`](DshApiClient::applications_with_secret_injections)
+//! * [`applications_with_secrets_injections(secrets, applications) -> [(id, application, injections)]`](DshApiClient::applications_with_secrets_injections)
 #![cfg_attr(feature = "actual", doc = "")]
 #![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
 #![cfg_attr(feature = "actual", doc = "* [`get_application_actual(application_id) -> Application`](DshApiClient::get_application_actual)")]
 #![cfg_attr(feature = "actual", doc = "* [`get_applications_actual() -> HashMap<String, Application>`](DshApiClient::get_applications_actual)")]
-#![cfg_attr(feature = "actual", doc = "* [`get_application_task_state(application_id, task_id) -> Task`](DshApiClient::get_application_task_state)")]
+#![cfg_attr(feature = "actual", doc = "* [`get_application_task_state(id, task_id) -> Task`](DshApiClient::get_application_task_state)")]
 use crate::dsh_api_client::DshApiClient;
 use crate::query_processor::{Part, QueryProcessor};
 #[cfg(feature = "actual")]
@@ -36,7 +38,7 @@ use crate::types::Task;
 use crate::types::{AllocationStatus, Application, ApplicationSecret, ApplicationVolumes, HealthCheck, Metrics, PortMapping, TaskStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::DshApiResult;
+use crate::{DshApiResult, Injection};
 use futures::future::try_join_all;
 use std::collections::HashMap;
 
@@ -44,42 +46,45 @@ use std::collections::HashMap;
 ///
 /// Module that contains a function to manage applications.
 ///
-/// ## API methods
+/// # API Methods
 /// * [`create_application(application_id, application)`](DshApiClient::create_application)
 /// * [`delete_application(application_id)`](DshApiClient::delete_application)
-/// * [`find_application_ids_with_derived_tasks() -> Vec<String>`](DshApiClient::find_application_ids_with_derived_tasks)
-/// * [`get_application(application_id) -> Application`](DshApiClient::get_application)
-/// * [`get_application_allocation_status(application_id) -> AllocationStatus`](DshApiClient::get_application_allocation_status)
-/// * [`get_application_task(application_id, task_id) -> TaskStatus`](DshApiClient::get_application_task)
-/// * [`get_application_task_allocation_status(application_id, task_id) -> AllocationStatus`](DshApiClient::get_application_task_allocation_status)
-/// * [`get_applications() -> HashMap<String, Application>`](DshApiClient::get_applications)
-/// * [`list_application_derived_task_ids(application_id) -> Vec<TaskId>`](DshApiClient::list_application_derived_task_ids)
+/// * [`find_application_ids_with_derived_tasks() -> [id]`](DshApiClient::find_application_ids_with_derived_tasks)
+/// * [`get_application(application_id) -> application`](DshApiClient::get_application)
+/// * [`get_application_allocation_status(application_id) -> allocation_status`](DshApiClient::get_application_allocation_status)
+/// * [`get_application_task(application_id, task_id) -> task_status`](DshApiClient::get_application_task)
+/// * [`get_application_task_allocation_status(application_id, task_id) -> allocation_status`](DshApiClient::get_application_task_allocation_status)
+/// * [`get_applications() -> map<id, application>`](DshApiClient::get_applications)
+/// * [`list_application_derived_task_ids(application_id) -> [task_id]`](DshApiClient::list_application_derived_task_ids)
 ///
-/// ## Utility methods
-/// * [`find_applications(predicate) -> Vec<(String, Application)>`](DshApiClient::find_applications)
-/// * [`find_applications_with_secret_injection(secret) -> Vec<String>`](DshApiClient::find_applications_with_secret_injection)
-/// * [`list_application_allocation_statuses() -> Vec<(String, AllocationStatus)>`](DshApiClient::list_application_allocation_statuses)
-/// * [`list_application_ids() -> Vec<String>`](DshApiClient::list_application_ids)
-/// * [`list_applications() -> Vec<(String, Application)>`](DshApiClient::list_applications)
-/// * [`list_applications_with_secret_injections() -> Vec<String>`](DshApiClient::list_applications_with_secret_injections)
+/// # Utility methods
+/// * [`find_applications(predicate) -> [(id, application)]`](DshApiClient::find_applications)
+/// * [`find_applications_that_use_env_value(query) -> [(id, application, envs)]`](DshApiClient::find_applications_that_use_env_value)
+/// * [`find_applications_with_secret_injections(secret) -> [(id, application, injections)]`](DshApiClient::find_applications_with_secret_injections)
+/// * [`list_application_allocation_statuses() -> [(id, allocation_status)]`](DshApiClient::list_application_allocation_statuses)
+/// * [`list_application_ids() -> [id]`](DshApiClient::list_application_ids)
+/// * [`list_applications() -> [(id, application)]`](DshApiClient::list_applications)
+/// * [`list_applications_with_secret_injections() -> [(id, application, injections)]`](DshApiClient::list_applications_with_secret_injections)
 ///
-/// ## Utility functions
+/// # Utility functions
 /// * [`application_diff(baseline, sample) -> ApplicationDiff`](DshApiClient::application_diff)
+/// * [`applications_with_secret_injections(secret, applications) -> [(id, application, injections)]`](DshApiClient::applications_with_secret_injections)
+/// * [`applications_with_secrets_injections(secrets, applications) -> [(id, application, injections)]`](DshApiClient::applications_with_secrets_injections)
 #[cfg_attr(feature = "actual", doc = "")]
 #[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
 #[cfg_attr(feature = "actual", doc = "* [`get_application_actual(application_id) -> Application`](DshApiClient::get_application_actual)")]
 #[cfg_attr(feature = "actual", doc = "* [`get_applications_actual() -> HashMap<String, Application>`](DshApiClient::get_applications_actual)")]
-#[cfg_attr(feature = "actual", doc = "* [`get_application_task_state(application_id, task_id) -> Task`](DshApiClient::get_application_task_state)")]
+#[cfg_attr(feature = "actual", doc = "* [`get_application_task_state(id, task_id) -> Task`](DshApiClient::get_application_task_state)")]
 impl DshApiClient<'_> {
   /// # Create application
   ///
   /// API function: `PUT /allocation/{tenant}/application/{appid}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `application_id` - application name used when deploying the application
   /// * `configuration` - configuration used when deploying the application
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the application has been successfully
   ///              deployed)
@@ -99,10 +104,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `DELETE /allocation/{tenant}/application/{appid}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `application_id` - application name of the application to undeploy
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the application has been successfully
   ///              undeployed)
@@ -122,10 +127,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/application/{appid}/actual`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `application_id` - application id of the requested application
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`Application`]`>` - application configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   #[cfg(feature = "actual")]
@@ -144,7 +149,7 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/application/actual`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<HashMap<String, `[`Application`]`>>` - hashmap containing the application configurations
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   #[cfg(feature = "actual")]
@@ -158,10 +163,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/application/{appid}/status`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `application_id` - application id of the requested application
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`AllocationStatus`]`>` - application allocation status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_application_allocation_status(&self, application_id: &str) -> DshApiResult<AllocationStatus> {
@@ -179,10 +184,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/application/{appid}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `application_id` - application id of the requested application
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`Application`]`>` - application configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_application(&self, application_id: &str) -> DshApiResult<Application> {
@@ -200,7 +205,7 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/application/configuration`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<HashMap<String, `[`Application`]`>>` - hashmap containing the application configurations
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_applications(&self) -> DshApiResult<HashMap<String, Application>> {
@@ -218,10 +223,10 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/task{appid}`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `application_id` - application name for which the tasks will be returned
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<String>>` - vector containing names of all derived tasks for the application
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_application_derived_task_ids(&self, application_id: &str) -> DshApiResult<Vec<String>> {
@@ -242,7 +247,7 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/task`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<String>>` - vector containing names of all application that have derived tasks
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn find_application_ids_with_derived_tasks(&self) -> DshApiResult<Vec<String>> {
@@ -258,11 +263,11 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/task{appid}/{id}`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `application_id` - application name of the requested application
   /// * `task_id` - id of the requested task
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`TaskStatus`]`>` - application task status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_application_task(&self, application_id: &str, task_id: &str) -> DshApiResult<TaskStatus> {
@@ -280,11 +285,11 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/task{appid}/{id}/status`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `application_id` - application name of the requested application
   /// * `task_id` - id of the requested task
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`AllocationStatus`]`>` - application task allocation status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_application_task_allocation_status(&self, application_id: &str, task_id: &str) -> DshApiResult<AllocationStatus> {
@@ -302,11 +307,11 @@ impl DshApiClient<'_> {
   ///
   /// API function: `GET /allocation/{tenant}/task{appid}/{id}/actual`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `application_id` - application name of the requested application
   /// * `task_id` - id of the requested task
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`Task`]`>` - actual application task status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   #[cfg(feature = "actual")]
@@ -323,7 +328,7 @@ impl DshApiClient<'_> {
 
   /// # List application ids with the corresponding allocation status
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<(String, `[`AllocationStatus`]`)>>` - list of application ids and allocation statuses
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_application_allocation_statuses(&self) -> DshApiResult<Vec<(String, AllocationStatus)>> {
@@ -339,7 +344,7 @@ impl DshApiClient<'_> {
 
   /// # List all application configurations with their ids
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<(String, `[`Application`]`)>>` - list of application ids and configurations
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_applications(&self) -> DshApiResult<Vec<(String, Application)>> {
@@ -348,10 +353,10 @@ impl DshApiClient<'_> {
 
   /// # Find all applications that match a predicate
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `predicate` - predicate that will be used to filter the applications
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<(String, `[`Application`]`)>>` - list of id/application pairs, ordered by id,
   ///   for which the predicate returned `true`
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -371,7 +376,7 @@ impl DshApiClient<'_> {
   /// If you also need the application configuration, use
   /// [`list_applications()`](Self::list_applications) instead.
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<String>>` - vector containing the sorted application ids
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_application_ids(&self) -> DshApiResult<Vec<String>> {
@@ -380,43 +385,42 @@ impl DshApiClient<'_> {
     Ok(application_ids)
   }
 
-  /// Get secret injections from an application
+  /// # Get secret injections from an application
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `application` - reference to the `Application`
   ///
-  /// ## Returns
-  /// * `Vec(<String, Vec<String>)>` - list of tuples that describe the secret injections.
+  /// # Returns
+  /// * `Vec(<String, Vec<Injection>)>` - list of tuples that describe the secret injections.
   ///   Each tuple consist of the secret id and the environment variables
   ///   that the secret is injected into.
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  fn all_secret_injections(application: &Application) -> Vec<(String, Vec<String>)> {
-    let mut injections = Vec::<(String, Vec<String>)>::new();
+  fn all_secret_injections(application: &Application) -> Vec<(String, Vec<Injection>)> {
+    let mut injections: Vec<(String, Vec<Injection>)> = vec![];
     for application_secret in &application.secrets {
-      let mut env_injections = vec![];
+      let mut env_injections: Vec<Injection> = vec![];
       for application_secret_injection in &application_secret.injections {
         if let Some(env_injection) = application_secret_injection.get("env") {
-          env_injections.push(env_injection.to_string());
+          env_injections.push(Injection::EnvVar(env_injection.to_string()));
         }
       }
       if !env_injections.is_empty() {
-        env_injections.sort();
         injections.push((application_secret.name.clone(), env_injections));
       }
     }
-    injections.sort();
+    injections.sort_by(|(secret_a, _), (secret_b, _)| secret_a.cmp(secret_b));
     injections
   }
 
-  /// List applications with secret injections
+  /// # List applications with secret injections
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Vec<(String, `[`Application`]`, Vec(<String, Vec<String>)>)>` - list of tuples
   ///   that describe the applications with secret injections.
   ///   Each tuple consist of the application id, the `Application` and a list of secret ids
   ///   with the environment variables that the secrets are injected into.
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn list_applications_with_secret_injections(&self) -> DshApiResult<Vec<(String, Application, Vec<(String, Vec<String>)>)>> {
+  pub async fn list_applications_with_secret_injections(&self) -> DshApiResult<Vec<(String, Application, Vec<(String, Vec<Injection>)>)>> {
     Ok(
       self
         .find_applications(&|application| !application.secrets.is_empty())
@@ -430,12 +434,12 @@ impl DshApiClient<'_> {
     )
   }
 
-  /// Find application that use an environment variable value
+  /// # Find application that use an environment variable value
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `query_process` - `[`QueryProcessor`]` that is matched against all environment variables of all applications
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Vec<(String, `[`Application`]`, Vec<(String, Vec<`[`Part`]`>)>)>` - list of tuples
   ///   that describe the matched environment variables.
   ///   Each tuple consist of
@@ -462,18 +466,18 @@ impl DshApiClient<'_> {
     Ok(matches)
   }
 
-  /// Find applications that use a secret injection
+  /// # Find applications that use a secret injection
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `secret` - the secret that is matched against all applications
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Vec<(String, `[`Application`]`, Vec<String>)>` - list of tuples
   ///   that describe the applications with secret injections.
-  ///   Each tuple consist of the application id, the `Application` and a list of
-  ///   environment variables that the secrets are injected into.
+  ///   Each tuple consist of the application id, the `Application` and a map of
+  ///   environment variables that the secret is injected into.
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn find_applications_with_secret_injection(&self, secret: &str) -> DshApiResult<Vec<(String, Application, Vec<String>)>> {
+  pub async fn find_applications_with_secret_injections(&self, secret: &str) -> DshApiResult<Vec<(String, Application, Vec<Injection>)>> {
     Ok(
       self
         .find_applications(&|application| !application.secrets.is_empty())
@@ -489,28 +493,70 @@ impl DshApiClient<'_> {
     )
   }
 
-  /// Find applications with secret injections
+  /// # Get applications that use a given secret injection
   ///
-  /// ## Parameters
-  /// * `application_id` - application name of the requested application
-  /// * `task_id` - id of the requested task
+  /// # Parameters
+  /// * `secret` - id of the secret to look for
+  /// * `applications` - hashmap of all applications
   ///
-  /// ## Returns
-  /// * `Vec<(String, u64, HashMap<String, Vec<String>>)>` - application task allocation status
-  pub fn applications_with_secrets_injections(secrets: &[String], applications: &HashMap<String, Application>) -> Vec<(String, u64, HashMap<String, Vec<String>>)> {
+  /// # Returns
+  /// * `Vec<(application_id, application, injections)>` - vector of applications that use the secret
+  ///   * `application_id` - application id of the application that uses the secret
+  ///   * `application` - reference to the application
+  ///   * `injections` - injections of the secret used in the application
+  #[allow(clippy::type_complexity)]
+  pub fn applications_with_secret_injections<'a>(secret: &str, applications: &'a HashMap<String, Application>) -> Vec<(String, &'a Application, Vec<Injection>)> {
     let mut application_ids: Vec<String> = applications.keys().map(|p| p.to_string()).collect();
     application_ids.sort();
-    let mut pairs: Vec<(String, u64, HashMap<String, Vec<String>>)> = vec![];
+    let mut tuples: Vec<(String, &Application, Vec<Injection>)> = vec![];
+    for application_id in application_ids {
+      let application = applications.get(&application_id).unwrap();
+      let mut injections = Vec::<Injection>::new();
+      for application_secret in &application.secrets {
+        if secret == application_secret.name {
+          for application_secret_injection in &application_secret.injections {
+            if let Some(env_injection) = application_secret_injection.get("env") {
+              injections.push(Injection::EnvVar(env_injection.to_string()));
+            }
+          }
+        }
+      }
+      if !injections.is_empty() {
+        tuples.push((application_id, application, injections));
+      }
+    }
+    tuples
+  }
+
+  /// # Get applications that use any of a list of given secret injections
+  ///
+  /// # Parameters
+  /// * `secrets` - ids of the secrets to look for
+  /// * `applications` - hashmap of all applications
+  ///
+  /// # Returns
+  /// * `Vec<(application_id, application, injections)>` - vector of applications that use the secret
+  ///   * `application_id` - application id of the application that uses the secret
+  ///   * `application` - reference to the application
+  ///   * `injections` - the injections of the secret in the application
+  #[allow(clippy::type_complexity)]
+  pub fn applications_with_secrets_injections<'a>(
+    secrets: &[String],
+    applications: &'a HashMap<String, Application>,
+  ) -> Vec<(String, &'a Application, HashMap<String, Vec<Injection>>)> {
+    let mut application_ids: Vec<String> = applications.keys().map(|p| p.to_string()).collect();
+    application_ids.sort();
+    let mut tuples: Vec<(String, &Application, HashMap<String, Vec<Injection>>)> = vec![];
     for application_id in application_ids {
       let application = applications.get(&application_id).unwrap();
       if !application.secrets.is_empty() {
-        let mut injections = HashMap::<String, Vec<String>>::new();
+        let mut injections = HashMap::<String, Vec<Injection>>::new();
         for application_secret in &application.secrets {
           if secrets.contains(&application_secret.name) {
-            let mut env_injections = vec![];
+            let mut env_injections: Vec<Injection> = vec![];
             for application_secret_injection in &application_secret.injections {
               if let Some(env_injection) = application_secret_injection.get("env") {
-                env_injections.push(env_injection.to_string());
+                env_injections.push(Injection::EnvVar(env_injection.to_string()));
               }
             }
             if !env_injections.is_empty() {
@@ -519,20 +565,20 @@ impl DshApiClient<'_> {
           }
         }
         if !injections.is_empty() {
-          pairs.push((application_id.clone(), application.instances, injections));
+          tuples.push((application_id, application, injections));
         }
       }
     }
-    pairs
+    tuples
   }
 
   /// # Compare Applications
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `baseline` - baseline application to compare against
   /// * `sample` - sample application that will be compared against the baseline
   ///
-  /// ## Returns
+  /// # Returns
   /// * `[`ApplicationDiff`]` - struct that describes the differences between the two `[`Application`]`s
   pub fn application_diff(baseline: &Application, sample: &Application) -> ApplicationDiff {
     ApplicationDiff {
@@ -580,9 +626,9 @@ pub struct ApplicationDiff {
 }
 
 impl ApplicationDiff {
-  /// Check if there are any differences
+  /// # Check if there are any differences
   ///
-  /// ## Returns
+  /// # Returns
   /// * `true` - struct does not contain any differences
   /// * `false` - struct does contain differences
   pub fn is_empty(&self) -> bool {
@@ -605,11 +651,11 @@ impl ApplicationDiff {
       && self.writable_streams.is_none()
   }
 
-  /// List the differences
+  /// # List the differences
   ///
   /// If there are no differences, an empty list will be returned.
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Vec<(String, String)>` - list of key/value pairs describing all differences
   pub fn differences(&self) -> Vec<(String, String)> {
     vec![
