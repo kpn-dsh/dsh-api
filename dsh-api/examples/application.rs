@@ -2,6 +2,7 @@ use crate::common::print_header;
 use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
 use dsh_api::query_processor::{parts_to_ansi_formatted_string, Part, RegexQueryProcessor};
 use dsh_api::types::{AllocationStatus, Application, TaskStatus};
+use dsh_api::Injection;
 use std::collections::HashMap;
 
 #[path = "common.rs"]
@@ -27,7 +28,7 @@ mod common;
 // list_applications_with_secret_injections
 
 const APPLICATION_ID: &str = "keyring-dev";
-const TASK_ID: &str = "974cf8b68-8glkc-00000000";
+const TASK_ID: &str = "974cf8b68-smlmg-00000000";
 const SECRET: &str = "greenbox_backend_password";
 
 #[tokio::main]
@@ -112,10 +113,15 @@ async fn main() -> Result<(), String> {
   }
 
   print_header("find_applications_with_secret_injection");
-  let applications: Vec<(String, Application, Vec<String>)> = client.find_applications_with_secret_injection(SECRET).await?;
+  let applications: Vec<(String, Application, Vec<Injection>)> = client.find_applications_with_secret_injections(SECRET).await?;
   println!("{} applications have secret injection for secret '{}'", applications.len(), SECRET);
   for (application_id, application, envs) in applications {
-    println!("{} -> {} -> {}", application_id, application.cpus, envs.join(", "))
+    println!(
+      "{} -> {} -> {}",
+      application_id,
+      application.cpus,
+      envs.iter().map(|inj| inj.to_string()).collect::<Vec<_>>().join(", ")
+    )
   }
 
   print_header("list_application_allocation_statuses");
@@ -140,16 +146,16 @@ async fn main() -> Result<(), String> {
   }
 
   print_header("list_applications_with_secret_injections");
-  let applications: Vec<(String, Application, Vec<(String, Vec<String>)>)> = client.list_applications_with_secret_injections().await?;
+  let applications: Vec<(String, Application, Vec<(String, Vec<Injection>)>)> = client.list_applications_with_secret_injections().await?;
   println!("{}", applications.len());
   for (application_id, application, secrets) in applications {
     println!("{} -> {}", application_id, application);
     for (secret_id, envs) in secrets {
-      println!("  {} -> [{}]", secret_id, envs.join(", "));
+      println!("  {} -> [{}]", secret_id, envs.iter().map(|inj| inj.to_string()).collect::<Vec<_>>().join(", "));
     }
   }
 
-  print_header("list_applications_with_secret_injections");
+  print_header("list_applications_that_match_a_query");
   let query_processor = RegexQueryProcessor::create("greenbox-dev").unwrap();
   let applications: Vec<(String, Application, Vec<(String, Vec<Part>)>)> = client.find_applications_that_use_env_value(&query_processor).await?;
   for (application_id, application, matches) in applications {
