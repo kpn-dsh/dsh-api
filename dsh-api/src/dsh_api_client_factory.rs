@@ -199,7 +199,7 @@ impl DshApiClientFactory {
   /// let client_factory = DshApiClientFactory::new();
   /// match client_factory.client().await {
   ///   Ok(client) => println!("rest api version is {}", client.api_version()),
-  ///   Err(error) => println!("could not create client ({})", error)
+  ///   Err(error) => println!("could not create client ({})", error),
   /// }
   /// # Ok(())
   /// # }

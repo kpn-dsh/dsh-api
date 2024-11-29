@@ -111,11 +111,8 @@ pub fn part_to_ansi_formatted_string(part: &Part) -> String {
 /// ```
 /// use dsh_api::query_processor::{parts_to_ansi_formatted_string, Part};
 ///
-/// let parts: [Part;3] = [
-///   Part::non_matching("prefix"),
-///   Part::matching("MATCH"),
-///   Part::non_matching("postfix")
-/// ];
+/// let parts: [Part; 3] =
+///   [Part::non_matching("prefix"), Part::matching("MATCH"), Part::non_matching("postfix")];
 /// println!("parts are {}", parts_to_ansi_formatted_string(&parts));
 /// ```
 /// This will print the string `"parts are prefix\x1B[1mMATCH\x1B[0mpostfix"` which,
@@ -134,7 +131,7 @@ pub fn parts_to_ansi_formatted_string(parts: &[Part]) -> String {
 /// or a `Some` which contains a `Vec` with exactly one `Part::Matching` element,
 /// containing the entire `haystack`.
 /// ```
-/// use dsh_api::query_processor::{Part, QueryProcessor, ExactMatchQueryProcessor};
+/// use dsh_api::query_processor::{ExactMatchQueryProcessor, Part, QueryProcessor};
 ///
 /// let exact_match_query_processor = ExactMatchQueryProcessor::create("exact").unwrap();
 /// let parts = exact_match_query_processor.matching_parts("exact").unwrap();

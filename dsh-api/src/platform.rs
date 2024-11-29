@@ -90,7 +90,7 @@ impl DshPlatform {
   /// # use dsh_api::platform::DshPlatform;
   /// match DshPlatform::try_default() {
   ///   Ok(default_platform) => println!("default platform is {}", default_platform),
-  ///   Err(error) => panic!("no default platform: {}", error)
+  ///   Err(error) => panic!("no default platform: {}", error),
   /// }
   /// ```
   pub fn try_default() -> Result<Self, String> {
@@ -128,10 +128,8 @@ impl DshPlatform {
   /// # Examples
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::NpLz.console_url(),
-  ///   Some("https://console.dsh-dev.dsh.np.aws.kpn.com")
-  /// );
+  /// let url = DshPlatform::NpLz.console_url();
+  /// assert_eq!(url, Some("https://console.dsh-dev.dsh.np.aws.kpn.com"));
   /// ```
   pub fn console_url(&self) -> Option<&str> {
     match self {
@@ -168,10 +166,8 @@ impl DshPlatform {
   /// # Examples
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::NpLz.public_vhosts_domain(),
-  ///   Some("dsh-dev.dsh.np.aws.kpn.com")
-  /// );
+  /// let domain = DshPlatform::NpLz.public_vhosts_domain();
+  /// assert_eq!(domain, Some("dsh-dev.dsh.np.aws.kpn.com"));
   /// ```
   pub fn public_vhosts_domain(&self) -> Option<&str> {
     match self {
