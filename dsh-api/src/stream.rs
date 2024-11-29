@@ -2,10 +2,11 @@
 //!
 //! Module that contains functions to manage internal and public Kafka streams.
 //!
-//! * [`create_internal_stream(stream_id, configuration) -> ()`](DshApiClient::create_internal_stream)
-//! * [`create_public_stream(stream_id, configuration) -> ()`](DshApiClient::create_public_stream)
-//! * [`delete_internal_stream(stream_id) -> ()`](DshApiClient::delete_internal_stream)
-//! * [`delete_public_stream(stream_id) -> ()`](DshApiClient::delete_public_stream)
+//! # API Methods
+//! * [`create_internal_stream(stream_id, configuration)`](DshApiClient::create_internal_stream)
+//! * [`create_public_stream(stream_id, configuration)`](DshApiClient::create_public_stream)
+//! * [`delete_internal_stream(stream_id)`](DshApiClient::delete_internal_stream)
+//! * [`delete_public_stream(stream_id)`](DshApiClient::delete_public_stream)
 //! * [`get_internal_stream(stream_id) -> InternalManagedStream`](DshApiClient::get_internal_stream)
 //! * [`get_internal_streams() -> Vec<InternalManagedStream>`](DshApiClient::get_internal_streams)
 //! * [`get_public_stream(stream_id) -> PublicManagedStream`](DshApiClient::get_public_stream)
@@ -17,19 +18,20 @@ use std::collections::HashMap;
 use futures::future::join_all;
 
 use crate::dsh_api_client::DshApiClient;
+use crate::types::{InternalManagedStream, ManagedInternalStreamId, ManagedPublicStreamId, PublicManagedStream};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_generated::types::{InternalManagedStream, ManagedInternalStreamId, ManagedPublicStreamId, PublicManagedStream};
 
 /// # Manage Kafka streams
 ///
 /// Module that contains functions to manage Kafka streams.
 ///
-/// * [`create_internal_stream(stream_id, configuration) -> ()`](DshApiClient::create_internal_stream)
-/// * [`create_public_stream(stream_id, configuration) -> ()`](DshApiClient::create_public_stream)
-/// * [`delete_internal_stream(stream_id) -> ()`](DshApiClient::delete_internal_stream)
-/// * [`delete_public_stream(stream_id) -> ()`](DshApiClient::delete_public_stream)
+/// # API Methods
+/// * [`create_internal_stream(stream_id, configuration)`](DshApiClient::create_internal_stream)
+/// * [`create_public_stream(stream_id, configuration)`](DshApiClient::create_public_stream)
+/// * [`delete_internal_stream(stream_id)`](DshApiClient::delete_internal_stream)
+/// * [`delete_public_stream(stream_id)`](DshApiClient::delete_public_stream)
 /// * [`get_internal_stream(stream_id) -> InternalManagedStream`](DshApiClient::get_internal_stream)
 /// * [`get_internal_streams() -> Vec<InternalManagedStream>`](DshApiClient::get_internal_streams)
 /// * [`get_public_stream(stream_id) -> PublicManagedStream`](DshApiClient::get_public_stream)
@@ -38,13 +40,13 @@ use dsh_api_generated::types::{InternalManagedStream, ManagedInternalStreamId, M
 impl DshApiClient<'_> {
   /// # Create internal stream
   ///
-  /// `POST /manage/{manager}/stream/internal/{streamId}/configuration`
+  /// API function: `POST /manage/{manager}/stream/internal/{streamId}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `stream_id` - name of the internal created stream
   /// * `configuration` - configuration for the created internal stream
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the stream has been successfully created)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -56,18 +58,18 @@ impl DshApiClient<'_> {
           .post_manage_stream_internal_configuration_by_manager_by_streamid(self.tenant_name(), &ManagedInternalStreamId::try_from(stream_id)?, self.token(), configuration)
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Create public stream
   ///
-  /// `POST /manage/{manager}/stream/public/{streamId}/configuration`
+  /// API function: `POST /manage/{manager}/stream/public/{streamId}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `stream_id` - name of the public created stream
   /// * `configuration` - configuration for the created public stream
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the stream has been successfully created)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -79,17 +81,17 @@ impl DshApiClient<'_> {
           .post_manage_stream_public_configuration_by_manager_by_streamid(self.tenant_name(), &ManagedPublicStreamId::try_from(stream_id)?, self.token(), configuration)
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Delete internal stream
   ///
-  /// `DELETE /manage/{manager}/stream/internal/{streamId}/configuration`
+  /// API function: `DELETE /manage/{manager}/stream/internal/{streamId}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `stream_id` - name of the internal stream to delete
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the stream has been successfully deleted)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -101,17 +103,17 @@ impl DshApiClient<'_> {
           .delete_manage_stream_internal_configuration_by_manager_by_streamid(self.tenant_name(), &ManagedInternalStreamId::try_from(stream_id)?, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Delete public stream
   ///
-  /// `DELETE /manage/{manager}/stream/public/{streamId}/configuration`
+  /// API function: `DELETE /manage/{manager}/stream/public/{streamId}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `stream_id` - name of the public stream to delete
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the stream has been successfully deleted)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -123,17 +125,17 @@ impl DshApiClient<'_> {
           .delete_manage_stream_public_configuration_by_manager_by_streamid(self.tenant_name(), &ManagedPublicStreamId::try_from(stream_id)?, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return internal stream configuration
   ///
-  /// `GET /manage/{manager}/stream/internal/{streamId}/configuration`
+  /// API function: `GET /manage/{manager}/stream/internal/{streamId}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `stream_id` - name of the requested internal stream
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`InternalManagedStream`]`>` - internal stream configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_internal_stream(&self, stream_id: &str) -> DshApiResult<InternalManagedStream> {
@@ -144,15 +146,15 @@ impl DshApiClient<'_> {
           .get_manage_stream_internal_configuration_by_manager_by_streamid(self.tenant_name(), &ManagedInternalStreamId::try_from(stream_id)?, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return internal stream configurations as a `HashMap`
   ///
-  /// `GET /manage/{manager}/stream`
-  /// `GET /manage/{manager}/stream/internal/{streamId}/configuration`
+  /// API function: `GET /manage/{manager}/stream`
+  /// API function: `GET /manage/{manager}/stream/internal/{streamId}/configuration`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<HashMap<>>` - internal stream configurations
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_internal_streams(&self) -> DshApiResult<HashMap<String, InternalManagedStream>> {
@@ -169,12 +171,12 @@ impl DshApiClient<'_> {
 
   /// # Return public stream configuration
   ///
-  /// `GET /manage/{manager}/stream/public/{streamId}/configuration`
+  /// API function: `GET /manage/{manager}/stream/public/{streamId}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `stream_id` - name of the requested public stream
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`PublicManagedStream`]`>` - public stream configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_public_stream(&self, stream_id: &str) -> DshApiResult<PublicManagedStream> {
@@ -185,15 +187,15 @@ impl DshApiClient<'_> {
           .get_manage_stream_public_configuration_by_manager_by_streamid(self.tenant_name(), &ManagedPublicStreamId::try_from(stream_id)?, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return public stream configurations as a `HashMap`
   ///
-  /// `GET /manage/{manager}/stream`
-  /// `GET /manage/{manager}/stream/public/{streamId}/configuration`
+  /// API function: `GET /manage/{manager}/stream`
+  /// API function: `GET /manage/{manager}/stream/public/{streamId}/configuration`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<HashMap<>>` - public stream configurations
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_public_streams(&self) -> DshApiResult<HashMap<String, PublicManagedStream>> {
@@ -210,15 +212,15 @@ impl DshApiClient<'_> {
 
   /// # Return sorted list of internal and public stream names
   ///
-  /// `GET /manage/{manager}/stream`
+  /// API function: `GET /manage/{manager}/stream`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<String>>` - list of stream names
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_stream_ids(&self) -> DshApiResult<Vec<String>> {
     let mut stream_ids: Vec<String> = self
       .process(self.generated_client.get_manage_stream_by_manager(self.tenant_name(), self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
       .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
     stream_ids.sort();
     Ok(stream_ids)

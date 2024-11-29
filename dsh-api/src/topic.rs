@@ -2,41 +2,47 @@
 //!
 //! Module that contains functions to manage Kafka topics.
 //!
-//! * [`create_topic(topic_id, configuration) -> ()`](DshApiClient::create_topic)
-//! * [`delete_topic(topic_id) -> ()`](DshApiClient::delete_topic)
+//! # API Methods
+//! * [`create_topic(topic_id, configuration)`](DshApiClient::create_topic)
+//! * [`delete_topic(topic_id)`](DshApiClient::delete_topic)
 //! * [`get_topic(topic_id) -> TopicStatus`](DshApiClient::get_topic)
 //! * [`get_topic_allocation_status(topic_id) -> AllocationStatus`](DshApiClient::get_topic_allocation_status)
 //! * [`get_topic_configuration(topic_id) -> Topic`](DshApiClient::get_topic_configuration)
-//! * [`get_topic_actual_configuration(topic_id) -> Topic`](DshApiClient::get_topic_actual_configuration)
 //! * [`get_topic_ids() -> Vec<String>`](DshApiClient::get_topic_ids)
+#![cfg_attr(feature = "actual", doc = "")]
+#![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#![cfg_attr(feature = "actual", doc = "* [`get_topic_actual_configuration(topic_id) -> Topic`](DshApiClient::get_topic_actual_configuration)")]
 
 use crate::dsh_api_client::DshApiClient;
+use crate::types::{AllocationStatus, Topic, TopicStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiResult;
-use dsh_api_generated::types::{AllocationStatus, Topic, TopicStatus};
 
 /// # Manage Kafka topics
 ///
 /// Module that contains functions to manage Kafka topics.
 ///
-/// * [`create_topic(topic_id, configuration) -> ()`](DshApiClient::create_topic)
-/// * [`delete_topic(topic_id) -> ()`](DshApiClient::delete_topic)
+/// # API Methods
+/// * [`create_topic(topic_id, configuration)`](DshApiClient::create_topic)
+/// * [`delete_topic(topic_id)`](DshApiClient::delete_topic)
 /// * [`get_topic(topic_id) -> TopicStatus`](DshApiClient::get_topic)
 /// * [`get_topic_allocation_status(topic_id) -> AllocationStatus`](DshApiClient::get_topic_allocation_status)
 /// * [`get_topic_configuration(topic_id) -> Topic`](DshApiClient::get_topic_configuration)
-/// * [`get_topic_actual_configuration(topic_id) -> Topic`](DshApiClient::get_topic_actual_configuration)
 /// * [`get_topic_ids() -> Vec<String>`](DshApiClient::get_topic_ids)
+#[cfg_attr(feature = "actual", doc = "")]
+#[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#[cfg_attr(feature = "actual", doc = "* [`get_topic_actual_configuration(topic_id) -> Topic`](DshApiClient::get_topic_actual_configuration)")]
 impl DshApiClient<'_> {
   /// # Create topic
   ///
-  /// `PUT /allocation/{tenant}/topic/{id}/configuration`
+  /// API function: `PUT /allocation/{tenant}/topic/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `topic_id` - name of the created topic
   /// * `configuration` - configuration for the created topic
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the topic has been successfully created)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -48,17 +54,17 @@ impl DshApiClient<'_> {
           .put_topic_configuration_by_tenant_by_id(self.tenant_name(), topic_id, self.token(), configuration)
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Delete topic
   ///
-  /// `DELETE /allocation/{tenant}/topic/{id}/configuration`
+  /// API function: `DELETE /allocation/{tenant}/topic/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `topic_id` - name of the topic to delete
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok(())` - when DSH has properly received the request
   ///              (note that this does not mean that the topic has been successfully deleted)
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
@@ -70,39 +76,33 @@ impl DshApiClient<'_> {
           .delete_topic_configuration_by_tenant_by_id(self.tenant_name(), topic_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return topic
   ///
-  /// `GET /allocation/{tenant}/topic/{id}`
+  /// API function: `GET /allocation/{tenant}/topic/{id}`
   ///
-  /// This method combines the results of the methods
-  /// [`get_topic_allocation_status()`](DshApiClient::get_topic_allocation_status),
-  /// [`get_topic_configuration()`](DshApiClient::get_topic_configuration) and
-  /// [`get_topic_configuration_actual()`](DshApiClient::get_topic_actual_configuration)
-  /// into one method call.
-  ///
-  /// ## Parameters
+  /// # Parameters
   /// * `topic_id` - name of the requested topic
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`TopicStatus`]`>` - topic status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_topic(&self, topic_id: &str) -> DshApiResult<TopicStatus> {
     self
       .process(self.generated_client.get_topic_by_tenant_by_id(self.tenant_name(), topic_id, self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return topic allocation status
   ///
-  /// `GET /allocation/{tenant}/topic/{id}/status`
+  /// API function: `GET /allocation/{tenant}/topic/{id}/status`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `topic_id` - name of the requested topic
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`AllocationStatus`]`>` - topic allocation status
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_topic_allocation_status(&self, topic_id: &str) -> DshApiResult<AllocationStatus> {
@@ -113,17 +113,17 @@ impl DshApiClient<'_> {
           .get_topic_status_by_tenant_by_id(self.tenant_name(), topic_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return topic configuration
   ///
-  /// `GET /allocation/{tenant}/topic/{id}/configuration`
+  /// API function: `GET /allocation/{tenant}/topic/{id}/configuration`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `topic_id` - name of the requested topic
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`Topic`]`>` - topic configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_topic_configuration(&self, topic_id: &str) -> DshApiResult<Topic> {
@@ -134,19 +134,20 @@ impl DshApiClient<'_> {
           .get_topic_configuration_by_tenant_by_id(self.tenant_name(), topic_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return actual topic configuration
   ///
-  /// `GET /allocation/{tenant}/topic/{id}/actual`
+  /// API function: `GET /allocation/{tenant}/topic/{id}/actual`
   ///
-  /// ## Parameters
+  /// # Parameters
   /// * `topic_id` - name of the requested topic
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<`[`Topic`]`>` - topic configuration
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  #[cfg(feature = "actual")]
   pub async fn get_topic_actual_configuration(&self, topic_id: &str) -> DshApiResult<Topic> {
     self
       .process(
@@ -155,20 +156,20 @@ impl DshApiClient<'_> {
           .get_topic_actual_by_tenant_by_id(self.tenant_name(), topic_id, self.token())
           .await,
       )
-      .map(|result| result.1)
+      .map(|(_, result)| result)
   }
 
   /// # Return sorted list of topic names
   ///
-  /// `GET /allocation/{tenant}/topic`
+  /// API function: `GET /allocation/{tenant}/topic`
   ///
-  /// ## Returns
+  /// # Returns
   /// * `Ok<Vec<String>>` - list of topic names
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_topic_ids(&self) -> DshApiResult<Vec<String>> {
     let mut topic_ids: Vec<String> = self
       .process(self.generated_client.get_topic_by_tenant(self.tenant_name(), self.token()).await)
-      .map(|result| result.1)
+      .map(|(_, result)| result)
       .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
     topic_ids.sort();
     Ok(topic_ids)

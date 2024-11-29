@@ -4,6 +4,26 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.2.0]
+
+### Added
+
+* Feature 'actual' enables/disables actual configurations.
+* Query processor capability.
+* Display implementations for selected types.
+
+### Changed
+
+* Some naming.
+* Improved documentation.
+* Changed type of guid to u16.
+* Improved error handling in client factory.
+* Better handling of usage relations.
+
+### Removed
+
+* Macros.
+
 ## [0.1.0] - 2024-10-29
 
 ### Added
