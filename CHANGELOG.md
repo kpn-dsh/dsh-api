@@ -13,6 +13,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ### Changed
 
+* Changed license to Apache-2.0.
 * Improved platform capabilites.
 
 ## [0.2.0]
