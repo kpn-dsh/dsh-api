@@ -1,9 +1,9 @@
 #![doc(html_favicon_url = "https://teamkpn.kpnnet.org/static/images/favicon.svg")]
 #![doc(html_logo_url = "https://teamkpn.kpnnet.org/static/images/favicon.svg")]
-//! # DSH Resource Management API
+//! # DSH resource management API
 //!
 //! This crate contains functions and definitions that provide support for using the functions
-//! of the DSH Resource Management API. The crate was originally developed as part of the
+//! of the DSH resource management API. The crate was originally developed as part of the
 //! [dcli](https://github.com/kpn-dsh/dcli) tool, but has now been promoted to a separate library.
 //!
 //! # Examples
@@ -65,16 +65,18 @@
 #[cfg_attr(feature = "generated", doc = "## Functions generated from openapi file")]
 #[cfg(feature = "generated")]
 pub use dsh_api_generated::generated;
+#[cfg(not(feature = "generated"))]
+pub(crate) use dsh_api_generated::generated;
+
 use dsh_sdk::error::DshRestTokenError;
+
 use log::{debug, error};
 use reqwest::Error as ReqwestError;
+use serde::{Deserialize, Serialize};
 use serde_json::Error as SerdeJsonError;
 use std::error::Error as StdError;
 use std::fmt::{Display, Formatter};
 use std::str::Utf8Error;
-
-#[cfg(not(feature = "generated"))]
-pub(crate) use dsh_api_generated::generated;
 
 pub use dsh_api_generated::display;
 
@@ -96,13 +98,24 @@ pub mod query_processor;
 pub mod secret;
 pub mod stream;
 pub mod topic;
+pub mod vhost;
 pub mod volume;
 
 /// # Enumeration that denotes an injection of a resource
-#[derive(Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Injection {
   /// Environment variable injection, where the value is the name of the environment variable.
+  #[serde(rename = "env")]
   EnvVar(String),
+  /// Path injection, where the value is the name of a directory in the container.
+  #[serde(rename = "path")]
+  Path(String),
+  /// Vhost injection, where the values are the exposed port and the a_zone
+  #[serde(rename = "vhost")]
+  Vhost(String, Option<String>),
+  /// Vhost app resource injection, where the value is the resource name
+  #[serde(rename = "vhost_resource")]
+  VhostResource(String),
 }
 
 /// # Enumeration that denotes where a resource has been used
@@ -110,14 +123,12 @@ pub enum Injection {
 /// There are a number of methods that return where a certain resource (e.g. a secret,
 /// a volume or an environment variable) has been used.
 /// This enum represents one usage of the resource.
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum UsedBy {
   /// Resource is used in an [`AppCatalogApp`](types::AppCatalogApp).
   /// * Id of the `AppCatalogApp`.
-  /// * Application resource.
-  /// * Number of instances.
-  /// * Injections.
-  App(String, String, u64, Vec<Injection>),
+  /// * Ids of the resources.
+  App(String, Vec<String>),
   /// Resource is used in an [`Application`](types::Application).
   /// * Application id.
   /// * Number of instances.
@@ -139,6 +150,12 @@ impl Display for Injection {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
       Injection::EnvVar(environment_variable) => write!(f, "{}", environment_variable),
+      Injection::Path(path) => write!(f, "{}", path),
+      Injection::Vhost(port, a_zone) => match a_zone {
+        Some(a_zone) => write!(f, "{}:{}", port, a_zone),
+        None => write!(f, "{}", port),
+      },
+      Injection::VhostResource(resource_name) => write!(f, "{}", resource_name),
     }
   }
 }
@@ -146,12 +163,8 @@ impl Display for Injection {
 impl Display for UsedBy {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      UsedBy::App(app_id, application_resource, instances, injections) => {
-        write!(f, "app: {}, application: {}, instances: {}", app_id, application_resource, instances)?;
-        if !injections.is_empty() {
-          write!(f, ", {}", injections.iter().map(|inj| inj.to_string()).collect::<Vec<_>>().join(", "))?
-        }
-        Ok(())
+      UsedBy::App(app_id, resource_ids) => {
+        write!(f, "app: {}, resources: {}", app_id, resource_ids.join(", "))
       }
       UsedBy::Application(application_id, instances, usage_locations) => {
         write!(f, "application: {}, instances: {}", application_id, instances)?;
@@ -321,6 +334,25 @@ fn test_dsh_api_error_is_sync() {
   fn assert_sync<T: Sync>() {}
   assert_sync::<DshApiError>();
 }
+
+// Function naming conventions
+//
+//                       parameter   returns
+//
+// find_Ys               predicate   zero or more Xs from one Y, that match a predicate
+// find_Ys_that_use_X    x_id        find all Ys that use X
+// find_Ys_that_use_Xs   x_ids       find all Ys that use one of Xs
+// get_X_from_Y          x_id        optional X from Y, that matches x_id
+// get_X_from_Ys         x_id        optional X from Ys, that matches x_id
+// get_Xs_from_Y         x_ids       zero or more Xs from one Y, that match one of the x_ids
+// get_Xs_from_Ys        x_ids       zero or more Xs from multiple Ys, that match one of the x_ids
+// X_from_Y                          (optional) X from Y
+// X_from_Ys                         (optional) X from Ys
+// Xs_from_Y                         zero or more Xs from one Y
+// Xs_from_Ys                        zero or more Xs from multiple Ys
+//
+// _with_Z                           result contains tuples (X, Z)
+// _with_Zs                          result contains tuples (X, Zs)
 
 // API naming convention
 //
