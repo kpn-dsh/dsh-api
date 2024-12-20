@@ -4,3 +4,4 @@
 /Cargo.lock
 /target
 /.idea
+/dsh-api-generated/src/open-api.json
