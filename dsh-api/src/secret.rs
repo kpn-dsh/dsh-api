@@ -1,44 +1,76 @@
 //! # Manage secrets
 //!
-//! Module that contains functions to manage secrets.
+//! Module that contains methods and functions to manage secrets.
+//! * API methods - DshApiClient methods that directly call the API.
+//! * Derived methods - DshApiClient methods that add extra capabilities
+//!   but depend on the API methods.
+//! * Functions - Functions that add extra capabilities but do not depend directly on the API.
 //!
-//! # API Methods
+//! # API methods
+//!
+//! [`DshApiClient`] methods that directly call the DSH resource management API.
+//!
 //! * [`create_secret(secret)`](DshApiClient::create_secret)
-//! * [`delete_secret(secret_id)`](DshApiClient::delete_secret)
-//! * [`get_secret(secret_id) -> bytes`](DshApiClient::get_secret)
-//! * [`get_secret_allocation_status(secret_id) -> allocation_status`](DshApiClient::get_secret_allocation_status)
-//! * [`get_secret_configuration(secret_id) -> ok`](DshApiClient::get_secret_configuration)
-//! * [`list_secret_ids() -> [secret_id]`](DshApiClient::list_secret_ids)
-//! * [`update_secret(secret_id, secret)`](DshApiClient::update_secret)
+//! * [`delete_secret(id)`](DshApiClient::delete_secret)
+//! * [`get_secret(id) -> bytes`](DshApiClient::get_secret)
+//! * [`get_secret_allocation_status(id) -> allocation_status`](DshApiClient::get_secret_allocation_status)
+//! * [`get_secret_configuration(id) -> ok`](DshApiClient::get_secret_configuration)
+//! * [`get_secret_with_usage(id) -> [usage]`](DshApiClient::get_secret_with_usage)
+//! * [`list_secret_ids() -> [id]`](DshApiClient::list_secret_ids)
+//! * [`list_secrets_with_usage() -> [(id, usage)]`](DshApiClient::list_secrets_with_usage)
+//! * [`update_secret(id, secret)`](DshApiClient::update_secret)
+//!
+//! # Derived methods
+//!
+//! [`DshApiClient`] methods that add extra capabilities but do not directly call the
+//! DSH resource management API. These derived methods depend on the API methods for this.
+//!
+//! * [`get_secret_with_usage(secret_id) -> [used_by]`](DshApiClient::get_secret_with_usage)
+//! * [`list_secrets_with_usage() -> [(secret_id, used_by)]`](DshApiClient::list_secrets_with_usage)
 #![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
-#![cfg_attr(feature = "actual", doc = "* [`get_secret_actual_configuration(secret_id) -> Empty`](DshApiClient::get_secret_actual_configuration)")]
+#![cfg_attr(feature = "actual", doc = "# Actual configuration methods")]
+#![cfg_attr(feature = "actual", doc = "* [`get_secret_actual_configuration(id) -> Empty`](DshApiClient::get_secret_actual_configuration)")]
 
-// TODO Special treatment for system secrets
 use crate::dsh_api_client::DshApiClient;
 #[allow(unused_imports)]
 use crate::types::{AllocationStatus, Empty, Secret};
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::{DshApiResult, Injection, UsedBy};
-use dsh_api_generated::types::{AppCatalogApp, Application};
+use crate::{app, application, DshApiResult, UsedBy};
 use futures::try_join;
 
 /// # Manage secrets
 ///
-/// Module that contains functions to manage secrets.
+/// Module that contains methods and functions to manage secrets.
+/// * API methods - DshApiClient methods that directly call the API.
+/// * Derived methods - DshApiClient methods that add extra capabilities
+///   but depend on the API methods.
+/// * Functions - Functions that add extra capabilities but do not depend directly on the API.
 ///
-/// # API Methods
+/// # API methods
+///
+/// [`DshApiClient`] methods that directly call the DSH resource management API.
+///
 /// * [`create_secret(secret)`](DshApiClient::create_secret)
-/// * [`delete_secret(secret_id)`](DshApiClient::delete_secret)
-/// * [`get_secret(secret_id) -> bytes`](DshApiClient::get_secret)
-/// * [`get_secret_allocation_status(secret_id) -> allocation_status`](DshApiClient::get_secret_allocation_status)
-/// * [`get_secret_configuration(secret_id) -> ok`](DshApiClient::get_secret_configuration)
-/// * [`list_secret_ids() -> [secret_id]`](DshApiClient::list_secret_ids)
-/// * [`update_secret(secret_id, secret)`](DshApiClient::update_secret)
+/// * [`delete_secret(id)`](DshApiClient::delete_secret)
+/// * [`get_secret(id) -> bytes`](DshApiClient::get_secret)
+/// * [`get_secret_allocation_status(id) -> allocation_status`](DshApiClient::get_secret_allocation_status)
+/// * [`get_secret_configuration(id) -> ok`](DshApiClient::get_secret_configuration)
+/// * [`get_secret_with_usage(id) -> [usage]`](DshApiClient::get_secret_with_usage)
+/// * [`list_secret_ids() -> [id]`](DshApiClient::list_secret_ids)
+/// * [`list_secrets_with_usage() -> [(id, usage)]`](DshApiClient::list_secrets_with_usage)
+/// * [`update_secret(id, secret)`](DshApiClient::update_secret)
+///
+/// # Derived methods
+///
+/// [`DshApiClient`] methods that add extra capabilities but do not directly call the
+/// DSH resource management API. These derived methods depend on the API methods for this.
+///
+/// * [`get_secret_with_usage(secret_id) -> [used_by]`](DshApiClient::get_secret_with_usage)
+/// * [`list_secrets_with_usage() -> [(secret_id, used_by)]`](DshApiClient::list_secrets_with_usage)
 #[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
-#[cfg_attr(feature = "actual", doc = "* [`get_secret_actual_configuration(secret_id) -> Empty`](DshApiClient::get_secret_actual_configuration)")]
+#[cfg_attr(feature = "actual", doc = "# Actual configuration methods")]
+#[cfg_attr(feature = "actual", doc = "* [`get_secret_actual_configuration(id) -> Empty`](DshApiClient::get_secret_actual_configuration)")]
 impl DshApiClient<'_> {
   /// # Create secret
   ///
@@ -161,6 +193,28 @@ impl DshApiClient<'_> {
       .map(|(_, result)| result)
   }
 
+  /// # Get secrets with usage
+  ///
+  /// Returns configuration and usage for a given secret.
+  ///
+  /// # Parameters
+  /// * `secret_id` - id of the requested secrets
+  ///
+  /// # Returns
+  /// * `Ok<Vec<UsedBy>>` - usage.
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn get_secret_with_usage(&self, secret_id: &str) -> DshApiResult<Vec<UsedBy>> {
+    let (applications, apps) = try_join!(self.get_applications(), self.get_app_configurations())?;
+    let mut usages: Vec<UsedBy> = vec![];
+    for (application_id, application, injections) in application::find_applications_that_use_secret(secret_id, &applications) {
+      usages.push(UsedBy::Application(application_id, application.instances, injections));
+    }
+    for (app_id, _, resource_ids) in app::find_apps_that_use_secret(secret_id, &apps) {
+      usages.push(UsedBy::App(app_id, resource_ids));
+    }
+    Ok(usages)
+  }
+
   /// # Return sorted list of secret names
   ///
   /// API function: `GET /allocation/{tenant}/secret`
@@ -191,14 +245,11 @@ impl DshApiClient<'_> {
     for secret_id in secret_ids {
       if !is_system_secret(secret_id.as_str()) {
         let mut usages: Vec<UsedBy> = vec![];
-        let applications_with_secret_injections: Vec<(String, &Application, Vec<Injection>)> = Self::applications_with_secret_injections(secret_id.as_str(), &applications);
-        for (application_id, application, injections) in applications_with_secret_injections {
-          // println!("{} >>>>>>>>>>>>>> {:?}", secret_id, injections);
+        for (application_id, application, injections) in application::find_applications_that_use_secret(secret_id.as_str(), &applications) {
           usages.push(UsedBy::Application(application_id, application.instances, injections));
         }
-        let apps_with_secret_injections: Vec<(String, &AppCatalogApp, String, &Application, Vec<Injection>)> = Self::apps_with_secret_injections(secret_id.as_str(), &apps);
-        for (app_id, _, application_id, application, injections) in apps_with_secret_injections {
-          usages.push(UsedBy::App(app_id, application_id, application.instances, injections));
+        for (app_id, _, resource_ids) in app::find_apps_that_use_secret(secret_id.as_str(), &apps) {
+          usages.push(UsedBy::App(app_id, resource_ids));
         }
         secrets_with_usage.push((secret_id, usages));
       }
@@ -230,6 +281,7 @@ impl DshApiClient<'_> {
   }
 }
 
-fn is_system_secret(secret_id: &str) -> bool {
+/// # Checks if secret is a system secret
+pub fn is_system_secret(secret_id: &str) -> bool {
   secret_id.contains('!')
 }

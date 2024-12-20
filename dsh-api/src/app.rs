@@ -2,46 +2,66 @@
 //!
 //! Module that contains functions to manage pre-packaged,
 //! easily configured apps that you can select from the App Catalog.
+//! * API methods - DshApiClient methods that directly call the API.
+//! * Derived methods - DshApiClient methods that add extra capabilities
+//!   but depend on the API methods.
+//! * Functions - Functions that add extra capabilities but do not depend directly on the API.
 //!
 //! # API methods
-//! * [`get_app_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_configuration)
-//! * [`get_app_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_configurations)
 //!
-//! # Utility methods
-//! * [`list_app_configurations() -> Vec<(String, AppCatalogApp)>`](DshApiClient::list_app_configurations)
-//! * [`list_app_ids() -> Vec<String>`](DshApiClient::list_app_ids)
+//! [`DshApiClient`] methods that directly call the DSH resource management API.
 //!
-//! # Utility functions
-//! * [`application_from_app(app) -> (String, &Application)`](DshApiClient::application_from_app)
+//! * [`get_app_configuration(app_id) -> app`](DshApiClient::get_app_configuration)
+//! * [`get_app_configurations() -> map<app_id, app>`](DshApiClient::get_app_configurations)
+//! * [`list_app_configurations() -> [(app_id, app)]`](DshApiClient::list_app_configurations)
+//! * [`list_app_ids() -> [app_id]`](DshApiClient::list_app_ids)
+//!
+//! # Derived methods
+//!
+//! [`DshApiClient`] methods that add extra capabilities but do not directly call the
+//! DSH resource management API. These derived methods depend on the API methods for this.
+//!
+//! * [`list_app_configurations() -> [(app_id, app)]`](DshApiClient::list_app_configurations)
+//! * [`list_app_ids() -> [app_id]`](DshApiClient::list_app_ids)
 #![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#![cfg_attr(feature = "actual", doc = "# Actual configuration methods")]
 #![cfg_attr(feature = "actual", doc = "* [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)")]
 #![cfg_attr(feature = "actual", doc = "* [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)")]
 use crate::dsh_api_client::DshApiClient;
-use std::collections::HashMap;
-
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::{DshApiResult, Injection};
+use dsh_api_generated::types::{Bucket, Certificate, Secret, Topic, Vhost, Volume};
+use std::collections::HashMap;
 
 /// # Manage apps in the App Catalog
 ///
 /// Module that contains functions to manage pre-packaged,
 /// easily configured apps that you can select from the App Catalog.
+/// * API methods - DshApiClient methods that directly call the API.
+/// * Derived methods - DshApiClient methods that add extra capabilities
+///   but depend on the API methods.
+/// * Functions - Functions that add extra capabilities but do not depend directly on the API.
 ///
 /// # API methods
-/// * [`get_app_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_configuration)
-/// * [`get_app_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_configurations)
 ///
-/// # Utility methods
-/// * [`list_app_configurations() -> Vec<(String, AppCatalogApp)>`](DshApiClient::list_app_configurations)
-/// * [`list_app_ids() -> Vec<String>`](DshApiClient::list_app_ids)
+/// [`DshApiClient`] methods that directly call the DSH resource management API.
 ///
-/// # Utility functions
-/// * [`application_from_app(app) -> (String, &Application)`](DshApiClient::application_from_app)
+/// * [`get_app_configuration(app_id) -> app`](DshApiClient::get_app_configuration)
+/// * [`get_app_configurations() -> map<app_id, app>`](DshApiClient::get_app_configurations)
+/// * [`list_app_configurations() -> [(app_id, app)]`](DshApiClient::list_app_configurations)
+/// * [`list_app_ids() -> [app_id]`](DshApiClient::list_app_ids)
+///
+/// # Derived methods
+///
+/// [`DshApiClient`] methods that add extra capabilities but do not directly call the
+/// DSH resource management API. These derived methods depend on the API methods for this.
+///
+/// * [`list_app_configurations() -> [(app_id, app)]`](DshApiClient::list_app_configurations)
+/// * [`list_app_ids() -> [app_id]`](DshApiClient::list_app_ids)
 #[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#[cfg_attr(feature = "actual", doc = "# Actual configuration methods")]
 #[cfg_attr(feature = "actual", doc = "* [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)")]
 #[cfg_attr(feature = "actual", doc = "* [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)")]
 impl DshApiClient<'_> {
@@ -150,109 +170,274 @@ impl DshApiClient<'_> {
     app_ids.sort();
     Ok(app_ids)
   }
+}
 
-  /// Get application resource from an App
-  ///
-  /// # Parameters
-  /// * `app` - app to get the application resource from
-  ///
-  /// # Returns
-  /// * `Some((resource_id, application))`
-  ///   * `resource_id` - resource id from the app
-  ///   * `application` - reference to the `Application`
-  pub fn application_from_app(app: &AppCatalogApp) -> Option<(String, &Application)> {
-    app.resources.iter().find_map(|(resource_id, resource)| match resource {
-      AppCatalogAppResourcesValue::Application(application) => Some((resource_id.to_string(), application)),
-      _ => None,
-    })
-  }
+/// Get application resources from `AppCatalogApp`
+///
+/// # Parameters
+/// * `app` - app to get the application resources from
+///
+/// # Returns
+/// Either `None` when the `app` does not have any application resources,
+/// or a `Some` that contains tuples describing the application resources:
+/// * resource id
+/// * reference to the `Application`
+pub fn application_resources_from_app(app: &AppCatalogApp) -> Option<Vec<(&String, &Application)>> {
+  resources_from_app(app, &|resource_value| match resource_value {
+    AppCatalogAppResourcesValue::Application(application) => Some(application),
+    _ => None,
+  })
+}
 
-  /// Get apps that use a given secret injection
-  ///
-  /// # Parameters
-  /// * `secret` - id of the secret to look for
-  /// * `apps` - hashmap of all apps
-  ///
-  /// # Returns
-  /// * `Vec<(app_id, app, application, injections)>` - vector of applications that use the secret
-  ///   * `app_id` - application id of the application that uses the secret
-  ///   * `app` - reference to the app
-  ///   * `application_resource_id` - application resource id in the app
-  ///   * `application` - reference to the application resource in the app
-  ///   * `injections` - the injections of the secret in the application
-  #[allow(clippy::type_complexity)]
-  pub fn apps_with_secret_injections<'a>(secret: &str, apps: &'a HashMap<String, AppCatalogApp>) -> Vec<(String, &'a AppCatalogApp, String, &'a Application, Vec<Injection>)> {
-    let mut app_ids: Vec<String> = apps.keys().map(|p| p.to_string()).collect();
-    app_ids.sort();
-    let mut tuples: Vec<(String, &AppCatalogApp, String, &Application, Vec<Injection>)> = vec![];
-    for app_id in app_ids {
-      let app = apps.get(&app_id).unwrap();
-      if let Some((application_resource_id, application)) = Self::application_from_app(app) {
-        if !application.secrets.is_empty() {
-          let mut injections = Vec::<Injection>::new();
-          for application_secret in &application.secrets {
-            if secret == application_secret.name {
-              for application_secret_injection in &application_secret.injections {
-                if let Some(env_injection) = application_secret_injection.get("env") {
-                  injections.push(Injection::EnvVar(env_injection.to_string()));
-                }
-              }
-            }
-          }
-          if !injections.is_empty() {
-            tuples.push((app_id, app, application_resource_id, application, injections));
-          }
+/// Get bucket resources from `AppCatalogApp`
+///
+/// # Parameters
+/// * `app` - app to get the bucket resources from
+///
+/// # Returns
+/// Either `None` when the `app` does not have any bucket resources,
+/// or a `Some` that contains tuples describing the bucket resources:
+/// * resource id
+/// * reference to the `Bucket`
+pub fn bucket_resources_from_app(app: &AppCatalogApp) -> Option<Vec<(&String, &Bucket)>> {
+  resources_from_app(app, &|resource_value| match resource_value {
+    AppCatalogAppResourcesValue::Bucket(bucket) => Some(bucket),
+    _ => None,
+  })
+}
+
+/// Get certificate resources from `AppCatalogApp`
+///
+/// # Parameters
+/// * `app` - app to get the certificate resources from
+///
+/// # Returns
+/// Either `None` when the `app` does not have any certificate resources,
+/// or a `Some` that contains tuples describing the certificate resources:
+/// * resource id
+/// * reference to the `Certificate`
+pub fn certificate_resources_from_app(app: &AppCatalogApp) -> Option<Vec<(&String, &Certificate)>> {
+  resources_from_app(app, &|resource_value| match resource_value {
+    AppCatalogAppResourcesValue::Certificate(certificate) => Some(certificate),
+    _ => None,
+  })
+}
+
+/// Get secret resources from `AppCatalogApp`
+///
+/// # Parameters
+/// * `app` - app to get the secret resources from
+///
+/// # Returns
+/// Either `None` when the `app` does not have any secret resources,
+/// or a `Some` that contains tuples describing the secret resources:
+/// * resource id
+/// * reference to the `Secret`
+pub fn secret_resources_from_app(app: &AppCatalogApp) -> Option<Vec<(&String, &Secret)>> {
+  resources_from_app(app, &|resource_value| match resource_value {
+    AppCatalogAppResourcesValue::Secret(secret) => Some(secret),
+    _ => None,
+  })
+}
+
+/// Get topic resources from `AppCatalogApp`
+///
+/// # Parameters
+/// * `app` - app to get the topic resources from
+///
+/// # Returns
+/// Either `None` when the `app` does not have any topic resources,
+/// or a `Some` that contains tuples describing the topic resources:
+/// * resource id
+/// * reference to the `Topic`
+pub fn topic_resources_from_app(app: &AppCatalogApp) -> Option<Vec<(&String, &Topic)>> {
+  resources_from_app(app, &|resource_value| match resource_value {
+    AppCatalogAppResourcesValue::Topic(topic) => Some(topic),
+    _ => None,
+  })
+}
+
+/// Get vhost resources from `AppCatalogApp`
+///
+/// # Parameters
+/// * `app` - app to get the vhost resources from
+///
+/// # Returns
+/// Either `None` when the `app` does not have any vhost resources,
+/// or a `Some` that contains tuples describing the vhost resources:
+/// * resource id
+/// * reference to the `Vhost`
+pub fn vhost_resources_from_app(app: &AppCatalogApp) -> Option<Vec<(&String, &Vhost)>> {
+  resources_from_app(app, &|resource_value| match resource_value {
+    AppCatalogAppResourcesValue::Vhost(vhost) => Some(vhost),
+    _ => None,
+  })
+}
+
+/// Get volume resources from `AppCatalogApp`
+///
+/// # Parameters
+/// * `app` - app to get the volume resources from
+///
+/// # Returns
+/// Either `None` when the `app` does not have any volume resources,
+/// or a `Some` that contains tuples describing the volume resources:
+/// * resource id
+/// * reference to the `Volume`
+pub fn volume_resources_from_app(app: &AppCatalogApp) -> Option<Vec<(&String, &Volume)>> {
+  resources_from_app(app, &|resource_value| match resource_value {
+    AppCatalogAppResourcesValue::Volume(volume) => Some(volume),
+    _ => None,
+  })
+}
+
+/// Find apps that use a given secret
+///
+/// # Parameters
+/// * `secret_id` - id of the secret to look for
+/// * `apps` - hashmap of all apps
+///
+/// # Returns
+/// `Vec<(app_id, app, resource_ids)>` - vector of applications that use the secret
+/// * `app_id` - app id of the app that uses the secret
+/// * `app` - reference to the app
+/// * `resource_ids` - secret resources of the secret in the app
+pub fn find_apps_that_use_secret<'a>(secret_id: &str, apps: &'a HashMap<String, AppCatalogApp>) -> Vec<(String, &'a AppCatalogApp, Vec<String>)> {
+  let mut app_ids: Vec<String> = apps.keys().map(|p| p.to_string()).collect();
+  app_ids.sort();
+  let mut tuples: Vec<(String, &'a AppCatalogApp, Vec<String>)> = vec![];
+  for app_id in app_ids {
+    let app = apps.get(&app_id).unwrap();
+    if let Some(secret_resources) = secret_resources_from_app(app) {
+      for (secret_resource_id, secret) in secret_resources {
+        if secret.name == secret_id {
+          tuples.push((app_id.clone(), app, vec![secret_resource_id.to_string()]));
         }
       }
     }
-    tuples
   }
+  tuples
+}
 
-  /// Get apps that use any of a list of given secret injections
-  ///
-  /// # Parameters
-  /// * `secrets` - ids of the secrets to look for
-  /// * `apps` - hashmap of all apps
-  ///
-  /// # Returns
-  /// * `Vec<(app_id, app, application, injections)>` - vector of applications that use the secret
-  ///   * `app_id` - application id of the application that uses the secret
-  ///   * `app` - reference to the app
-  ///   * `application_resource_id` - application resource id in the app
-  ///   * `application` - reference to the application resource in the app
-  ///   * `injections` - the injections of the secret in the application
-  #[allow(clippy::type_complexity)]
-  pub fn apps_with_secrets_injections<'a>(
-    secrets: &[String],
-    apps: &'a HashMap<String, AppCatalogApp>,
-  ) -> Vec<(String, &'a AppCatalogApp, String, &'a Application, HashMap<String, Vec<Injection>>)> {
-    let mut app_ids: Vec<String> = apps.keys().map(|p| p.to_string()).collect();
-    app_ids.sort();
-    let mut tuples: Vec<(String, &AppCatalogApp, String, &Application, HashMap<String, Vec<Injection>>)> = vec![];
-    for app_id in app_ids {
-      let app = apps.get(&app_id).unwrap();
-      if let Some((application_resource_id, application)) = Self::application_from_app(app) {
-        if !application.secrets.is_empty() {
-          let mut injections = HashMap::<String, Vec<Injection>>::new();
-          for application_secret in &application.secrets {
-            if secrets.contains(&application_secret.name) {
-              let mut env_injections: Vec<Injection> = vec![];
-              for application_secret_injection in &application_secret.injections {
-                if let Some(env_injection) = application_secret_injection.get("env") {
-                  env_injections.push(Injection::EnvVar(env_injection.to_string()));
-                }
-              }
-              if !env_injections.is_empty() {
-                injections.insert(application_secret.name.clone(), env_injections);
-              }
-            }
-          }
-          if !injections.is_empty() {
-            tuples.push((app_id, app, application_resource_id, application, injections));
-          }
+/// Find apps that use any of a list of given secret
+///
+/// # Parameters
+/// * `secrets` - ids of the secrets to look for
+/// * `apps` - hashmap of all apps
+///
+/// # Returns
+/// * `Vec<(app_id, app, resource_ids)>` - vector of apps that use the secret
+///   * `app_id` - app id of the app that uses the secret
+///   * `app` - reference to the app
+///   * `resource_ids` - application secret resource ids
+pub fn find_apps_that_use_secrets<'a>(secrets: &[String], apps: &'a HashMap<String, AppCatalogApp>) -> Vec<(String, &'a AppCatalogApp, Vec<String>)> {
+  let mut app_ids: Vec<String> = apps.keys().map(|p| p.to_string()).collect();
+  app_ids.sort();
+  let mut tuples: Vec<(String, &AppCatalogApp, Vec<String>)> = vec![];
+  for app_id in app_ids {
+    let mut resource_ids = vec![];
+    let app = apps.get(&app_id).unwrap();
+    if let Some(secret_resources) = secret_resources_from_app(app) {
+      for (secret_resource_id, secret) in secret_resources {
+        if secrets.contains(&secret.name) {
+          resource_ids.push(secret_resource_id.to_string())
         }
       }
     }
-    tuples
+    if !resource_ids.is_empty() {
+      tuples.push((app_id, app, resource_ids));
+    }
+  }
+  tuples
+}
+
+/// Find apps that use a given topic
+///
+/// # Parameters
+/// * `topic_id` - id of the topic to look for
+/// * `apps` - hashmap of all apps
+///
+/// # Returns
+/// * `Vec<(app_id, app, resource_ids)>` - vector of applications that use the topic
+///   * `app_id` - app id of the app that uses the topic
+///   * `app` - reference to the app
+///   * `resource_ids` - topic resources of the topic in the app
+pub fn find_apps_that_use_topic<'a>(topic_id: &str, apps: &'a HashMap<String, AppCatalogApp>) -> Vec<(String, &'a AppCatalogApp, Vec<String>)> {
+  let mut app_ids: Vec<String> = apps.keys().map(|p| p.to_string()).collect();
+  app_ids.sort();
+  let mut tuples: Vec<(String, &'a AppCatalogApp, Vec<String>)> = vec![];
+  for app_id in app_ids {
+    let app = apps.get(&app_id).unwrap();
+    if let Some(topic_resources) = topic_resources_from_app(app) {
+      for (topic_resource_id, _) in topic_resources {
+        if topic_resource_id.contains(topic_id) {
+          tuples.push((app_id.clone(), app, vec![topic_resource_id.to_string()]));
+        }
+      }
+    }
+  }
+  tuples
+}
+
+/// Find apps that use a given volume
+///
+/// # Parameters
+/// * `volume_id` - id of the volume to look for
+/// * `apps` - hashmap of all apps
+///
+/// # Returns
+/// * `Vec<(app_id, app, application, injections)>` - vector of applications that use the secret
+///   * `app_id` - application id of the app that uses the secret
+///   * `app` - reference to the app
+///   * `resource_ids` - topic resources of the volume in the app
+pub fn find_apps_that_use_volume<'a>(volume_id: &str, apps: &'a HashMap<String, AppCatalogApp>) -> Vec<(String, &'a AppCatalogApp, Vec<String>)> {
+  let mut app_ids: Vec<String> = apps.keys().map(|p| p.to_string()).collect();
+  app_ids.sort();
+  let mut tuples: Vec<(String, &AppCatalogApp, Vec<String>)> = vec![];
+  for app_id in app_ids {
+    let app = apps.get(&app_id).unwrap();
+    if let Some(volume_resources) = volume_resources_from_app(app) {
+      for (volume_resource_id, _) in volume_resources {
+        if volume_resource_id.contains(volume_id) {
+          tuples.push((app_id.clone(), app, vec![volume_resource_id.to_string()]));
+        }
+      }
+    }
+  }
+  tuples
+}
+
+/// # Get all vhost injections from `AppCatalogApp`
+///
+/// # Parameters
+/// * `app` - reference to the `AppCatalogApp`
+///
+/// # Returns
+/// `Vec<(String, Injection)>` - list of tuples that describe the vhost injections.
+/// Each tuple consist of
+/// * vhost resource id
+/// * vhost injection.
+pub fn vhosts_from_app(app: &AppCatalogApp) -> Vec<(String, Injection)> {
+  let mut injections: Vec<(String, Injection)> = vec![];
+  if let Some(vhost_resources) = vhost_resources_from_app(app) {
+    for (resource_id, vhost) in vhost_resources {
+      injections.push((vhost.value.clone(), Injection::VhostResource(resource_id.clone())));
+    }
+  }
+  injections
+}
+
+/// Get resources from App
+fn resources_from_app<'a, T>(app: &'a AppCatalogApp, finder: &dyn Fn(&'a AppCatalogAppResourcesValue) -> Option<&'a T>) -> Option<Vec<(&'a String, &'a T)>> {
+  let mut resources: Vec<(&String, &T)> = vec![];
+  for (resource_id, resource) in &app.resources {
+    if let Some(resource) = finder(resource) {
+      resources.push((resource_id, resource))
+    }
+  }
+  if resources.is_empty() {
+    None
+  } else {
+    Some(resources)
   }
 }
