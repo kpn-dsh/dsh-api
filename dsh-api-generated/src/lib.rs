@@ -5,3 +5,5 @@ pub mod generated {
 }
 
 pub mod display;
+
+pub static OPENAPI_SPEC: &str = include_str!("open-api.json");
