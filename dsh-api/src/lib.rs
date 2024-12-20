@@ -69,7 +69,7 @@ pub(crate) mod generated {
   include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 }
 
-pub static OPENAPI_SPEC: &str = include_str!("../openapi_spec/open-api.json");
+pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/open-api.json"));
 
 use dsh_sdk::error::DshRestTokenError;
 
