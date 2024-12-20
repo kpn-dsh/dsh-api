@@ -1,18 +1,17 @@
 //! Client for accessing the DSH api
 
-use std::fmt::{Display, Formatter};
-
-use bytes::Bytes;
-use futures::TryStreamExt;
-use progenitor_client::{ByteStream, Error as ProgenitorError, ResponseValue as ProgenitorResponseValue};
-use reqwest::StatusCode as ReqwestStatusCode;
-use serde::Serialize;
-
 use crate::dsh_api_tenant::DshApiTenant;
 use crate::generated::Client as GeneratedClient;
 use crate::platform::DshPlatform;
 use crate::types::error::ConversionError;
 use crate::DshApiError;
+use bytes::Bytes;
+use dsh_api_generated::OPENAPI_SPEC;
+use futures::TryStreamExt;
+use progenitor_client::{ByteStream, Error as ProgenitorError, ResponseValue as ProgenitorResponseValue};
+use reqwest::StatusCode as ReqwestStatusCode;
+use serde::Serialize;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug)]
 pub struct DshApiClient<'a> {
@@ -36,8 +35,19 @@ impl<'a> DshApiClient<'a> {
     Self { token, generated_client, tenant }
   }
 
+  /// # Returns the version of the openapi spec
   pub fn api_version(&self) -> &'static str {
     self.generated_client.api_version()
+  }
+
+  /// # Returns the openapi spec used to generate the client code
+  ///
+  /// Note that this is not the original openapi specification exposed by the
+  /// DSH resource management API. The version exposed by this function has two additions:
+  /// * Added authorization header specification to each operation.
+  /// * Added operationId parameter to each operation.
+  pub fn openapi_spec() -> &'static str {
+    OPENAPI_SPEC
   }
 
   pub(crate) fn _response_wrapper<T>(progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
