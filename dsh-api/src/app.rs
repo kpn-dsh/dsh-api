@@ -28,11 +28,10 @@
 #![cfg_attr(feature = "actual", doc = "* [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)")]
 #![cfg_attr(feature = "actual", doc = "* [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)")]
 use crate::dsh_api_client::DshApiClient;
-use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application};
+use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application, Bucket, Certificate, Secret, Topic, Vhost, Volume};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::{DshApiResult, Injection};
-use dsh_api_generated::types::{Bucket, Certificate, Secret, Topic, Vhost, Volume};
 use std::collections::HashMap;
 
 /// # Manage apps in the App Catalog

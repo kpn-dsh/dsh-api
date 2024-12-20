@@ -17,11 +17,10 @@
 use crate::app::find_apps_that_use_topic;
 use crate::application::find_applications_that_use_topic;
 use crate::dsh_api_client::DshApiClient;
-use crate::types::{AllocationStatus, Topic, TopicStatus};
+use crate::types::{AllocationStatus, AppCatalogApp, Application, Topic, TopicStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::{DshApiResult, Injection, UsedBy};
-use dsh_api_generated::types::{AppCatalogApp, Application};
 use futures::try_join;
 
 /// # Manage Kafka topics

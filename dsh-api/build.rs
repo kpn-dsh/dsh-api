@@ -14,7 +14,7 @@ fn main() -> Result<(), String> {
   // Make updated openapi spec available to the crate code
   let openapi_spec_updated_json = serde_json::to_string_pretty(&openapi_spec).unwrap();
   let mut embedded_openapi_file = std::path::Path::new(&std::env::var("CARGO_MANIFEST_DIR").unwrap()).to_path_buf();
-  embedded_openapi_file.push("src");
+  embedded_openapi_file.push("openapi_spec");
   embedded_openapi_file.push("open-api.json");
   // println!("cargo:warning= embedded_file: {:?}", &embedded_openapi_file);
   fs::write(embedded_openapi_file, &openapi_spec_updated_json).unwrap();

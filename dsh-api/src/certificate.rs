@@ -30,11 +30,10 @@
 #![cfg_attr(feature = "actual", doc = "* [`get_certificate_actual_configuration(certificate_id) -> Certificate`](DshApiClient::get_certificate_actual_configuration)")]
 
 use crate::dsh_api_client::DshApiClient;
-use crate::types::{AllocationStatus, Certificate, CertificateStatus};
+use crate::types::{AllocationStatus, AppCatalogApp, Application, Certificate, CertificateStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::{app, application, DshApiResult, UsedBy};
-use dsh_api_generated::types::{AppCatalogApp, Application};
 use futures::future::try_join_all;
 use futures::try_join;
 use std::collections::HashMap;

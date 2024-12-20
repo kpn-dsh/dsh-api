@@ -62,11 +62,14 @@
 //! # }
 //! ```
 
-#[cfg_attr(feature = "generated", doc = "## Functions generated from openapi file")]
-#[cfg(feature = "generated")]
-pub use dsh_api_generated::generated;
-#[cfg(not(feature = "generated"))]
-pub(crate) use dsh_api_generated::generated;
+/// # Types generated from openapi file
+pub use crate::generated::types;
+
+pub(crate) mod generated {
+  include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
+}
+
+pub static OPENAPI_SPEC: &str = include_str!("../openapi_spec/open-api.json");
 
 use dsh_sdk::error::DshRestTokenError;
 
@@ -78,17 +81,13 @@ use std::error::Error as StdError;
 use std::fmt::{Display, Formatter};
 use std::str::Utf8Error;
 
-pub use dsh_api_generated::display;
-
-/// # Types generated from openapi file
-pub use dsh_api_generated::types;
-
 pub mod app;
 pub mod app_configuration;
 pub mod app_manifest;
 pub mod application;
 pub mod bucket;
 pub mod certificate;
+pub mod display;
 pub mod dsh_api_client;
 pub mod dsh_api_client_factory;
 pub mod dsh_api_tenant;
