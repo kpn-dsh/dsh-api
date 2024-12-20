@@ -1,4 +1,4 @@
-# DSH Resource Management Api Client
+# DSH resource management API client
 
 ### Environment variables
 
@@ -86,50 +86,18 @@ The following features are defined:
     </tr>
 </table>
 
-## How to publish to Artifactory
-
-On the KPN Artifactory we have a Cargo repository dedicated
-for [DSH-IUC](https://artifacts.kpn.org/ui/repos/tree/General/cargo-dsh-iuc-local).
-LDAP Group `dig_dsh_iuc` has write access to this repository and is allowed to publish artifacts.
-
-As in .cargo/config.toml, the default registry points
-towards [DSH-IUC](https://artifacts.kpn.org/ui/repos/tree/General/cargo-dsh-iuc-local), you can
-publish your crate by running:
-
-Login to Artifactory (one time):
-
-```bash
-> make login
-```
-
-To publish all crates, run:
-
-```bash
-> make publish
-```
-
-See make help for more options:
-
-```bash
-> make help
-Targets Cargo:
-  build:                 Build all cargo packages
-  login:                 Login to KPN Artifactory for the cargo registry
-  publish:               Publish to KPN Artifactory
-  publish-allow-dirty:   Publish to KPN Artifactory without checking for uncommited files
-  publish-dry-run:       Dry-run the publish to KPN Artifactory
-  test:                  Run all cargo tests
-  test-<package>:        Run tests for a single cargo package
->
-```
-
 ## Coding guidelines
 
 Before pushing code to github, make sure that you adhere to the code formatting defined in
-`rustfmt.toml`. The following command shoud return without any remarks:
+`rustfmt.toml` and that you have run the `clippy` linter. The following commands should
+return without any remarks:
 
 ```bash
 > cargo +nightly fmt --check
+```
+
+```bash
+> cargo clippy
 ```
 
 Consider configuring your IDE to automatically apply the formatting rules when saving a file. 

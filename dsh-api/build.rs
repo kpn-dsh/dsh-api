@@ -5,13 +5,20 @@ use std::fmt::{Display, Formatter};
 use std::fs;
 
 fn main() -> Result<(), String> {
-  let src = "openapi_spec/openapi_1_8_0.json";
-  println!("cargo:rerun-if-changed={}", src);
-  let file = fs::File::open(src).unwrap();
-  let mut openapi: Value = serde_json::from_reader(file).unwrap();
-  update_openapi_spec(&mut openapi)?;
-  let updated_openapi_spec = serde_json::to_string_pretty(&openapi).unwrap();
-  let spec = serde_json::from_str(&updated_openapi_spec).unwrap();
+  let openapi_spec_original_file = "openapi_spec/openapi_1_8_0.json";
+  println!("cargo:rerun-if-changed={}", openapi_spec_original_file);
+  let file = fs::File::open(openapi_spec_original_file).unwrap();
+  let mut openapi_spec: Value = serde_json::from_reader(file).unwrap();
+  // Add authorization headers and operationId to original openapi spec
+  update_openapi_spec(&mut openapi_spec)?;
+  // Make updated openapi spec available to the crate code
+  let openapi_spec_updated_json = serde_json::to_string_pretty(&openapi_spec).unwrap();
+  let mut embedded_openapi_file = std::path::Path::new(&std::env::var("OUT_DIR").unwrap()).to_path_buf();
+  embedded_openapi_file.push("open-api.json");
+  // println!("cargo:warning= embedded_file: {:?}", &embedded_openapi_file);
+  fs::write(embedded_openapi_file, &openapi_spec_updated_json).unwrap();
+
+  let spec = serde_json::from_str(&openapi_spec_updated_json).unwrap();
   let mut generator_settings = GenerationSettings::default();
   generator_settings.with_derive("PartialEq");
   let mut generator = progenitor::Generator::new(&generator_settings);
@@ -21,7 +28,8 @@ fn main() -> Result<(), String> {
   let mut out_file = std::path::Path::new(&std::env::var("OUT_DIR").unwrap()).to_path_buf();
   out_file.push("codegen.rs");
   // println!("cargo:warning= out_file: {:?}", &out_file);
-  fs::write(out_file, content).unwrap();
+  fs::write(out_file, &content).unwrap();
+
   Ok(())
 }
 
@@ -57,17 +65,6 @@ impl Default for AuthorizationParameter {
       required: true,
       deprecated: false,
       schema: Default::default(),
-    }
-  }
-}
-
-#[test]
-fn test_openapi() {
-  let openapi_file = "/Users/wilbert/Workspaces/dsh/dsh-api/dsh-api-generated/openapi_spec/openapi_1_8_0.json";
-  if let Ok(openapi_string) = fs::read_to_string(openapi_file) {
-    if let Ok(mut openapi) = serde_json::from_str::<Value>(&openapi_string) {
-      update_openapi_spec(&mut openapi).expect("");
-      println!("{}", serde_json::to_string_pretty(&openapi).unwrap());
     }
   }
 }

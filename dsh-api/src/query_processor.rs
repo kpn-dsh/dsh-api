@@ -64,7 +64,7 @@ impl Part {
 impl Display for Part {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Matching(part) => write!(f, "\x1B[1m{}\x1B[0m", part),
+      Matching(part) => write!(f, "{}", part),
       NonMatching(part) => write!(f, "{}", part),
     }
   }
@@ -215,6 +215,30 @@ impl QueryProcessor for RegexQueryProcessor {
     } else {
       None
     }
+  }
+}
+
+/// # Dummy query processor implementation
+///
+/// This dummy query processor always returns the literal `haystack` as a
+/// single non-matching `Part`.
+/// This can be useful when you want to apply a function that expects a query processor,
+/// without actually applying the query.
+pub struct DummyQueryProcessor {}
+
+impl DummyQueryProcessor {
+  pub fn create() -> Result<Self, DshApiError> {
+    Ok(Self {})
+  }
+}
+
+impl QueryProcessor for DummyQueryProcessor {
+  fn describe(&self) -> String {
+    "accept all input".to_string()
+  }
+
+  fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>> {
+    Some(vec![Part::non_matching(haystack)])
   }
 }
 

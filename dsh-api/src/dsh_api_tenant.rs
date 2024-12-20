@@ -28,11 +28,12 @@ impl DshApiTenant {
   /// # use dsh_api::platform::DshPlatform;
   /// let name = String::from("greenbox-dev");
   /// let guid = 1903;
-  /// let platform = DshPlatform::NpLz;
+  /// let platform = DshPlatform::NpAwsLzDsh;
   /// let dsh_api_tenant = DshApiTenant::new(name, guid, platform);
-  /// if let Some(domain) = dsh_api_tenant.dsh_internal_domain() {
-  ///   assert_eq!(domain, "greenbox-dev.marathon.mesos".to_string())
-  /// }
+  /// assert_eq!(
+  ///   dsh_api_tenant.platform().internal_domain_for_tenant("greenbox-dev"),
+  ///   "greenbox-dev.marathon.mesos".to_string()
+  /// );
   /// ```
   pub fn new(name: String, guid: u16, platform: DshPlatform) -> Self {
     Self { name, guid, platform }
@@ -98,7 +99,7 @@ impl DshApiTenant {
   /// # use dsh_api::DshApiError;
   /// # fn main() -> Result<(), DshApiError> {
   /// let tenant_name = String::from("greenbox-dev");
-  /// let platform = DshPlatform::NpLz;
+  /// let platform = DshPlatform::NpAwsLzDsh;
   /// let dsh_api_tenant = DshApiTenant::from_tenant_and_platform(tenant_name, platform)?;
   /// println!("{}@{}", dsh_api_tenant.name(), dsh_api_tenant.platform());
   /// # Ok(())
@@ -132,7 +133,7 @@ impl DshApiTenant {
   /// # use dsh_api::DshApiError;
   /// # fn main() -> Result<(), DshApiError> {
   /// let tenant_name = String::from("greenbox-dev");
-  /// let platform = DshPlatform::NpLz;
+  /// let platform = DshPlatform::NpAwsLzDsh;
   /// let dsh_api_tenant = DshApiTenant::from_tenant_and_platform(tenant_name, platform)?;
   /// println!("{}@{}", dsh_api_tenant.name(), dsh_api_tenant.platform());
   /// # Ok(())
@@ -175,38 +176,6 @@ impl DshApiTenant {
 
   pub fn guid(&self) -> u16 {
     self.guid
-  }
-
-  pub fn app_domain(&self) -> Option<String> {
-    self.platform.app_domain(&self.name)
-  }
-
-  pub fn console_url(&self) -> Option<&str> {
-    self.platform.console_url()
-  }
-
-  pub fn dsh_internal_domain(&self) -> Option<String> {
-    self.platform.dsh_internal_domain(&self.name)
-  }
-
-  pub fn monitoring_url(&self) -> Option<String> {
-    self.platform.monitoring_url(&self.name)
-  }
-
-  pub fn public_vhosts_domain(&self) -> Option<&str> {
-    self.platform.public_vhosts_domain()
-  }
-
-  pub fn realm(&self) -> &str {
-    self.platform.realm()
-  }
-
-  pub fn endpoint_rest_access_token(&self) -> &str {
-    self.platform.endpoint_rest_access_token()
-  }
-
-  pub fn endpoint_rest_api(&self) -> &str {
-    self.platform.endpoint_rest_api()
   }
 }
 

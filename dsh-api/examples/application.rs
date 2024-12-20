@@ -41,7 +41,7 @@ async fn main() -> Result<(), String> {
   // delete_application
 
   print_header("find_application_ids_with_derived_tasks");
-  let mut applications_with_tasks: Vec<String> = client.find_application_ids_with_derived_tasks().await?;
+  let mut applications_with_tasks: Vec<String> = client.list_application_ids_with_derived_tasks().await?;
   applications_with_tasks.sort();
   println!("{}", applications_with_tasks.len());
   for application_id in applications_with_tasks {
@@ -165,5 +165,11 @@ async fn main() -> Result<(), String> {
     }
   }
 
+  print_header("find_applications");
+  let predicate = |application: &Application| application.needs_token;
+  let applications = client.find_applications(&predicate).await?;
+  for (application_id, _) in applications {
+    println!("{}", application_id);
+  }
   Ok(())
 }

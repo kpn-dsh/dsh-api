@@ -1,10 +1,10 @@
 use crate::common::{get_client, print_header};
+use dsh_api::types::{AllocationStatus, Certificate, CertificateStatus};
 
 #[path = "common.rs"]
 mod common;
 
 use dsh_api::UsedBy;
-use dsh_api_generated::types::{AllocationStatus, Certificate, CertificateStatus};
 
 // create_certificate(certificate_id, certificate)
 // delete_certificate(certificate_id)
@@ -41,7 +41,7 @@ async fn test_get_certificate_configuration() {
 #[tokio::test]
 async fn test_get_certificate_ids() {
   if let Ok(client) = get_client().await {
-    let certificate_ids: Vec<String> = client.get_certificate_ids().await.unwrap();
+    let certificate_ids: Vec<String> = client.list_certificate_ids().await.unwrap();
     print_header("get_certificate_ids");
     println!("{:#?}", certificate_ids);
   }

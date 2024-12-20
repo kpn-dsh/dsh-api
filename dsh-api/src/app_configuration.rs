@@ -2,11 +2,11 @@
 //!
 //! Module that contains functions to configure apps you start from the App Catalog.
 //!
-//! # API Methods
+//! # API methods
 //! * [`create_app_catalog_configuration(app_id, configuration)`](DshApiClient::create_app_catalog_configuration)
 //! * [`delete_app_catalog_configuration(app_id)`](DshApiClient::delete_app_catalog_configuration)
-//! * [`get_app_catalog_configuration_allocation_status(app_id) -> AllocationStatus`](DshApiClient::get_app_catalog_configuration_allocation_status)
-//! * [`get_app_catalog_configuration(app_id) -> AppCatalogAppConfiguration`](DshApiClient::get_app_catalog_configuration)
+//! * [`get_app_catalog_configuration_allocation_status(app_id) -> allocation_status`](DshApiClient::get_app_catalog_configuration_allocation_status)
+//! * [`get_app_catalog_configuration(app_id) -> configuration`](DshApiClient::get_app_catalog_configuration)
 
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{AllocationStatus, AppCatalogAppConfiguration};
@@ -18,11 +18,11 @@ use crate::DshApiResult;
 ///
 /// Module that contains functions to configure apps you start from the App Catalog.
 ///
-/// # API Methods
+/// # API methods
 /// * [`create_app_catalog_configuration(app_id, configuration)`](DshApiClient::create_app_catalog_configuration)
 /// * [`delete_app_catalog_configuration(app_id)`](DshApiClient::delete_app_catalog_configuration)
-/// * [`get_app_catalog_configuration_allocation_status(app_id) -> AllocationStatus`](DshApiClient::get_app_catalog_configuration_allocation_status)
-/// * [`get_app_catalog_configuration(app_id) -> AppCatalogAppConfiguration`](DshApiClient::get_app_catalog_configuration)
+/// * [`get_app_catalog_configuration_allocation_status(app_id) -> allocation_status`](DshApiClient::get_app_catalog_configuration_allocation_status)
+/// * [`get_app_catalog_configuration(app_id) -> configuration`](DshApiClient::get_app_catalog_configuration)
 impl DshApiClient<'_> {
   /// # Create or update a new App Catalog App
   ///

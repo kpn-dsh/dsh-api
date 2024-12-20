@@ -4,6 +4,21 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.3.0]
+
+> Note: The changes from version 0.2.0 to 0.3.0 are **not** backwards compatible.
+
+### Added
+
+* Expose openapi specification.
+* Added vhost capability.
+* Added Display implementations.
+
+### Changed
+
+* Changed license to Apache-2.0.
+* Improved platform capabilites.
+
 ## [0.2.0]
 
 ### Added
@@ -19,6 +34,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 * Changed type of guid to u16.
 * Improved error handling in client factory.
 * Better handling of usage relations.
+* Embedded generated code in api crate.
 
 ### Removed
 

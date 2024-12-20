@@ -2,16 +2,16 @@
 //!
 //! Module that contains functions to manage internal and public Kafka streams.
 //!
-//! # API Methods
-//! * [`create_internal_stream(stream_id, configuration)`](DshApiClient::create_internal_stream)
-//! * [`create_public_stream(stream_id, configuration)`](DshApiClient::create_public_stream)
-//! * [`delete_internal_stream(stream_id)`](DshApiClient::delete_internal_stream)
-//! * [`delete_public_stream(stream_id)`](DshApiClient::delete_public_stream)
-//! * [`get_internal_stream(stream_id) -> InternalManagedStream`](DshApiClient::get_internal_stream)
-//! * [`get_internal_streams() -> Vec<InternalManagedStream>`](DshApiClient::get_internal_streams)
-//! * [`get_public_stream(stream_id) -> PublicManagedStream`](DshApiClient::get_public_stream)
-//! * [`get_public_streams() -> Vec<PublicManagedStream>`](DshApiClient::get_public_streams)
-//! * [`get_stream_ids() -> Vec<String>`](DshApiClient::get_stream_ids)
+//! # API methods
+//! * [`create_internal_stream(id, configuration)`](DshApiClient::create_internal_stream)
+//! * [`create_public_stream(id, configuration)`](DshApiClient::create_public_stream)
+//! * [`delete_internal_stream(id)`](DshApiClient::delete_internal_stream)
+//! * [`delete_public_stream(id)`](DshApiClient::delete_public_stream)
+//! * [`get_internal_stream(id) -> stream`](DshApiClient::get_internal_stream)
+//! * [`get_internal_streams() -> [stream]`](DshApiClient::get_internal_streams)
+//! * [`get_public_stream(id) -> stream`](DshApiClient::get_public_stream)
+//! * [`get_public_streams() -> [stream]`](DshApiClient::get_public_streams)
+//! * [`get_stream_ids() -> [id]`](DshApiClient::get_stream_ids)
 
 use std::collections::HashMap;
 
@@ -23,20 +23,20 @@ use crate::types::{InternalManagedStream, ManagedInternalStreamId, ManagedPublic
 use crate::DshApiError;
 use crate::DshApiResult;
 
-/// # Manage Kafka streams
+/// # Manage internal and public Kafka streams
 ///
-/// Module that contains functions to manage Kafka streams.
+/// Module that contains functions to manage internal and public Kafka streams.
 ///
-/// # API Methods
-/// * [`create_internal_stream(stream_id, configuration)`](DshApiClient::create_internal_stream)
-/// * [`create_public_stream(stream_id, configuration)`](DshApiClient::create_public_stream)
-/// * [`delete_internal_stream(stream_id)`](DshApiClient::delete_internal_stream)
-/// * [`delete_public_stream(stream_id)`](DshApiClient::delete_public_stream)
-/// * [`get_internal_stream(stream_id) -> InternalManagedStream`](DshApiClient::get_internal_stream)
-/// * [`get_internal_streams() -> Vec<InternalManagedStream>`](DshApiClient::get_internal_streams)
-/// * [`get_public_stream(stream_id) -> PublicManagedStream`](DshApiClient::get_public_stream)
-/// * [`get_public_streams() -> Vec<PublicManagedStream>`](DshApiClient::get_public_streams)
-/// * [`get_stream_ids() -> Vec<String>`](DshApiClient::get_stream_ids)
+/// # API methods
+/// * [`create_internal_stream(id, configuration)`](DshApiClient::create_internal_stream)
+/// * [`create_public_stream(id, configuration)`](DshApiClient::create_public_stream)
+/// * [`delete_internal_stream(id)`](DshApiClient::delete_internal_stream)
+/// * [`delete_public_stream(id)`](DshApiClient::delete_public_stream)
+/// * [`get_internal_stream(id) -> stream`](DshApiClient::get_internal_stream)
+/// * [`get_internal_streams() -> [stream]`](DshApiClient::get_internal_streams)
+/// * [`get_public_stream(id) -> stream`](DshApiClient::get_public_stream)
+/// * [`get_public_streams() -> [stream]`](DshApiClient::get_public_streams)
+/// * [`get_stream_ids() -> [id]`](DshApiClient::get_stream_ids)
 impl DshApiClient<'_> {
   /// # Create internal stream
   ///

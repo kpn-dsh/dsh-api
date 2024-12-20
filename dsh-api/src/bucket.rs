@@ -1,20 +1,32 @@
 //! # Manage buckets
 //!
-//! Module that contains functions to manage buckets.
+//! Module that contains methods and functions to manage buckets.
+//! * API methods - DshApiClient methods that directly call the API.
+//! * Derived methods - DshApiClient methods that add extra capabilities
+//!   but depend on the API methods.
 //!
 //! # API methods
-//! * [`delete_bucket(bucket_id)`](DshApiClient::delete_bucket)
-//! * [`get_bucket(bucket_id) -> BucketStatus`](DshApiClient::get_bucket)
-//! * [`get_bucket_allocation_status(bucket_id) -> AllocationStatus`](DshApiClient::get_bucket_allocation_status)
-//! * [`get_bucket_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_configuration)
-//! * [`list_bucket_ids() -> Vec<bucket_id>`](DshApiClient::list_bucket_ids)
-//! * [`update_bucket(bucket_id, bucket)`](DshApiClient::update_bucket)
 //!
-//! # Utility methods
-//! * [`get_buckets() -> HashMap<bucket_id, bucket>`](DshApiClient::get_buckets)
-//! * [`list_buckets() -> Vec<(bucket_id, bucket)>`](DshApiClient::list_buckets)
+//! [`DshApiClient`] methods that directly call the DSH resource management API.
+//!
+//! * [`delete_bucket(id)`](DshApiClient::delete_bucket)
+//! * [`get_bucket(id) -> bucket_status`](DshApiClient::get_bucket)
+//! * [`get_bucket_allocation_status(id) -> allocation_status`](DshApiClient::get_bucket_allocation_status)
+//! * [`get_bucket_configuration(id) -> bucket`](DshApiClient::get_bucket_configuration)
+//! * [`get_buckets() -> map<id, bucket>`](DshApiClient::get_buckets)
+//! * [`list_bucket_ids() -> [id]`](DshApiClient::list_bucket_ids)
+//! * [`list_buckets() -> [(id, bucket)]`](DshApiClient::list_bucket_ids)
+//! * [`update_bucket(id, bucket)`](DshApiClient::update_bucket)
+//!
+//! # Derived methods
+//!
+//! [`DshApiClient`] methods that add extra capabilities but do not directly call the
+//! DSH resource management API. These derived methods depend on the API methods for this.
+//!
+//! * [`get_buckets() -> map<bucket_id, bucket>`](DshApiClient::get_buckets)
+//! * [`list_buckets() -> [(bucket_id, bucket)]`](DshApiClient::list_buckets)
 #![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#![cfg_attr(feature = "actual", doc = "# Actual configuration methods")]
 #![cfg_attr(feature = "actual", doc = "* [`get_bucket_actual_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_actual_configuration)")]
 
 use crate::dsh_api_client::DshApiClient;
@@ -27,21 +39,33 @@ use std::collections::HashMap;
 
 /// # Manage buckets
 ///
-/// Module that contains functions to manage buckets.
+/// Module that contains methods and functions to manage buckets.
+/// * API methods - DshApiClient methods that directly call the API.
+/// * Derived methods - DshApiClient methods that add extra capabilities
+///   but depend on the API methods.
 ///
 /// # API methods
-/// * [`delete_bucket(bucket_id)`](DshApiClient::delete_bucket)
-/// * [`get_bucket(bucket_id) -> BucketStatus`](DshApiClient::get_bucket)
-/// * [`get_bucket_allocation_status(bucket_id) -> AllocationStatus`](DshApiClient::get_bucket_allocation_status)
-/// * [`get_bucket_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_configuration)
-/// * [`list_bucket_ids() -> Vec<bucket_id>`](DshApiClient::list_bucket_ids)
-/// * [`update_bucket(bucket_id, bucket)`](DshApiClient::update_bucket)
 ///
-/// # Utility methods
-/// * [`get_buckets() -> HashMap<bucket_id, bucket>`](DshApiClient::get_buckets)
-/// * [`list_buckets() -> Vec<(bucket_id, bucket)>`](DshApiClient::list_buckets)
+/// [`DshApiClient`] methods that directly call the DSH resource management API.
+///
+/// * [`delete_bucket(id)`](DshApiClient::delete_bucket)
+/// * [`get_bucket(id) -> bucket_status`](DshApiClient::get_bucket)
+/// * [`get_bucket_allocation_status(id) -> allocation_status`](DshApiClient::get_bucket_allocation_status)
+/// * [`get_bucket_configuration(id) -> bucket`](DshApiClient::get_bucket_configuration)
+/// * [`get_buckets() -> map<id, bucket>`](DshApiClient::get_buckets)
+/// * [`list_bucket_ids() -> [id]`](DshApiClient::list_bucket_ids)
+/// * [`list_buckets() -> [(id, bucket)]`](DshApiClient::list_bucket_ids)
+/// * [`update_bucket(id, bucket)`](DshApiClient::update_bucket)
+///
+/// # Derived methods
+///
+/// [`DshApiClient`] methods that add extra capabilities but do not directly call the
+/// DSH resource management API. These derived methods depend on the API methods for this.
+///
+/// * [`get_buckets() -> map<bucket_id, bucket>`](DshApiClient::get_buckets)
+/// * [`list_buckets() -> [(bucket_id, bucket)]`](DshApiClient::list_buckets)
 #[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#[cfg_attr(feature = "actual", doc = "# Actual configuration methods")]
 #[cfg_attr(feature = "actual", doc = "* [`get_bucket_actual_configuration(bucket_id) -> Bucket`](DshApiClient::get_bucket_actual_configuration)")]
 impl DshApiClient<'_> {
   /// # Delete bucket

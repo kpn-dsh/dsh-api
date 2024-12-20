@@ -1,19 +1,30 @@
 //! # Manage applications
 //!
-//! Module that contains a function to manage applications.
+//! Module that contains methods and functions to manage applications.
+//! * API methods - DshApiClient methods that directly call the API.
+//! * Derived methods - DshApiClient methods that add extra capabilities
+//!   but depend on the API methods.
+//! * Functions - Functions that add extra capabilities but do not depend directly on the API.
 //!
-//! # API Methods
-//! * [`create_application(application_id, application)`](DshApiClient::create_application)
-//! * [`delete_application(application_id)`](DshApiClient::delete_application)
-//! * [`find_application_ids_with_derived_tasks() -> [id]`](DshApiClient::find_application_ids_with_derived_tasks)
-//! * [`get_application(application_id) -> application`](DshApiClient::get_application)
-//! * [`get_application_allocation_status(application_id) -> allocation_status`](DshApiClient::get_application_allocation_status)
-//! * [`get_application_task(application_id, task_id) -> task_status`](DshApiClient::get_application_task)
-//! * [`get_application_task_allocation_status(application_id, task_id) -> allocation_status`](DshApiClient::get_application_task_allocation_status)
+//! # API methods
+//!
+//! [`DshApiClient`] methods that directly call the DSH resource management API.
+//!
+//! * [`create_application(id, application)`](DshApiClient::create_application)
+//! * [`delete_application(id)`](DshApiClient::delete_application)
+//! * [`get_application(id) -> application`](DshApiClient::get_application)
+//! * [`get_application_allocation_status(id) -> allocation_status`](DshApiClient::get_application_allocation_status)
+//! * [`get_application_task(id, task_id) -> task_status`](DshApiClient::get_application_task)
+//! * [`get_application_task_allocation_status(id, task_id) -> allocation_status`](DshApiClient::get_application_task_allocation_status)
 //! * [`get_applications() -> map<id, application>`](DshApiClient::get_applications)
-//! * [`list_application_derived_task_ids(application_id) -> [task_id]`](DshApiClient::list_application_derived_task_ids)
+//! * [`list_application_derived_task_ids(id) -> [task_id]`](DshApiClient::list_application_derived_task_ids)
+//! * [`list_application_ids_with_derived_tasks() -> [id]`](DshApiClient::list_application_ids_with_derived_tasks)
 //!
-//! # Utility methods
+//! # Derived methods
+//!
+//! [`DshApiClient`] methods that add extra capabilities but do not directly call the
+//! DSH resource management API. These derived methods depend on the API methods for this.
+//!
 //! * [`find_applications(predicate) -> [(id, application)]`](DshApiClient::find_applications)
 //! * [`find_applications_that_use_env_value(query) -> [(id, application, envs)]`](DshApiClient::find_applications_that_use_env_value)
 //! * [`find_applications_with_secret_injections(secret) -> [(id, application, injections)]`](DshApiClient::find_applications_with_secret_injections)
@@ -21,13 +32,8 @@
 //! * [`list_application_ids() -> [id]`](DshApiClient::list_application_ids)
 //! * [`list_applications() -> [(id, application)]`](DshApiClient::list_applications)
 //! * [`list_applications_with_secret_injections() -> [(id, application, injections)]`](DshApiClient::list_applications_with_secret_injections)
-//!
-//! # Utility functions
-//! * [`application_diff(baseline, sample) -> ApplicationDiff`](DshApiClient::application_diff)
-//! * [`applications_with_secret_injections(secret, applications) -> [(id, application, injections)]`](DshApiClient::applications_with_secret_injections)
-//! * [`applications_with_secrets_injections(secrets, applications) -> [(id, application, injections)]`](DshApiClient::applications_with_secrets_injections)
 #![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#![cfg_attr(feature = "actual", doc = "# Actual configuration methods")]
 #![cfg_attr(feature = "actual", doc = "* [`get_application_actual(application_id) -> Application`](DshApiClient::get_application_actual)")]
 #![cfg_attr(feature = "actual", doc = "* [`get_applications_actual() -> HashMap<String, Application>`](DshApiClient::get_applications_actual)")]
 #![cfg_attr(feature = "actual", doc = "* [`get_application_task_state(id, task_id) -> Task`](DshApiClient::get_application_task_state)")]
@@ -40,24 +46,37 @@ use crate::types::{AllocationStatus, Application, ApplicationSecret, Application
 use crate::DshApiError;
 use crate::{DshApiResult, Injection};
 use futures::future::try_join_all;
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::collections::HashMap;
 
 /// # Manage applications
 ///
-/// Module that contains a function to manage applications.
+/// Module that contains methods and functions to manage applications.
+/// * API methods - DshApiClient methods that directly call the API.
+/// * Derived methods - DshApiClient methods that add extra capabilities
+///   but depend on the API methods.
+/// * Functions - Functions that add extra capabilities but do not depend directly on the API.
 ///
-/// # API Methods
-/// * [`create_application(application_id, application)`](DshApiClient::create_application)
-/// * [`delete_application(application_id)`](DshApiClient::delete_application)
-/// * [`find_application_ids_with_derived_tasks() -> [id]`](DshApiClient::find_application_ids_with_derived_tasks)
-/// * [`get_application(application_id) -> application`](DshApiClient::get_application)
-/// * [`get_application_allocation_status(application_id) -> allocation_status`](DshApiClient::get_application_allocation_status)
-/// * [`get_application_task(application_id, task_id) -> task_status`](DshApiClient::get_application_task)
-/// * [`get_application_task_allocation_status(application_id, task_id) -> allocation_status`](DshApiClient::get_application_task_allocation_status)
+/// # API methods
+///
+/// [`DshApiClient`] methods that directly call the DSH resource management API.
+///
+/// * [`create_application(id, application)`](DshApiClient::create_application)
+/// * [`delete_application(id)`](DshApiClient::delete_application)
+/// * [`get_application(id) -> application`](DshApiClient::get_application)
+/// * [`get_application_allocation_status(id) -> allocation_status`](DshApiClient::get_application_allocation_status)
+/// * [`get_application_task(id, task_id) -> task_status`](DshApiClient::get_application_task)
+/// * [`get_application_task_allocation_status(id, task_id) -> allocation_status`](DshApiClient::get_application_task_allocation_status)
 /// * [`get_applications() -> map<id, application>`](DshApiClient::get_applications)
-/// * [`list_application_derived_task_ids(application_id) -> [task_id]`](DshApiClient::list_application_derived_task_ids)
+/// * [`list_application_derived_task_ids(id) -> [task_id]`](DshApiClient::list_application_derived_task_ids)
+/// * [`list_application_ids_with_derived_tasks() -> [id]`](DshApiClient::list_application_ids_with_derived_tasks)
 ///
-/// # Utility methods
+/// # Derived methods
+///
+/// [`DshApiClient`] methods that add extra capabilities but do not directly call the
+/// DSH resource management API. These derived methods depend on the API methods for this.
+///
 /// * [`find_applications(predicate) -> [(id, application)]`](DshApiClient::find_applications)
 /// * [`find_applications_that_use_env_value(query) -> [(id, application, envs)]`](DshApiClient::find_applications_that_use_env_value)
 /// * [`find_applications_with_secret_injections(secret) -> [(id, application, injections)]`](DshApiClient::find_applications_with_secret_injections)
@@ -65,13 +84,8 @@ use std::collections::HashMap;
 /// * [`list_application_ids() -> [id]`](DshApiClient::list_application_ids)
 /// * [`list_applications() -> [(id, application)]`](DshApiClient::list_applications)
 /// * [`list_applications_with_secret_injections() -> [(id, application, injections)]`](DshApiClient::list_applications_with_secret_injections)
-///
-/// # Utility functions
-/// * [`application_diff(baseline, sample) -> ApplicationDiff`](DshApiClient::application_diff)
-/// * [`applications_with_secret_injections(secret, applications) -> [(id, application, injections)]`](DshApiClient::applications_with_secret_injections)
-/// * [`applications_with_secrets_injections(secrets, applications) -> [(id, application, injections)]`](DshApiClient::applications_with_secrets_injections)
 #[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = "## Actual configuration methods")]
+#[cfg_attr(feature = "actual", doc = "# Actual configuration methods")]
 #[cfg_attr(feature = "actual", doc = "* [`get_application_actual(application_id) -> Application`](DshApiClient::get_application_actual)")]
 #[cfg_attr(feature = "actual", doc = "* [`get_applications_actual() -> HashMap<String, Application>`](DshApiClient::get_applications_actual)")]
 #[cfg_attr(feature = "actual", doc = "* [`get_application_task_state(id, task_id) -> Task`](DshApiClient::get_application_task_state)")]
@@ -250,7 +264,7 @@ impl DshApiClient<'_> {
   /// # Returns
   /// * `Ok<Vec<String>>` - vector containing names of all application that have derived tasks
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn find_application_ids_with_derived_tasks(&self) -> DshApiResult<Vec<String>> {
+  pub async fn list_application_ids_with_derived_tasks(&self) -> DshApiResult<Vec<String>> {
     let mut application_ids: Vec<String> = self
       .process(self.generated_client.get_task_by_tenant(self.tenant_name(), self.token()).await)
       .map(|(_, result)| result)
@@ -385,33 +399,6 @@ impl DshApiClient<'_> {
     Ok(application_ids)
   }
 
-  /// # Get secret injections from an application
-  ///
-  /// # Parameters
-  /// * `application` - reference to the `Application`
-  ///
-  /// # Returns
-  /// * `Vec(<String, Vec<Injection>)>` - list of tuples that describe the secret injections.
-  ///   Each tuple consist of the secret id and the environment variables
-  ///   that the secret is injected into.
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  fn all_secret_injections(application: &Application) -> Vec<(String, Vec<Injection>)> {
-    let mut injections: Vec<(String, Vec<Injection>)> = vec![];
-    for application_secret in &application.secrets {
-      let mut env_injections: Vec<Injection> = vec![];
-      for application_secret_injection in &application_secret.injections {
-        if let Some(env_injection) = application_secret_injection.get("env") {
-          env_injections.push(Injection::EnvVar(env_injection.to_string()));
-        }
-      }
-      if !env_injections.is_empty() {
-        injections.push((application_secret.name.clone(), env_injections));
-      }
-    }
-    injections.sort_by(|(secret_a, _), (secret_b, _)| secret_a.cmp(secret_b));
-    injections
-  }
-
   /// # List applications with secret injections
   ///
   /// # Returns
@@ -427,7 +414,7 @@ impl DshApiClient<'_> {
         .await?
         .into_iter()
         .map(|(id, application)| {
-          let injections = Self::all_secret_injections(&application);
+          let injections = secrets_from_application(&application);
           (id, application, injections)
         })
         .collect::<Vec<_>>(),
@@ -469,7 +456,7 @@ impl DshApiClient<'_> {
   /// # Find applications that use a secret injection
   ///
   /// # Parameters
-  /// * `secret` - the secret that is matched against all applications
+  /// * `secret_id` - the secret that is matched against all applications
   ///
   /// # Returns
   /// * `Vec<(String, `[`Application`]`, Vec<String>)>` - list of tuples
@@ -477,47 +464,238 @@ impl DshApiClient<'_> {
   ///   Each tuple consist of the application id, the `Application` and a map of
   ///   environment variables that the secret is injected into.
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn find_applications_with_secret_injections(&self, secret: &str) -> DshApiResult<Vec<(String, Application, Vec<Injection>)>> {
+  pub async fn find_applications_with_secret_injections(&self, secret_id: &str) -> DshApiResult<Vec<(String, Application, Vec<Injection>)>> {
     Ok(
       self
         .find_applications(&|application| !application.secrets.is_empty())
         .await?
         .into_iter()
         .filter_map(|(id, application)| {
-          Self::all_secret_injections(&application)
+          secrets_from_application(&application)
             .into_iter()
-            .find(|(secret_id, _)| secret_id == secret)
+            .find(|(sid, _)| sid == secret_id)
             .map(|(_, a)| (id, application, a))
         })
         .collect::<Vec<_>>(),
     )
   }
+}
 
-  /// # Get applications that use a given secret injection
-  ///
-  /// # Parameters
-  /// * `secret` - id of the secret to look for
-  /// * `applications` - hashmap of all applications
-  ///
-  /// # Returns
-  /// * `Vec<(application_id, application, injections)>` - vector of applications that use the secret
-  ///   * `application_id` - application id of the application that uses the secret
-  ///   * `application` - reference to the application
-  ///   * `injections` - injections of the secret used in the application
-  #[allow(clippy::type_complexity)]
-  pub fn applications_with_secret_injections<'a>(secret: &str, applications: &'a HashMap<String, Application>) -> Vec<(String, &'a Application, Vec<Injection>)> {
-    let mut application_ids: Vec<String> = applications.keys().map(|p| p.to_string()).collect();
-    application_ids.sort();
-    let mut tuples: Vec<(String, &Application, Vec<Injection>)> = vec![];
-    for application_id in application_ids {
-      let application = applications.get(&application_id).unwrap();
-      let mut injections = Vec::<Injection>::new();
+/// # Compare Applications
+///
+/// # Parameters
+/// * `baseline` - baseline application to compare against
+/// * `sample` - sample application that will be compared against the baseline
+///
+/// # Returns
+/// * `[`ApplicationDiff`]` - struct that describes the differences between the two `[`Application`]`s
+pub fn differences_between_applications(baseline: &Application, sample: &Application) -> ApplicationDiff {
+  ApplicationDiff {
+    cpus: if baseline.cpus == sample.cpus { None } else { Some((baseline.cpus, sample.cpus)) },
+    env: if baseline.env == sample.env { None } else { Some((baseline.env.clone(), sample.env.clone())) },
+    exposed_ports: if baseline.exposed_ports == sample.exposed_ports.clone() { None } else { Some((baseline.exposed_ports.clone(), sample.exposed_ports.clone())) },
+    health_check: if baseline.health_check == sample.health_check { None } else { Some((baseline.health_check.clone(), sample.health_check.clone())) },
+    image: if baseline.image == sample.image.clone() { None } else { Some((baseline.image.clone(), sample.image.clone())) },
+    instances: if baseline.instances == sample.instances { None } else { Some((baseline.instances, sample.instances)) },
+    mem: if baseline.mem == sample.mem { None } else { Some((baseline.mem, sample.mem)) },
+    metrics: if baseline.metrics == sample.metrics { None } else { Some((baseline.metrics.clone(), sample.metrics.clone())) },
+    needs_token: if baseline.needs_token == sample.needs_token { None } else { Some((baseline.needs_token, sample.needs_token)) },
+    readable_streams: if baseline.readable_streams == sample.readable_streams { None } else { Some((baseline.readable_streams.clone(), sample.readable_streams.clone())) },
+    secrets: if baseline.secrets == sample.secrets { None } else { Some((baseline.secrets.clone(), sample.secrets.clone())) },
+    single_instance: if baseline.single_instance == sample.single_instance { None } else { Some((baseline.single_instance, sample.single_instance)) },
+    spread_group: if baseline.spread_group == sample.spread_group { None } else { Some((baseline.spread_group.clone(), sample.spread_group.clone())) },
+    topics: if baseline.topics == sample.topics { None } else { Some((baseline.topics.clone(), sample.topics.clone())) },
+    user: if baseline.user == sample.user { None } else { Some((baseline.user.clone(), sample.user.clone())) },
+    volumes: if baseline.volumes == sample.volumes { None } else { Some((baseline.volumes.clone(), sample.volumes.clone())) },
+    writable_streams: if baseline.writable_streams == sample.writable_streams { None } else { Some((baseline.writable_streams.clone(), sample.writable_streams.clone())) },
+  }
+}
+
+/// # Get all secret injections in `Application`
+///
+/// # Parameters
+/// * `application` - reference to the `Application`
+///
+/// # Returns
+/// * `Vec(<String, Vec<Injection>)>` - list of tuples that describe the secret injections.
+///   Each tuple consist of the secret id and the environment variables
+///   that the secret is injected into.
+pub fn secrets_from_application(application: &Application) -> Vec<(String, Vec<Injection>)> {
+  let mut injections: Vec<(String, Vec<Injection>)> = vec![];
+  for application_secret in &application.secrets {
+    let mut env_injections: Vec<Injection> = vec![];
+    for application_secret_injection in &application_secret.injections {
+      if let Some(env_injection) = application_secret_injection.get("env") {
+        env_injections.push(Injection::EnvVar(env_injection.to_string()));
+      }
+    }
+    if !env_injections.is_empty() {
+      injections.push((application_secret.name.clone(), env_injections));
+    }
+  }
+  injections.sort_by(|(secret_a, _), (secret_b, _)| secret_a.cmp(secret_b));
+  injections
+}
+
+/// # Find topic injections in `Application`s
+///
+/// # Parameters
+/// * `topic_id` - id of the topic to look for
+/// * `applications` - hashmap of all application id/application pairs
+///
+/// # Returns
+/// * `Vec<(application_id, application, injections)>` - vector of applications that use the topic
+///   * `application_id` - application id of the application that uses the secret
+///   * `application` - reference to the application
+///   * `injections` - injections of the secret used in the application
+pub fn find_applications_that_use_topic<'a>(topic_id: &str, applications: &'a HashMap<String, Application>) -> Vec<(String, &'a Application, Vec<Injection>)> {
+  let mut application_ids: Vec<String> = applications.keys().map(|p| p.to_string()).collect();
+  application_ids.sort();
+  let mut tuples: Vec<(String, &Application, Vec<Injection>)> = vec![];
+  for application_id in application_ids {
+    let application = applications.get(&application_id).unwrap();
+    if !application.env.is_empty() {
+      let mut envs_that_contain_topic_id: Vec<String> = application.env.clone().into_iter().filter(|(_, v)| v.contains(topic_id)).map(|(k, _)| k).collect();
+      if !envs_that_contain_topic_id.is_empty() {
+        envs_that_contain_topic_id.sort();
+        tuples.push((
+          application_id.clone(),
+          application,
+          envs_that_contain_topic_id.into_iter().map(Injection::EnvVar).collect::<Vec<_>>(),
+        ));
+      }
+    }
+  }
+  tuples
+}
+
+/// # Get all vhost injections from `Application`
+///
+/// # Parameters
+/// * `application` - reference to the `Application`
+///
+/// # Returns
+/// `Vec<(String, Injection)>` - list of tuples that describe the vhost injections.
+/// Each tuple consist of
+/// * vhost id
+/// * vhost injection.
+pub fn vhosts_from_application(application: &Application) -> Vec<(String, Injection)> {
+  let mut vhost_injections: Vec<(String, Injection)> = vec![];
+  for (port, port_mapping) in &application.exposed_ports {
+    if let Some(vhost_string) = port_mapping.vhost.clone() {
+      if let Some((vhost, a_zone)) = parse_vhost_string(&vhost_string) {
+        vhost_injections.push((vhost, Injection::Vhost(port.clone(), a_zone)));
+      }
+    }
+  }
+  vhost_injections
+}
+
+/// # Get all vhost injections from `Application`s
+///
+/// # Parameters
+/// * `applications` - hashmap containing all applications
+///
+/// # Returns
+/// `Vec<(String, Vec<Injection>)>` - list of tuples that describe the vhosts. Each tuple consists of
+/// * application id
+/// * reference to the `Application`
+/// * list of tuples that describe the vhost injections
+///   * vhost id
+///   * vhost injection
+#[allow(clippy::type_complexity)]
+pub fn vhosts_from_applications(applications: &HashMap<String, Application>) -> Vec<(&String, &Application, Vec<(String, Injection)>)> {
+  let mut application_injections: Vec<(&String, &Application, Vec<(String, Injection)>)> = vec![];
+  for (application_id, application) in applications {
+    let injections = vhosts_from_application(application);
+    if !injections.is_empty() {
+      application_injections.push((application_id, application, injections));
+    }
+  }
+  application_injections.sort_by(|(id_a, _, _), (id_b, _, _)| id_a.cmp(id_b));
+  application_injections
+}
+
+/// # Find secret injections in `Application`
+///
+/// # Parameters
+/// * `secret_id` - id of the secret to look for
+/// * `application` - reference to toe `Application`
+///
+/// # Returns
+/// * `Vec<(Injection)>` - injections of the secret used in the application
+pub fn get_secret_from_application(secret_id: &str, application: &Application) -> Vec<Injection> {
+  let mut injections = Vec::<Injection>::new();
+  for application_secret in &application.secrets {
+    if secret_id == application_secret.name {
+      for application_secret_injection in &application_secret.injections {
+        if let Some(env_injection) = application_secret_injection.get("env") {
+          injections.push(Injection::EnvVar(env_injection.to_string()));
+        }
+      }
+    }
+  }
+  injections
+}
+
+/// # Find secret injections in `Application`s
+///
+/// # Parameters
+/// * `secret_id` - id of the secret to look for
+/// * `applications` - hashmap of all application id/application pairs
+///
+/// # Returns
+/// * `Vec<(application_id, application, injections)>` - vector of applications that use the secret
+///   * `application_id` - application id of the application that uses the secret
+///   * `application` - reference to the application
+///   * `injections` - injections of the secret used in the application
+pub fn find_applications_that_use_secret<'a>(secret_id: &str, applications: &'a HashMap<String, Application>) -> Vec<(String, &'a Application, Vec<Injection>)> {
+  let mut application_ids: Vec<String> = applications.keys().map(|p| p.to_string()).collect();
+  application_ids.sort();
+  let mut tuples: Vec<(String, &Application, Vec<Injection>)> = vec![];
+  for application_id in application_ids {
+    let application = applications.get(&application_id).unwrap();
+    let injections = get_secret_from_application(secret_id, application);
+    if !injections.is_empty() {
+      tuples.push((application_id, application, injections));
+    }
+  }
+  tuples
+}
+
+/// # Get applications that use any of a list of given secret injections
+///
+/// # Parameters
+/// * `secret_ids` - ids of the secrets to look for
+/// * `applications` - hashmap of all applications
+///
+/// # Returns
+/// * `Vec<(application_id, application, injections)>` - vector of applications that use the secret
+///   * `application_id` - application id of the application that uses the secret
+///   * `application` - reference to the application
+///   * `injections` - the injections of the secret in the application
+#[allow(clippy::type_complexity)]
+pub fn find_applications_that_use_secrets<'a>(
+  secret_ids: &[String],
+  applications: &'a HashMap<String, Application>,
+) -> Vec<(String, &'a Application, HashMap<String, Vec<Injection>>)> {
+  let mut application_ids: Vec<String> = applications.keys().map(|p| p.to_string()).collect();
+  application_ids.sort();
+  let mut tuples: Vec<(String, &Application, HashMap<String, Vec<Injection>>)> = vec![];
+  for application_id in application_ids {
+    let application = applications.get(&application_id).unwrap();
+    if !application.secrets.is_empty() {
+      let mut injections = HashMap::<String, Vec<Injection>>::new();
       for application_secret in &application.secrets {
-        if secret == application_secret.name {
+        if secret_ids.contains(&application_secret.name) {
+          let mut env_injections: Vec<Injection> = vec![];
           for application_secret_injection in &application_secret.injections {
             if let Some(env_injection) = application_secret_injection.get("env") {
-              injections.push(Injection::EnvVar(env_injection.to_string()));
+              env_injections.push(Injection::EnvVar(env_injection.to_string()));
             }
+          }
+          if !env_injections.is_empty() {
+            injections.insert(application_secret.name.clone(), env_injections);
           }
         }
       }
@@ -525,82 +703,38 @@ impl DshApiClient<'_> {
         tuples.push((application_id, application, injections));
       }
     }
-    tuples
   }
+  tuples
+}
 
-  /// # Get applications that use any of a list of given secret injections
-  ///
-  /// # Parameters
-  /// * `secrets` - ids of the secrets to look for
-  /// * `applications` - hashmap of all applications
-  ///
-  /// # Returns
-  /// * `Vec<(application_id, application, injections)>` - vector of applications that use the secret
-  ///   * `application_id` - application id of the application that uses the secret
-  ///   * `application` - reference to the application
-  ///   * `injections` - the injections of the secret in the application
-  #[allow(clippy::type_complexity)]
-  pub fn applications_with_secrets_injections<'a>(
-    secrets: &[String],
-    applications: &'a HashMap<String, Application>,
-  ) -> Vec<(String, &'a Application, HashMap<String, Vec<Injection>>)> {
-    let mut application_ids: Vec<String> = applications.keys().map(|p| p.to_string()).collect();
-    application_ids.sort();
-    let mut tuples: Vec<(String, &Application, HashMap<String, Vec<Injection>>)> = vec![];
-    for application_id in application_ids {
-      let application = applications.get(&application_id).unwrap();
-      if !application.secrets.is_empty() {
-        let mut injections = HashMap::<String, Vec<Injection>>::new();
-        for application_secret in &application.secrets {
-          if secrets.contains(&application_secret.name) {
-            let mut env_injections: Vec<Injection> = vec![];
-            for application_secret_injection in &application_secret.injections {
-              if let Some(env_injection) = application_secret_injection.get("env") {
-                env_injections.push(Injection::EnvVar(env_injection.to_string()));
-              }
-            }
-            if !env_injections.is_empty() {
-              injections.insert(application_secret.name.clone(), env_injections);
-            }
-          }
-        }
-        if !injections.is_empty() {
-          tuples.push((application_id, application, injections));
-        }
+/// # Get applications that use a given volume injection
+///
+/// # Parameters
+/// * `volume_id` - id of the volume to look for
+/// * `applications` - hashmap of all applications
+///
+/// # Returns
+/// * `Vec<(application_id, application, injections)>` - vector of applications that use the secret
+///   * `application_id` - application id of the application that uses the secret
+///   * `application` - reference to the application
+///   * `injections` - injections of the secret used in the application
+pub fn find_applications_that_use_volume<'a>(volume_id: &str, applications: &'a HashMap<String, Application>) -> Vec<(String, &'a Application, Vec<Injection>)> {
+  let mut application_ids: Vec<String> = applications.keys().map(|p| p.to_string()).collect();
+  application_ids.sort();
+  let mut tuples: Vec<(String, &Application, Vec<Injection>)> = vec![];
+  for application_id in application_ids {
+    let application = applications.get(&application_id).unwrap();
+    let mut injections = Vec::<Injection>::new();
+    for (path, application_volume) in &application.volumes {
+      if application_volume.name.contains(volume_id) {
+        injections.push(Injection::Path(path.to_string()));
       }
     }
-    tuples
-  }
-
-  /// # Compare Applications
-  ///
-  /// # Parameters
-  /// * `baseline` - baseline application to compare against
-  /// * `sample` - sample application that will be compared against the baseline
-  ///
-  /// # Returns
-  /// * `[`ApplicationDiff`]` - struct that describes the differences between the two `[`Application`]`s
-  pub fn application_diff(baseline: &Application, sample: &Application) -> ApplicationDiff {
-    ApplicationDiff {
-      cpus: if baseline.cpus == sample.cpus { None } else { Some((baseline.cpus, sample.cpus)) },
-      env: if baseline.env == sample.env { None } else { Some((baseline.env.clone(), sample.env.clone())) },
-      exposed_ports: if baseline.exposed_ports == sample.exposed_ports.clone() { None } else { Some((baseline.exposed_ports.clone(), sample.exposed_ports.clone())) },
-      health_check: if baseline.health_check == sample.health_check { None } else { Some((baseline.health_check.clone(), sample.health_check.clone())) },
-      image: if baseline.image == sample.image.clone() { None } else { Some((baseline.image.clone(), sample.image.clone())) },
-      instances: if baseline.instances == sample.instances { None } else { Some((baseline.instances, sample.instances)) },
-      mem: if baseline.mem == sample.mem { None } else { Some((baseline.mem, sample.mem)) },
-      metrics: if baseline.metrics == sample.metrics { None } else { Some((baseline.metrics.clone(), sample.metrics.clone())) },
-      needs_token: if baseline.needs_token == sample.needs_token { None } else { Some((baseline.needs_token, sample.needs_token)) },
-      readable_streams: if baseline.readable_streams == sample.readable_streams { None } else { Some((baseline.readable_streams.clone(), sample.readable_streams.clone())) },
-      secrets: if baseline.secrets == sample.secrets { None } else { Some((baseline.secrets.clone(), sample.secrets.clone())) },
-      single_instance: if baseline.single_instance == sample.single_instance { None } else { Some((baseline.single_instance, sample.single_instance)) },
-      spread_group: if baseline.spread_group == sample.spread_group { None } else { Some((baseline.spread_group.clone(), sample.spread_group.clone())) },
-      topics: if baseline.topics == sample.topics { None } else { Some((baseline.topics.clone(), sample.topics.clone())) },
-      user: if baseline.user == sample.user { None } else { Some((baseline.user.clone(), sample.user.clone())) },
-      volumes: if baseline.volumes == sample.volumes { None } else { Some((baseline.volumes.clone(), sample.volumes.clone())) },
-      writable_streams: if baseline.writable_streams == sample.writable_streams { None } else { Some((baseline.writable_streams.clone(), sample.writable_streams.clone())) },
+    if !injections.is_empty() {
+      tuples.push((application_id, application, injections));
     }
   }
+  tuples
 }
 
 /// Structure that contains the differences between two `Application`s
@@ -702,4 +836,27 @@ impl ApplicationDiff {
     .map(|p| p.to_owned().to_owned())
     .collect::<Vec<_>>()
   }
+}
+
+fn a_zone(a_zone_string: String) -> Option<String> {
+  if a_zone_string.contains("'private'") {
+    Some("private".to_string())
+  } else if a_zone_string.contains("'public'") {
+    Some("public".to_string())
+  } else {
+    None
+  }
+}
+
+lazy_static! {
+  static ref VHOST_REGEX: Regex = Regex::new(r"\{\s*vhost\(\s*'([a-zA-Z0-9_\.-]+)'\s*(,\s*'([a-zA-Z0-9_-]+)')?\s*\)\s*\}").unwrap();
+}
+
+pub(crate) fn parse_vhost_string(vhost_string: &str) -> Option<(String, Option<String>)> {
+  VHOST_REGEX.captures(vhost_string).map(|captures| {
+    (
+      captures.get(1).map(|m| m.as_str().to_string()).unwrap_or_default(),
+      captures.get(2).and_then(|m| a_zone(m.as_str().to_string())),
+    )
+  })
 }

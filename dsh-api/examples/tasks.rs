@@ -13,7 +13,7 @@ async fn main() -> Result<(), String> {
   let client = client_factory.client().await?;
 
   // Return applications that have derived tasks
-  let applications: Vec<String> = client.find_application_ids_with_derived_tasks().await?;
+  let applications: Vec<String> = client.list_application_ids_with_derived_tasks().await?;
   println!("applications with tasks\n{}", serde_json::to_string_pretty(&applications).unwrap());
 
   // Return task ids

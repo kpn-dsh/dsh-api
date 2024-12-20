@@ -37,8 +37,6 @@
 //!
 //! E.g. if the tenant name is `greenbox-dev`, the environment variable must be
 //! `DSH_API_GUID_GREENBOX_DEV`.
-use std::env;
-
 use crate::dsh_api_client::DshApiClient;
 use crate::dsh_api_tenant::DshApiTenant;
 use crate::generated::Client as GeneratedClient;
@@ -48,6 +46,7 @@ use dsh_sdk::RestTokenFetcherBuilder;
 use dsh_sdk::{Platform as SdkPlatform, RestTokenFetcher};
 use lazy_static::lazy_static;
 use log::info;
+use std::env;
 
 /// # Factory for DSH API client
 #[derive(Debug)]
@@ -110,13 +109,13 @@ impl DshApiClientFactory {
   /// # }
   /// ```
   pub fn create(tenant: DshApiTenant, secret: String) -> Result<Self, DshApiError> {
-    match RestTokenFetcherBuilder::new(SdkPlatform::from(tenant.platform()))
+    match RestTokenFetcherBuilder::new(SdkPlatform::try_from(tenant.platform())?)
       .tenant_name(tenant.name().clone())
       .client_secret(secret)
       .build()
     {
       Ok(token_fetcher) => {
-        let generated_client = GeneratedClient::new(tenant.platform().endpoint_rest_api());
+        let generated_client = GeneratedClient::new(&tenant.platform().api_rest_endpoint());
         Ok(DshApiClientFactory { token_fetcher, generated_client, tenant })
       }
       Err(rest_token_error) => Err(DshApiError::Unexpected(
@@ -285,10 +284,23 @@ lazy_static! {
 }
 
 fn get_secret(tenant: &DshApiTenant) -> Result<String, DshApiError> {
-  let secret_env = format!(
+  let environment_variable_full = secret_environment_variable(tenant.platform().full_name(), tenant.name());
+  match env::var(&environment_variable_full) {
+    Ok(secret_from_environment_variable_full) => Ok(secret_from_environment_variable_full),
+    Err(_) => {
+      let environment_variable_alias = secret_environment_variable(tenant.platform().alias(), tenant.name());
+      match env::var(environment_variable_alias) {
+        Ok(secret_from_environment_variable_alias) => Ok(secret_from_environment_variable_alias),
+        Err(_) => Err(DshApiError::Configuration(format!("environment variable {} not set", environment_variable_full))),
+      }
+    }
+  }
+}
+
+fn secret_environment_variable(platform_name: &str, tenant_name: &str) -> String {
+  format!(
     "DSH_API_SECRET_{}_{}",
-    tenant.platform().to_string().to_ascii_uppercase().replace('-', "_"),
-    tenant.name().to_ascii_uppercase().replace('-', "_")
-  );
-  env::var(&secret_env).map_err(|_| DshApiError::Configuration(format!("environment variable {} not set", secret_env)))
+    platform_name.to_ascii_uppercase().replace('-', "_"),
+    tenant_name.to_ascii_uppercase().replace('-', "_")
+  )
 }
