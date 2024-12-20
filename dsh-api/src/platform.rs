@@ -32,8 +32,6 @@ pub enum DshPlatform {
   /// * name: `np-aws-lz-dsh`
   /// * cloud provider: `aws`
   /// * realm: `dev-lz-dsh`
-  /// * key cloak url: `https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth`
-  /// * vhost domain: `dsh-dev.dsh.np.aws.kpn.com`
   #[serde(rename = "np-aws-lz-dsh", alias = "nplz")]
   NpAwsLzDsh,
 
@@ -42,8 +40,6 @@ pub enum DshPlatform {
   /// * name: `poc-aws-dsh`
   /// * cloud provider: `aws`
   /// * realm: `poc-dsh`
-  /// * key cloak url: `https://auth.prod.cp.kpn-dsh.com/auth`
-  /// * vhost domain: `poc.kpn-dsh.com`
   #[serde(rename = "poc-aws-dsh", alias = "poc")]
   PocAwsDsh,
 
@@ -52,8 +48,6 @@ pub enum DshPlatform {
   /// * name: `prod-aws-dsh`
   /// * cloud provider: `aws`
   /// * realm: `tt-dsh`
-  /// * key cloak url: `https://auth.prod.cp.kpn-dsh.com/auth//auth`
-  /// * vhost domain: `kpn-dsh.com`
   #[serde(rename = "prod-aws-dsh", alias = "prod")]
   ProdAwsDsh,
 
@@ -62,8 +56,6 @@ pub enum DshPlatform {
   /// * name: `prod-aws-lz-dsh`
   /// * cloud provider: `aws`
   /// * realm: `prod-lz-dsh`
-  /// * key cloak url: `https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth`
-  /// * vhost domain: `dsh-prod.dsh.prod.aws.kpn.com`
   #[serde(rename = "prod-aws-lz-dsh", alias = "prodlz")]
   ProdAwsLzDsh,
 
@@ -72,8 +64,6 @@ pub enum DshPlatform {
   /// * name: `prod-aws-lz-laas`
   /// * cloud provider: `aws`
   /// * realm: `prod-aws-lz-laas`
-  /// * key cloak url: `https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth`
-  /// * vhost domain: `laas-prod.dsh.prod.aws.kpn.com`
   #[serde(rename = "prod-aws-lz-laas", alias = "prodls")]
   ProdAwsLzLaas,
 
@@ -82,8 +72,6 @@ pub enum DshPlatform {
   /// * name: `prod-azure-dsh`
   /// * cloud provider: `azure`
   /// * realm: `prod-azure-dsh`
-  /// * key cloak url: `https://auth.prod.cp.kpn-dsh.com/auth//auth`
-  /// * vhost domain: `az.kpn-dsh.com`
   #[serde(rename = "prod-azure-dsh", alias = "prodaz")]
   ProdAzureDsh,
 }
