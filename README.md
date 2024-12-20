@@ -1,4 +1,4 @@
-# DSH Resource Management Api Client
+# DSH resource management API client
 
 ### Environment variables
 
@@ -126,10 +126,15 @@ Targets Cargo:
 ## Coding guidelines
 
 Before pushing code to github, make sure that you adhere to the code formatting defined in
-`rustfmt.toml`. The following command shoud return without any remarks:
+`rustfmt.toml` and that you have run the `clippy` linter. The following commands should
+return without any remarks:
 
 ```bash
 > cargo +nightly fmt --check
+```
+
+```bash
+> cargo clippy
 ```
 
 Consider configuring your IDE to automatically apply the formatting rules when saving a file. 
