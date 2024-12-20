@@ -2,13 +2,13 @@
 //!
 //! Module that contains a function to query the App Catalog for all manifest files.
 //!
-//! # API Methods
-//! * [`list_app_catalog_manifests() -> Vec<AppCatalogManifest>`](DshApiClient::list_app_catalog_manifests)
+//! # API methods
+//! * [`list_app_catalog_manifests() -> [manifest]`](DshApiClient::list_app_catalog_manifests)
 //!
-//! # Utility methods
-//! * [`list_app_catalog_manifest_ids() -> Vec<String>`](DshApiClient::list_app_catalog_manifest_ids)
-//! * [`list_app_catalog_manifest_ids_with_versions() -> Vec<(String, Vec<String>)>`](DshApiClient::list_app_catalog_manifest_ids_with_versions)
-//! * [`list_app_catalog_manifests_with_versions() -> Vec<(String, Vec<String>)>`](DshApiClient::list_app_catalog_manifests_with_versions)
+//! # Derived methods
+//! * [`list_app_catalog_manifest_ids() -> [id]`](DshApiClient::list_app_catalog_manifest_ids)
+//! * [`list_app_catalog_manifest_ids_with_versions() -> [id, [version]]`](DshApiClient::list_app_catalog_manifest_ids_with_versions)
+//! * [`list_app_catalog_manifests_with_versions() -> [id, [(version, manifest)]]`](DshApiClient::list_app_catalog_manifests_with_versions)
 use crate::dsh_api_client::DshApiClient;
 use crate::types::AppCatalogManifest;
 #[allow(unused_imports)]
@@ -36,13 +36,13 @@ pub const VERSION: &str = "version";
 ///
 /// Module that contains a function to query the App Catalog for all manifest files.
 ///
-/// # API Methods
-/// * [`list_app_catalog_manifests() -> Vec<AppCatalogManifest>`](DshApiClient::list_app_catalog_manifests)
+/// # API methods
+/// * [`list_app_catalog_manifests() -> [manifest]`](DshApiClient::list_app_catalog_manifests)
 ///
-/// # Utility methods
-/// * [`list_app_catalog_manifest_ids() -> Vec<String>`](DshApiClient::list_app_catalog_manifest_ids)
-/// * [`list_app_catalog_manifest_ids_with_versions() -> Vec<(String, Vec<String>)>`](DshApiClient::list_app_catalog_manifest_ids_with_versions)
-/// * [`list_app_catalog_manifests_with_versions() -> Vec<(String, Vec<String>)>`](DshApiClient::list_app_catalog_manifests_with_versions)
+/// # Derived methods
+/// * [`list_app_catalog_manifest_ids() -> [id]`](DshApiClient::list_app_catalog_manifest_ids)
+/// * [`list_app_catalog_manifest_ids_with_versions() -> [id, [version]]`](DshApiClient::list_app_catalog_manifest_ids_with_versions)
+/// * [`list_app_catalog_manifests_with_versions() -> [id, [(version, manifest)]]`](DshApiClient::list_app_catalog_manifests_with_versions)
 impl DshApiClient<'_> {
   /// # Return a list of all App Catalog manifests
   ///
