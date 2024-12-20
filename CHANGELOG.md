@@ -4,6 +4,17 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.3.0]
+
+### Added
+
+* Expose openapi specification.
+* Added vhost capability
+
+### Changed
+
+* Improved platform capabilites.
+
 ## [0.2.0]
 
 ### Added
