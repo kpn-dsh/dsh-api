@@ -6,7 +6,8 @@ members = [
 resolver = "2"
 
 [workspace.package]
-authors = ["KPN <unibox@kpn.com>"]
+authors = ["Wilbert Schelvis, <wilbert.schelvis@kpn.com>", "KPN DSH Team, <unibox@kpn.com>"]
+categories = ["command-line-utilities", "development-tools::build-utils"]
 description = "DSH resource management API client"
 edition = "2021"
 homepage = "https://www.kpn.com/dsh"
