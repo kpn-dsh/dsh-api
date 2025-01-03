@@ -5,7 +5,7 @@ use std::fmt::{Display, Formatter};
 use std::fs;
 
 fn main() -> Result<(), String> {
-  let openapi_spec_original_file = "openapi_spec/openapi_1_8_0.json";
+  let openapi_spec_original_file = "openapi_spec/openapi_1_9_0.json";
   println!("cargo:rerun-if-changed={}", openapi_spec_original_file);
   let file = fs::File::open(openapi_spec_original_file).unwrap();
   let mut openapi_spec: Value = serde_json::from_reader(file).unwrap();

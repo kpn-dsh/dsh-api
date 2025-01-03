@@ -4,6 +4,18 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.3.2]
+
+### Added
+
+* Support DSH open api specification version 1.9.0.
+
+## [0.3.1]
+
+### Added
+
+* Readme file for dsh-api subproject.
+
 ## [0.3.0]
 
 > Note: The changes from version 0.2.0 to 0.3.0 are **not** backwards compatible.
