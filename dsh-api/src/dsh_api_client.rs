@@ -35,6 +35,7 @@ impl<'a> DshApiClient<'a> {
   }
 
   /// # Returns the version of the openapi spec
+  #[deprecated(since = "0.3.2", note = "please use `dsh_api::api_version()` method instead")]
   pub fn api_version(&self) -> &'static str {
     self.generated_client.api_version()
   }

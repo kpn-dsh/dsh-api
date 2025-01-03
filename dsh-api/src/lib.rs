@@ -100,6 +100,16 @@ pub mod topic;
 pub mod vhost;
 pub mod volume;
 
+/// # Returns the version of the lib crate
+pub fn crate_version() -> &'static str {
+  "0.3.2"
+}
+
+/// # Returns the version of the openapi spec
+pub fn api_version() -> &'static str {
+  generated::Client::new("").api_version()
+}
+
 /// # Enumeration that denotes an injection of a resource
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Injection {
@@ -320,6 +330,16 @@ pub fn secret_environment_variable(platform_name: &str, tenant_name: &str) -> St
 /// ```
 pub fn guid_environment_variable(tenant_name: &str) -> String {
   format!("{}_{}", GUID_ENVIRONMENT_VARIABLE_PREFIX, tenant_name.to_ascii_uppercase().replace('-', "_"))
+}
+
+#[test]
+fn test_api_version() {
+  assert_eq!(api_version(), "1.9.0");
+}
+
+#[test]
+fn test_crate_version() {
+  assert_eq!(crate_version(), "0.3.2");
 }
 
 #[test]
