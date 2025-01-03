@@ -33,8 +33,8 @@
 
 use crate::types::{
   ActualCertificate, AllocationStatus, AppCatalogApp, AppCatalogAppConfiguration, AppCatalogAppResourcesValue, AppCatalogManifest, Application, ApplicationSecret,
-  ApplicationVolumes, Bucket, BucketStatus, Certificate, CertificateStatus, Empty, HealthCheck, InternalManagedStream, Metrics, Notification, PathSpec, PortMapping,
-  PublicManagedStream, Secret, Task, TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
+  ApplicationVolumes, Bucket, BucketStatus, Certificate, CertificateStatus, Empty, HealthCheck, Metrics, Notification, PathSpec, PortMapping, PublicManagedStream, Secret, Task,
+  TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
 };
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -228,12 +228,6 @@ fn write_managed_stream(f: &mut Formatter<'_>, kind: Option<&str>, partitions: i
     write!(f, ", {}: {}", key, value)?
   }
   Ok(())
-}
-
-impl Display for InternalManagedStream {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write_managed_stream(f, Some("internal"), self.partitions, self.replication_factor, &self.kafka_properties)
-  }
 }
 
 impl Display for Metrics {
