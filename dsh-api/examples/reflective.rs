@@ -20,8 +20,7 @@ fn main() -> Result<(), String> {
   println!("use crate::types::*;");
   println!("use crate::{{DshApiError, DshApiResult}};");
   println!("use erased_serde::Serialize as ErasedSerialize;");
-  println!("use std::any::Any;");
-  println!("use std::ops::Deref;");
+  println!("use std::str::FromStr;");
   println!();
 
   println!("impl DshApiClient<'_> {{");
@@ -41,13 +40,11 @@ fn print_get_operations(api_paths: &Vec<ApiPath>) {
     .iter()
     .filter_map(|api_path| api_path.operations.get(&ApiOperationType::Get).map(|api_operation| (&api_path.path, api_operation)))
     .collect::<Vec<_>>();
-
   // TODO For testing only
   // let get_operations: Vec<(&String, &ApiOperation)> = get_operations
   //   .into_iter()
   //   .filter(|(path, _)| *path == "/manage/{manager}/tenant/{tenant}/limit/{kind}")
   //   .collect::<Vec<_>>();
-
   let mut first = true;
   for (api_path, api_operation) in get_operations {
     if first {
@@ -63,38 +60,17 @@ fn print_get_operations(api_paths: &Vec<ApiPath>) {
   println!("  }}");
 }
 
-//   pub async fn post(&self, path: &str, parameters: &[Box<dyn Any>]) -> DshApiResult<()> {
-//     if path == "secret_by_tenant" {
-//       self
-//         .process(
-//           self
-//             .generated_client
-//             .post_secret_by_tenant(
-//               self.tenant_name(),
-//               self.token(),
-//               parameters.get(0).unwrap().deref().downcast_ref::<Secret>().unwrap(),
-//             )
-//             .await,
-//         )
-//         .map(|(_, result)| result)
-//     } else {
-//       Err(DshApiError::Configuration(format!("post method '{}' not recognized", path)))
-//     }
-//   }
-
 fn print_put_operations(api_paths: &Vec<ApiPath>) {
-  println!("  pub async fn put(&self, path: &str, parameters: &[&str], body: &Box<dyn Any>) -> DshApiResult<()> {{");
+  println!("  pub async fn put(&self, path: &str, parameters: &[&str], body: &str) -> DshApiResult<()> {{");
   let put_operations: Vec<(&String, &ApiOperation)> = api_paths
     .iter()
     .filter_map(|api_path| api_path.operations.get(&ApiOperationType::Put).map(|api_operation| (&api_path.path, api_operation)))
     .collect::<Vec<_>>();
-
   // TODO For testing only
   // let put_operations: Vec<(&String, &ApiOperation)> = put_operations
   //   .into_iter()
   //   .filter(|(path, _)| *path == "/allocation/{tenant}/aclgroup/{id}/configuration")
   //   .collect::<Vec<_>>();
-
   let mut first = true;
   for (api_path, api_operation) in put_operations {
     if first {
@@ -116,7 +92,6 @@ fn api_paths(openapi: OpenAPI) -> Result<Vec<ApiPath>, String> {
     let _path_elements = PathElement::vec_from_str(&path);
     let mut api_path = ApiPath { path: path.clone(), _path_elements, operations: HashMap::new() };
     if let ReferenceOr::Item(item) = path_item {
-      // println!("{}\n{:#?}", path, item.parameters);
       if let Some(delete) = item.delete {
         api_path
           .operations
@@ -158,8 +133,8 @@ fn create_api_operation(_operation_type: ApiOperationType, operation: Operation)
     .map(|parameter| parameter_to_parameter_type(parameter, &operation_id))
     .collect::<Vec<_>>();
   let request_body = operation.request_body.map(|request_body| match request_body {
-    ReferenceOr::Reference { reference } => ref_to_string(reference.as_ref()),
-    ReferenceOr::Item(item) => request_body_to_string(&item),
+    ReferenceOr::Reference { reference } => RequestBodyType::SerializableType(reference_to_string(reference.as_ref())),
+    ReferenceOr::Item(request_body_item) => RequestBodyType::from(&request_body_item),
   });
   let mut _ok_responses: Vec<(u16, ResponseBodyType)> = vec![];
   let mut _error_responses: Vec<(u16, ResponseBodyType)> = vec![];
@@ -174,29 +149,6 @@ fn create_api_operation(_operation_type: ApiOperationType, operation: Operation)
   }
   let ok_response = _ok_responses.iter().min_by_key(|(status_code, _)| status_code).ok_or("".to_string())?.1.clone();
   Ok(ApiOperation { _operation_type, parameters, request_body, operation_id, ok_response, _ok_responses, _error_responses })
-
-  // let response_string = responses_to_string(&operation.responses);
-  // match operation.request_body {
-  //   Some(ref request_body) => match request_body {
-  //     ReferenceOr::Reference { reference } => {
-  //       println!("  {} -> {}", operation_type, response_string);
-  //       println!("    {}", operation.operation_id.clone().unwrap_or(">>>>>>>>>>".to_string()));
-  //       print_parameters(&operation.parameters);
-  //       println!("    body: {}", ref_to_string(reference));
-  //     }
-  //     ReferenceOr::Item(body) => {
-  //       println!("  {} -> {}", operation_type, response_string);
-  //       println!("    {}", operation.operation_id.clone().unwrap_or(">>>>>>>>>>".to_string()));
-  //       print_parameters(&operation.parameters);
-  //       println!("    body: {}", request_body_to_string(body))
-  //     }
-  //   },
-  //   None => {
-  //     println!("  {} -> {}", operation_type, response_string);
-  //     println!("    {}", operation.operation_id.clone().unwrap_or(">>>>>>>>>>".to_string()));
-  //     print_parameters(&operation.parameters);
-  //   }
-  // }
 }
 
 #[derive(Debug, PartialEq)]
@@ -275,199 +227,22 @@ enum ParameterType {
   RefStr,
 }
 
-// parameters
-// .get(1)
-// .unwrap()
-// .downcast_ref::<GetManageTenantLimitByManagerByTenantByKindKind>()
-// .unwrap()
-// .deref()
-// .to_owned(),
-
 impl ParameterType {
   fn to_index_parameter(&self, index: isize, name: &str) -> String {
     match self {
       ParameterType::ConstructedTypeOwned(constructed_type) => format!(
-        "/* {}: constructed owned */ {}::try_from(parameters.get({}).unwrap().deref())?",
+        "/* {}: constructed owned */ {}::from_str(parameters.get({}).unwrap())?",
         name, constructed_type, index
       ),
       ParameterType::ConstructedTypeRef(constructed_type) => format!(
-        "/* {}: constructed ref */ &{}::try_from(parameters.get({}).unwrap().deref())?",
+        "/* {}: constructed ref */ &{}::from_str(parameters.get({}).unwrap())?",
         name, constructed_type, index
       ),
-      ParameterType::SerializableType(serializable_type) => format!(
-        "/* {}: serializable */ &{}::try_from(parameters.get({}).unwrap().deref())?",
-        name, serializable_type, index
-      ),
+      ParameterType::SerializableType(serializable_type) => format!("/* {}: serializable */ &{}::from_str(parameters.get({}).unwrap())?", name, serializable_type, index),
       ParameterType::RefStr => format!("/* {}: &str */ parameters.get({}).unwrap()", name, index),
     }
   }
 }
-
-// schema with pattern -> add &
-
-// GET
-
-//  26 constructed  &GetAclgroupConfigurationByTenantByIdId::try_from(parameters.get(0).unwrap().deref())?,
-//           {
-//             "in": "path",
-//             "name": "id",
-//             "description": "Kafka ACL group id",
-//             "required": true,
-//             "schema": {
-//               "type": "string",
-//               "pattern": "[a-z][a-z0-9-]{1,15}"
-//             },
-//             "example": "kafka-acl-group-id",
-//             "explode": false,
-//             "style": "simple"
-//           },
-
-// 417 constructed  GetDatacatalogAssetByTenantByKindKind::try_from(parameters.get(0).unwrap().deref())?,
-//           {
-//             "in": "path",
-//             "name": "kind",
-//             "description": "data catalog asset kind",
-//             "required": true,
-//             "schema": {
-//               "type": "string",
-//               "enum": [
-//                 "bucket",
-//                 "writablestream"
-//               ]
-//             },
-//             "style": "simple"
-//           },
-
-// 432 constructed  GetDatacatalogAssetByTenantByKindByNameKind::try_from(parameters.get(0).unwrap().deref())?,
-//           {
-//             "in": "path",
-//             "name": "kind",
-//             "description": "data catalog asset kind",
-//             "required": true,
-//             "schema": {
-//               "type": "string",
-//               "enum": [
-//                 "bucket",
-//                 "writablestream"
-//               ]
-//             },
-//             "style": "simple"
-//           },
-
-// 448 constructed  GetDatacatalogAssetConfigurationByTenantByKindByNameKind::try_from(parameters.get(0).unwrap().deref())?,
-//           {
-//             "in": "path",
-//             "name": "kind",
-//             "description": "data catalog asset kind",
-//             "required": true,
-//             "schema": {
-//               "type": "string",
-//               "enum": [
-//                 "bucket",
-//                 "writablestream"
-//               ]
-//             },
-//             "style": "simple"
-//           },
-
-// 987 constructed  GetManageTenantLimitByManagerByTenantByKindKind::try_from(parameters.get(1).unwrap().deref())?,
-//           {
-//             "in": "path",
-//             "name": "kind",
-//             "description": "Limit request type",
-//             "required": true,
-//             "schema": {
-//               "type": "string",
-//               "enum": [
-//                 "cpu",
-//                 "mem",
-//                 "certificatecount",
-//                 "secretcount",
-//                 "topiccount",
-//                 "partitioncount",
-//                 "consumerrate",
-//                 "producerrate",
-//                 "requestrate"
-//               ]
-//             },
-//             "example": "cpu",
-//             "explode": false,
-//             "style": "simple"
-//           },
-
-// PUT
-
-// 1019 constructed &PutAclgroupConfigurationByTenantByIdId::try_from(parameters.get(0).unwrap().deref())?,
-//           {
-//             "in": "path",
-//             "name": "id",
-//             "description": "Kafka ACL group id",
-//             "required": true,
-//             "schema": {
-//               "type": "string",
-//               "pattern": "[a-z][a-z0-9-]{1,15}"
-//             },
-//             "example": "kafka-acl-group-id",
-//             "explode": false,
-//             "style": "simple"
-//           },
-
-// 1127 constructed PutDatacatalogAssetConfigurationByTenantByKindByNameKind::try_from(parameters.get(0).unwrap().deref())?,
-//           {
-//             "in": "path",
-//             "name": "kind",
-//             "description": "data catalog asset kind",
-//             "required": true,
-//             "schema": {
-//               "type": "string",
-//               "enum": [
-//                 "bucket",
-//                 "writablestream"
-//               ]
-//             },
-//             "style": "simple"
-//           },
-
-// 1316 constructed PutManageTenantLimitByManagerByTenantByKindKind::try_from(parameters.get(1).unwrap().deref())?,
-//           {
-//             "in": "path",
-//             "name": "kind",
-//             "description": "Limit request type",
-//             "required": true,
-//             "schema": {
-//               "type": "string",
-//               "enum": [
-//                 "cpu",
-//                 "mem",
-//                 "certificatecount",
-//                 "secretcount",
-//                 "topiccount",
-//                 "partitioncount",
-//                 "consumerrate",
-//                 "producerrate",
-//                 "requestrate"
-//               ]
-//             },
-//             "example": "cpu",
-//             "explode": false,
-//             "style": "simple"
-//           },
-
-// impl ParameterType {
-//   fn to_index_parameter(&self, index: isize) -> String {
-//     match self {
-//       ParameterType::ConstructedType(constructed_type) => format!(
-//         "/* constructed */ parameters.get({}).unwrap().downcast_ref::<{}>().unwrap().to_owned()",
-//         index, constructed_type
-//       ),
-//       ParameterType::SerializableType(serializable_type) => format!(
-//         "/* serializable */ parameters.get({}).unwrap().downcast_ref::<&{}>().unwrap().to_owned()",
-//         index, serializable_type
-//       ),
-//       ParameterType::RefStr => format!("/* &str */ parameters.get({}).unwrap().downcast_ref::<&str>().unwrap().to_owned()", index),
-//     }
-//   }
-// }
 
 impl Display for ParameterType {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -480,53 +255,39 @@ impl Display for ParameterType {
   }
 }
 
-// enum RequestBodyType {
-//   String,
-//   SerializableType(String),
-// }
+#[derive(Debug)]
+enum RequestBodyType {
+  String,
+  SerializableType(String),
+}
 
-// impl Display for RequestBodyType {
-//   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-//     match self {
-//       Self::String => write!(f, "str"),
-//       Self::SerializableType(type_) => write!(f, "{}", type_),
-//     }
-//   }
-// }
+impl Display for RequestBodyType {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::String => write!(f, "String"),
+      Self::SerializableType(type_) => write!(f, "{}", type_),
+    }
+  }
+}
 
 #[derive(Clone, Debug)]
 enum ResponseBodyType {
-  // Error(String),
   Ok(String),
   SerializableType(String),
   String,
 }
 
 impl ResponseBodyType {
-  fn mapping(&self) -> &str {
+  fn response_mapping(&self) -> &str {
     match self {
-      // ResponseBodyType::Error(_) => {},
       ResponseBodyType::Ok(_) => ".map(|(_, result)| result)",
       ResponseBodyType::SerializableType(_) => ".map(|(_, result)| Box::new(result) as Box<dyn ErasedSerialize>)",
       ResponseBodyType::String => ".await.map(|(_, result)| Box::new(result) as Box<dyn ErasedSerialize>)",
     }
   }
-}
 
-// self
-//   .process_string(
-//     self
-//       .generated_client
-//       .get_secret_by_tenant_by_id(self.tenant_name(), parameters.get(0).unwrap(), self.token())
-//       .await,
-//   )
-//   .await
-//   .map(|(_, result)| Box::new(result) as Box<dyn ErasedSerialize>)
-
-impl ResponseBodyType {
   fn processing_function(&self) -> &str {
     match self {
-      // ResponseBodyType::Error(_) => {},
       ResponseBodyType::Ok(_) => "process",
       ResponseBodyType::SerializableType(_) => "process",
       ResponseBodyType::String => "process_string",
@@ -537,7 +298,6 @@ impl ResponseBodyType {
 impl Display for ResponseBodyType {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      // Self::Error(reference) => write!(f, "{}", reference),
       Self::Ok(desc) => write!(f, "{}", desc),
       Self::SerializableType(type_) => write!(f, "{}", type_),
       Self::String => write!(f, "str"),
@@ -554,7 +314,7 @@ struct ApiPath {
 struct ApiOperation {
   _operation_type: ApiOperationType,
   parameters: Vec<(String, ParameterType)>,
-  request_body: Option<String>,
+  request_body: Option<RequestBodyType>,
   operation_id: String,
   ok_response: ResponseBodyType,
   _ok_responses: Vec<(u16, ResponseBodyType)>,
@@ -587,7 +347,6 @@ impl ApiOperation {
     for (parameter, parameter_type) in &self.parameters {
       println!("    parameter {}: {}", parameter, parameter_type);
     }
-
     if let Some(ref request_body) = self.request_body {
       println!("    request body: {}", request_body);
     }
@@ -617,13 +376,16 @@ impl ApiOperation {
   }
 
   fn to_get(&self, api_path: &String) -> String {
-    let comment1 = format!("GET {}", api_path);
-    let comment2 = self
-      .parameters
-      .iter()
-      .map(|(parameter_name, parameter_type)| format!("{}:{}", parameter_name, parameter_type))
-      .collect::<Vec<_>>()
-      .join(", ");
+    let comments = vec![
+      format!("GET {}", api_path),
+      self
+        .parameters
+        .iter()
+        .map(|(parameter_name, parameter_type)| format!("{}:{}", parameter_name, parameter_type))
+        .collect::<Vec<_>>()
+        .join(", "),
+      format!("{:?}", self.ok_response),
+    ];
     let mut parameter_counter = -1;
     let parameters = self
       .parameters
@@ -632,19 +394,17 @@ impl ApiOperation {
       .map(|(_index, (parameter_name, parameter_type))| {
         if parameter_name == "tenant" {
           "self.tenant_name()".to_string()
-        } else if parameter_name == "token" {
+        } else if parameter_name == "Authorization" {
           "self.token()".to_string()
         } else {
           parameter_counter += 1;
           parameter_type.to_index_parameter(parameter_counter, parameter_name)
         }
       })
-      .collect::<Vec<_>>()
-      .join(",\n              ");
+      .collect::<Vec<_>>();
     formatdoc!(
       r#"
         if path == "{}" {{
-              // {}
               // {}
               self
                 .{}(
@@ -658,24 +418,25 @@ impl ApiOperation {
                 {}
             }}"#,
       self.operation_id,
-      comment1,
-      comment2,
+      comments.join("\n      // "),
       self.ok_response.processing_function(),
       self.operation_id,
-      parameters,
-      self.ok_response.mapping()
+      parameters.join(",\n              "),
+      self.ok_response.response_mapping()
     )
   }
 
   fn to_put(&self, api_path: &String) -> String {
-    let comment1 = format!("PUT {}", api_path);
-    let comment2 = self
-      .parameters
-      .iter()
-      .map(|(parameter_name, parameter_type)| format!("{}:{}", parameter_name, parameter_type))
-      .collect::<Vec<_>>()
-      .join(", ");
-    let comment3 = format!("{:?}", self.ok_response);
+    let comments = vec![
+      format!("PUT {}", api_path),
+      self
+        .parameters
+        .iter()
+        .map(|(parameter_name, parameter_type)| format!("{}:{}", parameter_name, parameter_type))
+        .collect::<Vec<_>>()
+        .join(", "),
+      format!("{:?} / {:?}", self.request_body, self.ok_response),
+    ];
     let mut parameter_counter = -1;
     let mut parameters = self
       .parameters
@@ -684,7 +445,7 @@ impl ApiOperation {
       .map(|(_index, (parameter_name, parameter_type))| {
         if parameter_name == "tenant" {
           "self.tenant_name()".to_string()
-        } else if parameter_name == "token" {
+        } else if parameter_name == "Authorization" {
           "self.token()".to_string()
         } else {
           parameter_counter += 1;
@@ -692,15 +453,20 @@ impl ApiOperation {
         }
       })
       .collect::<Vec<_>>();
-    if let Some(ref request_body) = self.request_body {
-      parameters.push(format!("body.downcast_ref::<&{}>().unwrap()", request_body));
+    if let Some(ref request_body_type) = self.request_body {
+      match request_body_type {
+        RequestBodyType::String => {
+          parameters.push("serde_json::from_str::<String>(body).map_err(|_| DshApiError::Parameter(\"cannot parse body into &String\".to_string()))?.to_string()".to_string())
+        }
+        RequestBodyType::SerializableType(serializable_type) => parameters.push(format!(
+          "&serde_json::from_str::<{}>(body).map_err(|_| DshApiError::Parameter(\"cannot parse body into {}\".to_string()))?",
+          serializable_type, serializable_type
+        )),
+      }
     }
-    let parameters = parameters.join(",\n              ");
     formatdoc!(
       r#"
         if path == "{}" {{
-              // {}
-              // {}
               // {}
               self
                 .{}(
@@ -714,77 +480,14 @@ impl ApiOperation {
                 {}
             }}"#,
       self.operation_id,
-      comment1,
-      comment2,
-      comment3,
+      comments.join("\n      // "),
       self.ok_response.processing_function(),
       self.operation_id,
-      parameters,
-      self.ok_response.mapping()
+      parameters.join(",\n              "),
+      self.ok_response.response_mapping()
     )
   }
-
-  // fn to_put_old(&self, api_path: &String) -> String {
-  //   let comment1 = format!("PUT {}", api_path);
-  //   let comment2 = self
-  //     .parameters
-  //     .iter()
-  //     .map(|(parameter_name, parameter_type)| format!("{}:{}", parameter_name, parameter_type))
-  //     .collect::<Vec<_>>()
-  //     .join(", ");
-  //   let mut parameter_counter = -1;
-  //   let mut parameters: Vec<String> = self
-  //     .parameters
-  //     .iter()
-  //     .enumerate()
-  //     .map(|(_index, (parameter_name, parameter_type))| {
-  //       if parameter_name == "tenant" {
-  //         "              self.tenant_name()".to_string()
-  //       } else if parameter_name == "token" {
-  //         "              self.token()".to_string()
-  //       } else {
-  //         parameter_counter += 1;
-  //         format!("              {}", parameter_type.to_index_parameter(parameter_counter, parameter_name))
-  //       }
-  //     })
-  //     .collect::<Vec<_>>();
-  //   if let Some(ref request_body) = self.request_body {
-  //     parameters.push(format!("              body.downcast_ref::<&{}>().unwrap()", request_body));
-  //   }
-  //   format!(
-  //           "if path == \"{}\" {{\n      // {}\n      // {}\n      self\n        .process(\n          self\n            .generated_client\n            .{}(\n{}\n            )\n            .await\n        )\n        .map(|(_, result)| result)\n    }}",
-  //           self.operation_id, comment1, comment2, self.operation_id, parameters.join(",\n")
-  //       )
-  // }
 }
-
-// parameters
-// .get(1)
-// .unwrap()
-// .downcast_ref::<GetManageTenantLimitByManagerByTenantByKindKind>()
-// .unwrap()
-// .deref()
-// .to_owned(),
-
-//    if path == "aclgroup_configuration_by_tenant_by_id" {
-//      self
-//        .process(
-//          self
-//            .generated_client
-//            .get_aclgroup_configuration_by_tenant_by_id(
-//              self.tenant_name(),
-//              parameters
-//                .get(0)
-//                .unwrap()
-//                .deref()
-//                .downcast_ref::<&GetAclgroupConfigurationByTenantByIdId>()
-//                .unwrap(),
-//              self.token(),
-//            )
-//            .await,
-//        )
-//        .map(|(_, result)| Box::new(result) as Box<dyn ErasedSerialize>)
-//    } else if path == "application_configuration_by_tenant_by_appid" {
 
 fn type_to_string(type_: &Type) -> String {
   match type_ {
@@ -808,7 +511,7 @@ fn type_to_string(type_: &Type) -> String {
 
 fn schema_to_string(parameter: &ReferenceOr<Schema>) -> String {
   match parameter {
-    ReferenceOr::Reference { reference } => ref_to_string(reference),
+    ReferenceOr::Reference { reference } => reference_to_string(reference),
     ReferenceOr::Item(schema) => {
       let schema_kind = schema.schema_kind.clone();
       match schema_kind {
@@ -821,7 +524,7 @@ fn schema_to_string(parameter: &ReferenceOr<Schema>) -> String {
 
 fn boxed_schema_to_string(parameter: &ReferenceOr<Box<Schema>>) -> String {
   match parameter {
-    ReferenceOr::Reference { reference } => ref_to_string(reference),
+    ReferenceOr::Reference { reference } => reference_to_string(reference),
     ReferenceOr::Item(schema) => {
       let schema_kind = schema.schema_kind.clone();
       match schema_kind {
@@ -832,37 +535,7 @@ fn boxed_schema_to_string(parameter: &ReferenceOr<Box<Schema>>) -> String {
   }
 }
 
-// fn parameter_to_string(parameter: &ReferenceOr<Parameter>) -> String {
-//   match parameter {
-//     ReferenceOr::Reference { reference } => ref_to_string(reference),
-//     ReferenceOr::Item(item) => {
-//       let parameter_data = item.clone().parameter_data();
-//       match parameter_data.format {
-//         ParameterSchemaOrContent::Schema(schema) => {
-//           format!("{}: {}", parameter_data.name, schema_to_string(&schema))
-//         }
-//         ParameterSchemaOrContent::Content(_) => {
-//           format!(">>>>>>>>>> {}", parameter_data.name)
-//         }
-//       }
-//     }
-//   }
-// }
-
-// fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>) -> (String, ParameterType) {
-//   match parameter {
-//     ReferenceOr::Reference { .. } => panic!(),
-//     ReferenceOr::Item(item) => {
-//       let parameter_data = item.clone().parameter_data();
-//       match parameter_data.format {
-//         ParameterSchemaOrContent::Schema(schema) => (parameter_data.name, ParameterType::SerializableType(schema_to_string(&schema))),
-//         ParameterSchemaOrContent::Content(_) => (parameter_data.name, ParameterType::String),
-//       }
-//     }
-//   }
-// }
-
-pub fn capitalize(s: &str) -> String {
+fn capitalize(s: &str) -> String {
   let mut c = s.chars();
   match c.next() {
     None => String::new(),
@@ -885,35 +558,23 @@ fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>, operation_id:
       let parameter_data = parameter_item.clone().parameter_data();
       match parameter_data.format {
         ParameterSchemaOrContent::Schema(ref schema) => match schema {
-          ReferenceOr::Reference { reference } => (parameter_data.name, ParameterType::SerializableType(ref_to_string(reference))),
+          ReferenceOr::Reference { reference } => (parameter_data.name, ParameterType::SerializableType(reference_to_string(reference))),
           ReferenceOr::Item(item) => match &item.schema_kind {
             SchemaKind::Type(type_) => match type_ {
               Type::String(string_type) => {
                 let has_pattern = string_type.pattern.is_some();
                 let has_enumeration = !string_type.enumeration.is_empty();
                 match (has_pattern, has_enumeration) {
-                  (false, false) =>
-                  // No pattern, no enumeration -> &str
-                  {
-                    (parameter_data.name, ParameterType::RefStr)
-                  }
-                  (false, true) =>
-                  // No pattern, enumeration -> Owned type
-                  {
-                    let type_name = to_type_name(operation_id, parameter_data.name.as_str());
-                    (parameter_data.name, ParameterType::ConstructedTypeOwned(type_name))
-                  }
-                  (true, false) =>
-                  // Pattern, no enumeration -> Ref type
-                  {
-                    let type_name = to_type_name(operation_id, parameter_data.name.as_str());
-                    (parameter_data.name, ParameterType::ConstructedTypeRef(type_name))
-                  }
-                  (true, true) =>
-                  // Pattern and enumeration -> &str
-                  {
-                    unimplemented!()
-                  }
+                  (false, false) => (parameter_data.name, ParameterType::RefStr), // No pattern, no enumeration -> &str
+                  (false, true) => (
+                    parameter_data.name.clone(),
+                    ParameterType::ConstructedTypeOwned(to_type_name(operation_id, parameter_data.name.as_str())),
+                  ), // No pattern, enumeration -> Constructed owned type
+                  (true, false) => (
+                    parameter_data.name.clone(),
+                    ParameterType::ConstructedTypeRef(to_type_name(operation_id, parameter_data.name.as_str())),
+                  ), // Pattern, no enumeration -> Constructed ref type
+                  (true, true) => unimplemented!(),                               // Pattern and enumeration -> Should not occur
                 }
               }
               _ => unimplemented!(),
@@ -943,38 +604,24 @@ fn response_to_response_body_type(response: &ReferenceOr<Response>) -> ResponseB
   }
 }
 
-// fn response_to_string(response: &ReferenceOr<Response>) -> String {
-//   match response {
-//     ReferenceOr::Reference { reference } => ref_to_string(reference),
-//     ReferenceOr::Item(response) => match response.content.get("application/json") {
-//       Some(media_type) => match &media_type.schema {
-//         Some(schema) => schema_to_string(&schema),
-//         None => ">>>>>>>>>> NO_SCHEMA".to_string(),
-//       },
-//       None => match response.content.get("text/plain") {
-//         Some(_) => "String".to_string(),
-//         None => response.description.to_string(),
-//       },
-//     },
-//   }
-// }
-
-fn ref_to_string(reference: &str) -> String {
+fn reference_to_string(reference: &str) -> String {
   match reference.strip_prefix("#/components/schemas/") {
     Some(type_) => type_.to_string(),
     None => format!("$ref: {}", reference),
   }
 }
 
-fn request_body_to_string(request_body: &RequestBody) -> String {
-  match request_body.content.get("application/json") {
-    Some(media_type) => match &media_type.schema {
-      Some(schema) => schema_to_string(&schema),
-      None => ">>>>>>>>>> NO_SCHEMA".to_string(),
-    },
-    None => match request_body.content.get("text/plain") {
-      Some(_) => "String".to_string(),
-      None => format!(">>>>>>>>>> NO_JSON_NO_TEXT {:?}", request_body),
-    },
+impl From<&RequestBody> for RequestBodyType {
+  fn from(request_body: &RequestBody) -> Self {
+    match request_body.content.get("application/json") {
+      Some(media_type) => match &media_type.schema {
+        Some(schema) => RequestBodyType::SerializableType(schema_to_string(&schema)),
+        None => unimplemented!(),
+      },
+      None => match request_body.content.get("text/plain") {
+        Some(_) => RequestBodyType::String,
+        None => unimplemented!(),
+      },
+    }
   }
 }
