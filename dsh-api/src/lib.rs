@@ -100,6 +100,11 @@ pub mod topic;
 pub mod vhost;
 pub mod volume;
 
+#[cfg(feature = "generic")]
+pub mod generic;
+#[cfg(feature = "generic")]
+pub mod generic_gen;
+
 /// # Returns the version of the lib crate
 pub fn crate_version() -> &'static str {
   "0.3.2"
@@ -150,6 +155,7 @@ pub enum DshApiError {
   Configuration(String),
   NotAuthorized,
   NotFound,
+  Parameter(String),
   Unexpected(String, Option<Box<dyn StdError + Send + Sync>>),
 }
 
@@ -189,10 +195,11 @@ impl Display for UsedBy {
 impl StdError for DshApiError {
   fn source(&self) -> Option<&(dyn StdError + 'static)> {
     match self {
-      DshApiError::Configuration(_) => None,
-      DshApiError::NotAuthorized => None,
-      DshApiError::NotFound => None,
-      DshApiError::Unexpected(_, source) => source.as_deref()?.source(),
+      Self::Configuration(_) => None,
+      Self::NotAuthorized => None,
+      Self::NotFound => None,
+      Self::Parameter(_) => None,
+      Self::Unexpected(_, source) => source.as_deref()?.source(),
     }
   }
 }
@@ -203,6 +210,7 @@ impl Display for DshApiError {
       DshApiError::Configuration(message) => write!(f, "{}", message),
       DshApiError::NotAuthorized => write!(f, "not authorized"),
       DshApiError::NotFound => write!(f, "not found"),
+      DshApiError::Parameter(message) => write!(f, "{}", message),
       DshApiError::Unexpected(message, cause) => match cause {
         Some(cause) => write!(f, "unexpected error ({})", cause),
         None => write!(f, "unexpected error ({})", message),
