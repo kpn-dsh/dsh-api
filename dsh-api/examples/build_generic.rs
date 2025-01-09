@@ -3,39 +3,50 @@ use indoc::formatdoc;
 use openapiv3::{AdditionalProperties, OpenAPI, Operation, Parameter, ParameterSchemaOrContent, ReferenceOr, RequestBody, Response, Schema, SchemaKind, StatusCode, Type};
 use serde_json;
 use std::collections::HashMap;
+use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::fs::File;
+use std::io::{BufWriter, Write};
 
-fn main() -> Result<(), String> {
+fn main() -> Result<(), Box<dyn Error>> {
   // let openapi_spec_original_file = "dsh-api/openapi_spec/openapi_1_9_0.json";
   // let file = std::fs::File::open(openapi_spec_original_file).unwrap();
   // let openapi_spec: OpenAPI = serde_json::from_reader(file).unwrap();
 
   let openapi_spec_string = DshApiClient::openapi_spec();
   let openapi_spec: OpenAPI = serde_json::from_str(openapi_spec_string).unwrap();
-  println!("// openapi spec version: {}", openapi_spec.info.version);
+
+  let mut w: BufWriter<File> = BufWriter::new(File::create("dsh-api/src/generic.rs").unwrap());
+  // let mut w: BufWriter<std::io::Stdout> = BufWriter::new(std::io::stdout());
+
+  writeln!(w, "// openapi spec version: {}", openapi_spec.info.version)?;
+  writeln!(w, "#![cfg_attr(rustfmt, rustfmt_skip)]")?;
 
   let api_paths = api_paths(openapi_spec)?;
 
-  println!("use crate::dsh_api_client::DshApiClient;");
-  println!("use crate::types::*;");
-  println!("use crate::{{DshApiError, DshApiResult}};");
-  println!("use erased_serde::Serialize as ErasedSerialize;");
-  println!("use std::str::FromStr;");
-  println!();
+  writeln!(w, "use crate::dsh_api_client::DshApiClient;")?;
+  writeln!(w, "use crate::types::*;")?;
+  writeln!(w, "use crate::{{DshApiError, DshApiResult}};")?;
+  writeln!(w, "use erased_serde::Serialize as ErasedSerialize;")?;
+  writeln!(w, "use std::str::FromStr;")?;
+  writeln!(w)?;
 
-  println!("impl DshApiClient<'_> {{");
+  writeln!(w, "impl DshApiClient<'_> {{")?;
 
-  print_get_operations(&api_paths);
-  println!();
-  print_put_operations(&api_paths);
+  print_get_operations(&mut w, &api_paths)?;
+  writeln!(w)?;
+  print_put_operations(&mut w, &api_paths)?;
 
-  println!("}}");
+  writeln!(w, "}}")?;
 
   Ok(())
 }
 
-fn print_get_operations(api_paths: &Vec<ApiPath>) {
-  println!("  pub async fn get(&self, path: &str, parameters: &[&str]) -> DshApiResult<Box<dyn ErasedSerialize>> {{");
+fn print_get_operations(w: &mut dyn Write, api_paths: &Vec<ApiPath>) -> Result<(), Box<dyn Error>> {
+  writeln!(
+    w,
+    "  pub async fn get(&self, path: &str, parameters: &[&str]) -> DshApiResult<Box<dyn ErasedSerialize>> {{"
+  )?;
   let get_operations: Vec<(&String, &ApiOperation)> = api_paths
     .iter()
     .filter_map(|api_path| api_path.operations.get(&ApiOperationType::Get).map(|api_operation| (&api_path.path, api_operation)))
@@ -48,20 +59,21 @@ fn print_get_operations(api_paths: &Vec<ApiPath>) {
   let mut first = true;
   for (api_path, api_operation) in get_operations {
     if first {
-      print!("    {}", api_operation.to_get(api_path))
+      write!(w, "    {}", api_operation.to_get_if_block(api_path))?;
     } else {
-      print!(" else {}", api_operation.to_get(api_path));
+      write!(w, " else {}", api_operation.to_get_if_block(api_path))?;
     }
     first = false;
   }
-  println!(" else {{");
-  println!("      Err(DshApiError::Configuration(format!(\"get method '{{}}' not recognized\", path)))");
-  println!("    }}");
-  println!("  }}");
+  writeln!(w, " else {{")?;
+  writeln!(w, "      Err(DshApiError::Configuration(format!(\"get method '{{}}' not recognized\", path)))")?;
+  writeln!(w, "    }}")?;
+  writeln!(w, "  }}")?;
+  Ok(())
 }
 
-fn print_put_operations(api_paths: &Vec<ApiPath>) {
-  println!("  pub async fn put(&self, path: &str, parameters: &[&str], body: &str) -> DshApiResult<()> {{");
+fn print_put_operations(w: &mut dyn Write, api_paths: &Vec<ApiPath>) -> Result<(), Box<dyn Error>> {
+  writeln!(w, "  pub async fn put(&self, path: &str, parameters: &[&str], body: &str) -> DshApiResult<()> {{")?;
   let put_operations: Vec<(&String, &ApiOperation)> = api_paths
     .iter()
     .filter_map(|api_path| api_path.operations.get(&ApiOperationType::Put).map(|api_operation| (&api_path.path, api_operation)))
@@ -74,16 +86,17 @@ fn print_put_operations(api_paths: &Vec<ApiPath>) {
   let mut first = true;
   for (api_path, api_operation) in put_operations {
     if first {
-      print!("    {}", api_operation.to_put(api_path))
+      write!(w, "    {}", api_operation.to_put_if_block(api_path))?;
     } else {
-      print!(" else {}", api_operation.to_put(api_path));
+      write!(w, " else {}", api_operation.to_put_if_block(api_path))?;
     }
     first = false;
   }
-  println!(" else {{");
-  println!("      Err(DshApiError::Configuration(format!(\"get method '{{}}' not recognized\", path)))");
-  println!("    }}");
-  println!("  }}");
+  writeln!(w, " else {{")?;
+  writeln!(w, "      Err(DshApiError::Configuration(format!(\"get method '{{}}' not recognized\", path)))")?;
+  writeln!(w, "    }}")?;
+  writeln!(w, "  }}")?;
+  Ok(())
 }
 
 fn api_paths(openapi: OpenAPI) -> Result<Vec<ApiPath>, String> {
@@ -375,68 +388,7 @@ impl ApiOperation {
     }
   }
 
-  fn to_get(&self, api_path: &String) -> String {
-    let comments = vec![
-      format!("GET {}", api_path),
-      self
-        .parameters
-        .iter()
-        .map(|(parameter_name, parameter_type)| format!("{}:{}", parameter_name, parameter_type))
-        .collect::<Vec<_>>()
-        .join(", "),
-      format!("{:?}", self.ok_response),
-    ];
-    let mut parameter_counter = -1;
-    let parameters = self
-      .parameters
-      .iter()
-      .enumerate()
-      .map(|(_index, (parameter_name, parameter_type))| {
-        if parameter_name == "tenant" {
-          "self.tenant_name()".to_string()
-        } else if parameter_name == "Authorization" {
-          "self.token()".to_string()
-        } else {
-          parameter_counter += 1;
-          parameter_type.to_index_parameter(parameter_counter, parameter_name)
-        }
-      })
-      .collect::<Vec<_>>();
-    formatdoc!(
-      r#"
-        if path == "{}" {{
-              // {}
-              self
-                .{}(
-                  self
-                    .generated_client
-                    .{}(
-                      {}
-                    )
-                    .await
-                )
-                {}
-            }}"#,
-      self.operation_id,
-      comments.join("\n      // "),
-      self.ok_response.processing_function(),
-      self.operation_id,
-      parameters.join(",\n              "),
-      self.ok_response.response_mapping()
-    )
-  }
-
-  fn to_put(&self, api_path: &String) -> String {
-    let comments = vec![
-      format!("PUT {}", api_path),
-      self
-        .parameters
-        .iter()
-        .map(|(parameter_name, parameter_type)| format!("{}:{}", parameter_name, parameter_type))
-        .collect::<Vec<_>>()
-        .join(", "),
-      format!("{:?} / {:?}", self.request_body, self.ok_response),
-    ];
+  fn to_if_block(&self, comments: Vec<String>) -> String {
     let mut parameter_counter = -1;
     let mut parameters = self
       .parameters
@@ -455,11 +407,11 @@ impl ApiOperation {
       .collect::<Vec<_>>();
     if let Some(ref request_body_type) = self.request_body {
       match request_body_type {
-        RequestBodyType::String => {
-          parameters.push("serde_json::from_str::<String>(body).map_err(|_| DshApiError::Parameter(\"cannot parse body into &String\".to_string()))?.to_string()".to_string())
-        }
+        RequestBodyType::String => parameters.push(
+          "serde_json::from_str::<String>(body).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid String\".to_string()))?.to_string()".to_string(),
+        ),
         RequestBodyType::SerializableType(serializable_type) => parameters.push(format!(
-          "&serde_json::from_str::<{}>(body).map_err(|_| DshApiError::Parameter(\"cannot parse body into {}\".to_string()))?",
+          "&serde_json::from_str::<{}>(body).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid {}\".to_string()))?",
           serializable_type, serializable_type
         )),
       }
@@ -473,9 +425,9 @@ impl ApiOperation {
                   self
                     .generated_client
                     .{}(
-                      {}
+                      {},
                     )
-                    .await
+                    .await,
                 )
                 {}
             }}"#,
@@ -486,6 +438,32 @@ impl ApiOperation {
       parameters.join(",\n              "),
       self.ok_response.response_mapping()
     )
+  }
+
+  fn to_get_if_block(&self, api_path: &String) -> String {
+    self.to_if_block(vec![
+      format!("GET {}", api_path),
+      self
+        .parameters
+        .iter()
+        .map(|(parameter_name, parameter_type)| format!("{}:{}", parameter_name, parameter_type))
+        .collect::<Vec<_>>()
+        .join(", "),
+      format!("{:?}", self.ok_response),
+    ])
+  }
+
+  fn to_put_if_block(&self, api_path: &String) -> String {
+    self.to_if_block(vec![
+      format!("PUT {}", api_path),
+      self
+        .parameters
+        .iter()
+        .map(|(parameter_name, parameter_type)| format!("{}:{}", parameter_name, parameter_type))
+        .collect::<Vec<_>>()
+        .join(", "),
+      format!("{:?} / {:?}", self.request_body, self.ok_response),
+    ])
   }
 }
 
