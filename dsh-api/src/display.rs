@@ -17,7 +17,6 @@
 //! * [`CertificateStatus`]
 //! * [`Empty`]
 //! * [`HealthCheck`]
-//! * [`InternalManagedStream`]
 //! * [`Metrics`]
 //! * [`Notification`]
 //! * [`PortMapping`]
