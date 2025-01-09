@@ -9,6 +9,11 @@ All notable changes to the DSH Api Client project will be documented in this fil
 ### Added
 
 * Support DSH open api specification version 1.9.0.
+* Generic api function.
+
+### Changed
+
+* Implementation of methods that provide the api and the openapi versions.
 
 ## [0.3.1]
 
