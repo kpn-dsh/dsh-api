@@ -69,7 +69,12 @@ pub(crate) mod generated {
   include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 }
 
-pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/open-api.json"));
+#[cfg(feature = "generic")]
+pub mod generic {
+  include!(concat!(env!("OUT_DIR"), "/generic.rs"));
+}
+
+pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/openapi.json"));
 
 use dsh_sdk::error::DshRestTokenError;
 
@@ -99,11 +104,6 @@ pub mod stream;
 pub mod topic;
 pub mod vhost;
 pub mod volume;
-
-#[cfg(feature = "generic")]
-pub mod generic;
-#[cfg(feature = "generic")]
-pub mod generic_gen;
 
 /// # Returns the version of the lib crate
 pub fn crate_version() -> &'static str {

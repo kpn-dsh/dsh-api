@@ -1,101 +1,79 @@
-use dsh_api::dsh_api_client::DshApiClient;
 use indoc::formatdoc;
 use openapiv3::{AdditionalProperties, OpenAPI, Operation, Parameter, ParameterSchemaOrContent, ReferenceOr, RequestBody, Response, Schema, SchemaKind, StatusCode, Type};
-use serde_json;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::Write;
 
-fn main() -> Result<(), Box<dyn Error>> {
-  // let openapi_spec_original_file = "dsh-api/openapi_spec/openapi_1_9_0.json";
-  // let file = std::fs::File::open(openapi_spec_original_file).unwrap();
-  // let openapi_spec: OpenAPI = serde_json::from_reader(file).unwrap();
+pub fn generate_generic(writer: &mut dyn Write, openapi_spec: OpenAPI) -> Result<(), Box<dyn Error>> {
+  writeln!(writer, "#[cfg_attr(rustfmt, rustfmt_skip)]")?;
+  writeln!(writer, "// openapi spec version: {}", openapi_spec.info.version)?;
+  writeln!(writer, "use crate::dsh_api_client::DshApiClient;")?;
+  writeln!(writer, "use crate::types::*;")?;
+  writeln!(writer, "use crate::{{DshApiError, DshApiResult}};")?;
+  writeln!(writer, "use erased_serde::Serialize as ErasedSerialize;")?;
+  writeln!(writer, "use std::str::FromStr;")?;
+  writeln!(writer)?;
 
-  let openapi_spec_string = DshApiClient::openapi_spec();
-  let openapi_spec: OpenAPI = serde_json::from_str(openapi_spec_string).unwrap();
-
-  let mut w: BufWriter<File> = BufWriter::new(File::create("dsh-api/src/generic.rs").unwrap());
-  // let mut w: BufWriter<std::io::Stdout> = BufWriter::new(std::io::stdout());
-
-  writeln!(w, "// openapi spec version: {}", openapi_spec.info.version)?;
-  writeln!(w, "#![cfg_attr(rustfmt, rustfmt_skip)]")?;
+  writeln!(writer, "impl DshApiClient<'_> {{")?;
 
   let api_paths = api_paths(openapi_spec)?;
+  print_get_operations(writer, &api_paths)?;
+  writeln!(writer)?;
+  print_put_operations(writer, &api_paths)?;
 
-  writeln!(w, "use crate::dsh_api_client::DshApiClient;")?;
-  writeln!(w, "use crate::types::*;")?;
-  writeln!(w, "use crate::{{DshApiError, DshApiResult}};")?;
-  writeln!(w, "use erased_serde::Serialize as ErasedSerialize;")?;
-  writeln!(w, "use std::str::FromStr;")?;
-  writeln!(w)?;
-
-  writeln!(w, "impl DshApiClient<'_> {{")?;
-
-  print_get_operations(&mut w, &api_paths)?;
-  writeln!(w)?;
-  print_put_operations(&mut w, &api_paths)?;
-
-  writeln!(w, "}}")?;
+  writeln!(writer, "}}")?;
 
   Ok(())
 }
 
-fn print_get_operations(w: &mut dyn Write, api_paths: &Vec<ApiPath>) -> Result<(), Box<dyn Error>> {
+fn print_get_operations(writer: &mut dyn Write, api_paths: &[ApiPath]) -> Result<(), Box<dyn Error>> {
   writeln!(
-    w,
+    writer,
     "  pub async fn get(&self, path: &str, parameters: &[&str]) -> DshApiResult<Box<dyn ErasedSerialize>> {{"
   )?;
   let get_operations: Vec<(&String, &ApiOperation)> = api_paths
     .iter()
     .filter_map(|api_path| api_path.operations.get(&ApiOperationType::Get).map(|api_operation| (&api_path.path, api_operation)))
     .collect::<Vec<_>>();
-  // TODO For testing only
-  // let get_operations: Vec<(&String, &ApiOperation)> = get_operations
-  //   .into_iter()
-  //   .filter(|(path, _)| *path == "/manage/{manager}/tenant/{tenant}/limit/{kind}")
-  //   .collect::<Vec<_>>();
   let mut first = true;
   for (api_path, api_operation) in get_operations {
     if first {
-      write!(w, "    {}", api_operation.to_get_if_block(api_path))?;
+      write!(writer, "    {}", api_operation.to_get_if_block(api_path))?;
     } else {
-      write!(w, " else {}", api_operation.to_get_if_block(api_path))?;
+      write!(writer, " else {}", api_operation.to_get_if_block(api_path))?;
     }
     first = false;
   }
-  writeln!(w, " else {{")?;
-  writeln!(w, "      Err(DshApiError::Configuration(format!(\"get method '{{}}' not recognized\", path)))")?;
-  writeln!(w, "    }}")?;
-  writeln!(w, "  }}")?;
+  writeln!(writer, " else {{")?;
+  writeln!(writer, "      Err(DshApiError::Configuration(format!(\"get method '{{}}' not recognized\", path)))")?;
+  writeln!(writer, "    }}")?;
+  writeln!(writer, "  }}")?;
   Ok(())
 }
 
-fn print_put_operations(w: &mut dyn Write, api_paths: &Vec<ApiPath>) -> Result<(), Box<dyn Error>> {
-  writeln!(w, "  pub async fn put(&self, path: &str, parameters: &[&str], body: &str) -> DshApiResult<()> {{")?;
+fn print_put_operations(writer: &mut dyn Write, api_paths: &[ApiPath]) -> Result<(), Box<dyn Error>> {
+  writeln!(
+    writer,
+    "  pub async fn put(&self, path: &str, parameters: &[&str], body: &str) -> DshApiResult<()> {{"
+  )?;
   let put_operations: Vec<(&String, &ApiOperation)> = api_paths
     .iter()
     .filter_map(|api_path| api_path.operations.get(&ApiOperationType::Put).map(|api_operation| (&api_path.path, api_operation)))
     .collect::<Vec<_>>();
-  // TODO For testing only
-  // let put_operations: Vec<(&String, &ApiOperation)> = put_operations
-  //   .into_iter()
-  //   .filter(|(path, _)| *path == "/allocation/{tenant}/aclgroup/{id}/configuration")
-  //   .collect::<Vec<_>>();
   let mut first = true;
   for (api_path, api_operation) in put_operations {
     if first {
-      write!(w, "    {}", api_operation.to_put_if_block(api_path))?;
+      write!(writer, "    {}", api_operation.to_put_if_block(api_path))?;
     } else {
-      write!(w, " else {}", api_operation.to_put_if_block(api_path))?;
+      write!(writer, " else {}", api_operation.to_put_if_block(api_path))?;
     }
     first = false;
   }
-  writeln!(w, " else {{")?;
-  writeln!(w, "      Err(DshApiError::Configuration(format!(\"get method '{{}}' not recognized\", path)))")?;
-  writeln!(w, "    }}")?;
-  writeln!(w, "  }}")?;
+  writeln!(writer, " else {{")?;
+  writeln!(writer, "      Err(DshApiError::Configuration(format!(\"get method '{{}}' not recognized\", path)))")?;
+  writeln!(writer, "    }}")?;
+  writeln!(writer, "  }}")?;
   Ok(())
 }
 
@@ -153,7 +131,7 @@ fn create_api_operation(_operation_type: ApiOperationType, operation: Operation)
   let mut _error_responses: Vec<(u16, ResponseBodyType)> = vec![];
   for (status_code, response) in operation.responses.responses {
     if let StatusCode::Code(numerical_status_code) = status_code {
-      if numerical_status_code >= 200 && numerical_status_code < 300 {
+      if (200..300).contains(&numerical_status_code) {
         _ok_responses.push((numerical_status_code, response_to_response_body_type(&response)))
       } else {
         _error_responses.push((numerical_status_code, response_to_response_body_type(&response)))
@@ -242,17 +220,21 @@ enum ParameterType {
 
 impl ParameterType {
   fn to_index_parameter(&self, index: isize, name: &str) -> String {
+    let get_or_first = if index == 0 { "first()".to_string() } else { format!("get({})", index) };
     match self {
       ParameterType::ConstructedTypeOwned(constructed_type) => format!(
-        "/* {}: constructed owned */ {}::from_str(parameters.get({}).unwrap())?",
-        name, constructed_type, index
+        "/* {}: constructed owned */ {}::from_str(parameters.{}.unwrap())?",
+        name, constructed_type, get_or_first
       ),
       ParameterType::ConstructedTypeRef(constructed_type) => format!(
-        "/* {}: constructed ref */ &{}::from_str(parameters.get({}).unwrap())?",
-        name, constructed_type, index
+        "/* {}: constructed ref */ &{}::from_str(parameters.{}.unwrap())?",
+        name, constructed_type, get_or_first
       ),
-      ParameterType::SerializableType(serializable_type) => format!("/* {}: serializable */ &{}::from_str(parameters.get({}).unwrap())?", name, serializable_type, index),
-      ParameterType::RefStr => format!("/* {}: &str */ parameters.get({}).unwrap()", name, index),
+      ParameterType::SerializableType(serializable_type) => format!(
+        "/* {}: serializable */ &{}::from_str(parameters.{}.unwrap())?",
+        name, serializable_type, get_or_first
+      ),
+      ParameterType::RefStr => format!("/* {}: &str */ parameters.{}.unwrap()", name, get_or_first),
     }
   }
 }
@@ -393,8 +375,7 @@ impl ApiOperation {
     let mut parameters = self
       .parameters
       .iter()
-      .enumerate()
-      .map(|(_index, (parameter_name, parameter_type))| {
+      .map(|(parameter_name, parameter_type)| {
         if parameter_name == "tenant" {
           "self.tenant_name()".to_string()
         } else if parameter_name == "Authorization" {
@@ -469,7 +450,7 @@ impl ApiOperation {
 
 fn type_to_string(type_: &Type) -> String {
   match type_ {
-    Type::String(_) => format!("str"),
+    Type::String(_) => "str".to_string(),
     Type::Number(_) => unimplemented!(),
     Type::Integer(_) => unimplemented!(),
     Type::Object(object_type) => match object_type.additional_properties {
@@ -522,16 +503,12 @@ fn capitalize(s: &str) -> String {
 }
 
 fn to_type_name(operation_id: &str, name: &str) -> String {
-  format!(
-    "{}{}",
-    operation_id.split('_').map(|part| capitalize(part)).collect::<Vec<_>>().join(""),
-    capitalize(name)
-  )
+  format!("{}{}", operation_id.split('_').map(capitalize).collect::<Vec<_>>().join(""), capitalize(name))
 }
 
-fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>, operation_id: &String) -> (String, ParameterType) {
+fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>, operation_id: &str) -> (String, ParameterType) {
   match parameter {
-    ReferenceOr::Reference { .. } => panic!(),
+    ReferenceOr::Reference { .. } => unimplemented!(),
     ReferenceOr::Item(parameter_item) => {
       let parameter_data = parameter_item.clone().parameter_data();
       match parameter_data.format {
@@ -568,11 +545,11 @@ fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>, operation_id:
 
 fn response_to_response_body_type(response: &ReferenceOr<Response>) -> ResponseBodyType {
   match response {
-    ReferenceOr::Reference { .. } => panic!(),
+    ReferenceOr::Reference { .. } => unimplemented!(),
     ReferenceOr::Item(response) => match response.content.get("application/json") {
       Some(media_type) => match &media_type.schema {
-        Some(schema) => ResponseBodyType::SerializableType(schema_to_string(&schema)),
-        None => panic!(),
+        Some(schema) => ResponseBodyType::SerializableType(schema_to_string(schema)),
+        None => unimplemented!(),
       },
       None => match response.content.get("text/plain") {
         Some(_) => ResponseBodyType::String,
@@ -593,7 +570,7 @@ impl From<&RequestBody> for RequestBodyType {
   fn from(request_body: &RequestBody) -> Self {
     match request_body.content.get("application/json") {
       Some(media_type) => match &media_type.schema {
-        Some(schema) => RequestBodyType::SerializableType(schema_to_string(&schema)),
+        Some(schema) => RequestBodyType::SerializableType(schema_to_string(schema)),
         None => unimplemented!(),
       },
       None => match request_body.content.get("text/plain") {
