@@ -69,11 +69,6 @@ pub(crate) mod generated {
   include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 }
 
-#[cfg(feature = "generic")]
-pub mod generic {
-  include!(concat!(env!("OUT_DIR"), "/generic.rs"));
-}
-
 pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/openapi.json"));
 
 use dsh_sdk::error::DshRestTokenError;
@@ -96,11 +91,12 @@ pub mod display;
 pub mod dsh_api_client;
 pub mod dsh_api_client_factory;
 pub mod dsh_api_tenant;
+pub mod generic;
 pub mod platform;
 pub mod proxy;
 pub mod query_processor;
 pub mod secret;
-pub mod stream;
+// pub mod stream;
 pub mod topic;
 pub mod vhost;
 pub mod volume;
