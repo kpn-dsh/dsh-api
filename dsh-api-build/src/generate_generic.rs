@@ -4,69 +4,115 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::io::Write;
+use PathElement;
+
+const COMMENT_OUTER: &str = r#"
+/// # Generic API function calls
+///
+/// Module that contains methods to call the api methods in a generic way.
+/// What this means is that the API functions can be called indirect,
+/// where the path of the method must be provided as an argument.
+///
+/// This has a number of consequences,
+/// which are caused by the limitations of the `rust` language with respect to abstraction:
+/// * The number and types of the required parameters for each method
+///   are not known at compile time, which means that (emulated) dynamic typing is used
+///   and parameters errors will occur at run-time instead of compile time.
+///   * Path parameters must be provided as `&str`.
+///   * Body parameters must be provided as a json `&str` that can be deserialized at runtime
+///     into the expected type.
+/// * The response type for each method is not known at compile time.
+///   * For `GET` methods the responses will be returned as dynamic trait objects
+///     that implement [`erased_serde::Serialize`], defined in the
+///     [`erased_serde`](https://crates.io/crates/erased-serde) crate.
+///     These objects can be serialized into json, yaml or toml without any type information.
+///   * If `DELETE`, `POST` and `PUT` methods return data this will be ignored
+///     and only errors will be returned.
+///
+/// # Examples
+///
+/// Get the configuration of the application `keyring-dev` and print it as json.
+///
+/// ```ignore
+/// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+/// let application = client.get(
+///   "get_application_configuration_by_tenant_by_appid",
+///   &["keyring-dev"]
+/// ).await?;
+/// println!("{}", serde_json::to_string_pretty(&application)?);
+/// # Ok(())
+/// # }
+/// ```
+///
+/// Update the secret `abcdef` to the value `ABCDEF`.
+///
+/// ```ignore
+/// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+///  let secret = serde_json::to_string("ABCDEF")?;
+///  client.put("put_secret_by_tenant_by_id", &["abcdef"], &secret).await?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # API functions
+///
+/// [`DshApiClient`] methods that call the DSH resource management API.
+///
+/// * [`delete(path, [parameters]) -> Ok`](DshApiClient::delete)
+/// * [`get(path, [parameters]) -> serialize`](DshApiClient::get)
+/// * [`post(path, [parameters], body) -> Ok`](DshApiClient::post)
+/// * [`put(path, [parameters], body) -> Ok`](DshApiClient::put)
+"#;
+
+const USE: &str = r#"#[cfg_attr(rustfmt, rustfmt_skip)]
+// openapi spec version: 1.9.0
+use crate::dsh_api_client::DshApiClient;
+use crate::types::*;
+use crate::{DshApiError, DshApiResult};
+use erased_serde::Serialize;
+use std::str::FromStr;
+"#;
 
 pub fn generate_generic(writer: &mut dyn Write, openapi_spec: OpenAPI) -> Result<(), Box<dyn Error>> {
-  writeln!(writer, "#[cfg_attr(rustfmt, rustfmt_skip)]")?;
-  writeln!(writer, "// openapi spec version: {}", openapi_spec.info.version)?;
-  writeln!(writer, "use crate::dsh_api_client::DshApiClient;")?;
-  writeln!(writer, "use crate::types::*;")?;
-  writeln!(writer, "use crate::{{DshApiError, DshApiResult}};")?;
-  writeln!(writer, "use erased_serde::Serialize as ErasedSerialize;")?;
-  writeln!(writer, "use std::str::FromStr;")?;
+  writeln!(writer, "{}", USE)?;
   writeln!(writer)?;
 
+  writeln!(writer, "{}", COMMENT_OUTER)?;
   writeln!(writer, "impl DshApiClient<'_> {{")?;
 
   let api_paths = api_paths(openapi_spec)?;
-  print_get_operations(writer, &api_paths)?;
+
+  print_operations(writer, ApiOperationType::Delete, &api_paths)?;
   writeln!(writer)?;
-  print_put_operations(writer, &api_paths)?;
+  print_operations(writer, ApiOperationType::Get, &api_paths)?;
+  writeln!(writer)?;
+  print_operations(writer, ApiOperationType::Post, &api_paths)?;
+  writeln!(writer)?;
+  print_operations(writer, ApiOperationType::Put, &api_paths)?;
 
   writeln!(writer, "}}")?;
 
   Ok(())
 }
 
-fn print_get_operations(writer: &mut dyn Write, api_paths: &[ApiPath]) -> Result<(), Box<dyn Error>> {
-  writeln!(
-    writer,
-    "  pub async fn get(&self, path: &str, parameters: &[&str]) -> DshApiResult<Box<dyn ErasedSerialize>> {{"
-  )?;
-  let get_operations: Vec<(&String, &ApiOperation)> = api_paths
+fn print_operations(writer: &mut dyn Write, operation_type: ApiOperationType, api_paths: &[ApiPath]) -> Result<(), Box<dyn Error>> {
+  writeln!(writer, "  {} {{", operation_type.signature())?;
+  let operations: Vec<(&String, &ApiOperation)> = api_paths
     .iter()
-    .filter_map(|api_path| api_path.operations.get(&ApiOperationType::Get).map(|api_operation| (&api_path.path, api_operation)))
+    .filter_map(|api_path| api_path.operations.get(&operation_type).map(|api_operation| (&api_path.path, api_operation)))
     .collect::<Vec<_>>();
   let mut first = true;
-  for (api_path, api_operation) in get_operations {
+  for (api_path, api_operation) in operations {
     if first {
-      write!(writer, "    {}", api_operation.to_get_if_block(api_path))?;
+      write!(writer, "    {}", api_operation.to_if_block(api_path))?;
     } else {
-      write!(writer, " else {}", api_operation.to_get_if_block(api_path))?;
-    }
-    first = false;
-  }
-  writeln!(writer, " else {{")?;
-  writeln!(writer, "      Err(DshApiError::Configuration(format!(\"get method '{{}}' not recognized\", path)))")?;
-  writeln!(writer, "    }}")?;
-  writeln!(writer, "  }}")?;
-  Ok(())
-}
-
-fn print_put_operations(writer: &mut dyn Write, api_paths: &[ApiPath]) -> Result<(), Box<dyn Error>> {
-  writeln!(
-    writer,
-    "  pub async fn put(&self, path: &str, parameters: &[&str], body: &str) -> DshApiResult<()> {{"
-  )?;
-  let put_operations: Vec<(&String, &ApiOperation)> = api_paths
-    .iter()
-    .filter_map(|api_path| api_path.operations.get(&ApiOperationType::Put).map(|api_operation| (&api_path.path, api_operation)))
-    .collect::<Vec<_>>();
-  let mut first = true;
-  for (api_path, api_operation) in put_operations {
-    if first {
-      write!(writer, "    {}", api_operation.to_put_if_block(api_path))?;
-    } else {
-      write!(writer, " else {}", api_operation.to_put_if_block(api_path))?;
+      write!(writer, " else {}", api_operation.to_if_block(api_path))?;
     }
     first = false;
   }
@@ -139,51 +185,51 @@ fn create_api_operation(_operation_type: ApiOperationType, operation: Operation)
     }
   }
   let ok_response = _ok_responses.iter().min_by_key(|(status_code, _)| status_code).ok_or("".to_string())?.1.clone();
-  Ok(ApiOperation { _operation_type, parameters, request_body, operation_id, ok_response, _ok_responses, _error_responses })
+  Ok(ApiOperation { operation_type: _operation_type, parameters, request_body, operation_id, ok_response, _ok_responses, _error_responses })
 }
 
-#[derive(Debug, PartialEq)]
-enum PathElement {
-  Literal(String),
-  Variable(String),
-}
-
-impl Display for PathElement {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::Literal(literal) => write!(f, "{}", literal),
-      Self::Variable(variable) => write!(f, "{{{}}}", variable),
-    }
-  }
-}
-
-impl From<&PathElement> for String {
-  fn from(value: &PathElement) -> Self {
-    match value {
-      PathElement::Literal(literal) => literal.to_string(),
-      PathElement::Variable(variable) => variable.to_string(),
-    }
-  }
-}
-
-impl PathElement {
-  fn vec_from_str(string: &str) -> Vec<PathElement> {
-    string
-      .split('/')
-      .collect::<Vec<_>>()
-      .into_iter()
-      .filter_map(|element| {
-        if element.is_empty() {
-          None
-        } else if element.starts_with('{') && element.ends_with('}') {
-          Some(PathElement::Variable(element[1..element.len() - 1].to_string()))
-        } else {
-          Some(PathElement::Literal(element.to_string()))
-        }
-      })
-      .collect::<Vec<_>>()
-  }
-}
+// #[derive(Debug, PartialEq)]
+// enum PathElement {
+//   Literal(String),
+//   Variable(String),
+// }
+//
+// impl Display for PathElement {
+//   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//     match self {
+//       Self::Literal(literal) => write!(f, "{}", literal),
+//       Self::Variable(variable) => write!(f, "{{{}}}", variable),
+//     }
+//   }
+// }
+//
+// impl From<&PathElement> for String {
+//   fn from(value: &PathElement) -> Self {
+//     match value {
+//       PathElement::Literal(literal) => literal.to_string(),
+//       PathElement::Variable(variable) => variable.to_string(),
+//     }
+//   }
+// }
+//
+// impl PathElement {
+//   fn vec_from_str(string: &str) -> Vec<PathElement> {
+//     string
+//       .split('/')
+//       .collect::<Vec<_>>()
+//       .into_iter()
+//       .filter_map(|element| {
+//         if element.is_empty() {
+//           None
+//         } else if element.starts_with('{') && element.ends_with('}') {
+//           Some(PathElement::Variable(element[1..element.len() - 1].to_string()))
+//         } else {
+//           Some(PathElement::Literal(element.to_string()))
+//         }
+//       })
+//       .collect::<Vec<_>>()
+//   }
+// }
 
 #[derive(Eq, Hash, PartialEq)]
 enum ApiOperationType {
@@ -195,18 +241,31 @@ enum ApiOperationType {
   Put,
 }
 
+impl ApiOperationType {
+  pub(crate) fn signature(&self) -> &str {
+    match self {
+      ApiOperationType::Get => "pub async fn get(&self, path: &str, parameters: &[&str]) -> DshApiResult<Box<dyn Serialize>>",
+      ApiOperationType::Delete => "pub async fn delete(&self, path: &str, parameters: &[&str]) -> DshApiResult<()>",
+      ApiOperationType::Head => unimplemented!(),
+      ApiOperationType::Patch => unimplemented!(),
+      ApiOperationType::Post => "pub async fn post(&self, path: &str, parameters: &[&str], body: &str) -> DshApiResult<()>",
+      ApiOperationType::Put => "pub async fn put(&self, path: &str, parameters: &[&str], body: &str) -> DshApiResult<()>",
+    }
+  }
+}
+
 const _OPERATION_TYPES: [ApiOperationType; 6] =
   [ApiOperationType::Delete, ApiOperationType::Get, ApiOperationType::Head, ApiOperationType::Patch, ApiOperationType::Post, ApiOperationType::Put];
 
 impl Display for ApiOperationType {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::Delete => write!(f, "DELETE"),
-      Self::Get => write!(f, "GET"),
-      Self::Head => write!(f, "HEAD"),
-      Self::Patch => write!(f, "PATCH"),
-      Self::Post => write!(f, "POST"),
-      Self::Put => write!(f, "PUT"),
+      Self::Delete => write!(f, "delete"),
+      Self::Get => write!(f, "get"),
+      Self::Head => write!(f, "head"),
+      Self::Patch => write!(f, "patch"),
+      Self::Post => write!(f, "post"),
+      Self::Put => write!(f, "put"),
     }
   }
 }
@@ -250,7 +309,7 @@ impl Display for ParameterType {
   }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 enum RequestBodyType {
   String,
   SerializableType(String),
@@ -273,11 +332,14 @@ enum ResponseBodyType {
 }
 
 impl ResponseBodyType {
-  fn response_mapping(&self) -> &str {
-    match self {
-      ResponseBodyType::Ok(_) => ".map(|(_, result)| result)",
-      ResponseBodyType::SerializableType(_) => ".map(|(_, result)| Box::new(result) as Box<dyn ErasedSerialize>)",
-      ResponseBodyType::String => ".await.map(|(_, result)| Box::new(result) as Box<dyn ErasedSerialize>)",
+  fn response_mapping(&self, operation_type: &ApiOperationType) -> &str {
+    match operation_type {
+      ApiOperationType::Get => match self {
+        ResponseBodyType::Ok(_) => ".map(|(_, result)| result)",
+        ResponseBodyType::SerializableType(_) => ".map(|(_, result)| Box::new(result) as Box<dyn Serialize>)",
+        ResponseBodyType::String => ".await.map(|(_, result)| Box::new(result) as Box<dyn Serialize>)",
+      },
+      _ => ".map(|(_, _)| ())",
     }
   }
 
@@ -307,7 +369,7 @@ struct ApiPath {
 }
 
 struct ApiOperation {
-  _operation_type: ApiOperationType,
+  operation_type: ApiOperationType,
   parameters: Vec<(String, ParameterType)>,
   request_body: Option<RequestBodyType>,
   operation_id: String,
@@ -338,7 +400,7 @@ impl ApiPath {
 
 impl ApiOperation {
   fn _print(&self) {
-    println!("  {}", self._operation_type);
+    println!("  {}", self.operation_type);
     for (parameter, parameter_type) in &self.parameters {
       println!("    parameter {}: {}", parameter, parameter_type);
     }
@@ -370,7 +432,26 @@ impl ApiOperation {
     }
   }
 
-  fn to_if_block(&self, comments: Vec<String>) -> String {
+  fn comments(&self, api_path: &str) -> Vec<String> {
+    vec![
+      Some(format!("{} {}", self.operation_type.to_string().as_str().to_uppercase(), api_path)),
+      Some(
+        self
+          .parameters
+          .iter()
+          .map(|(parameter_name, parameter_type)| format!("{}:{}", parameter_name, parameter_type))
+          .collect::<Vec<_>>()
+          .join(", "),
+      ),
+      self.request_body.clone().map(|request_body| request_body.to_string()),
+      Some(format!("{}", self.ok_response)),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>()
+  }
+
+  fn to_if_block(&self, api_path: &str) -> String {
     let mut parameter_counter = -1;
     let mut parameters = self
       .parameters
@@ -413,38 +494,12 @@ impl ApiOperation {
                 {}
             }}"#,
       self.operation_id,
-      comments.join("\n      // "),
+      self.comments(api_path).join("\n      // "),
       self.ok_response.processing_function(),
       self.operation_id,
       parameters.join(",\n              "),
-      self.ok_response.response_mapping()
+      self.ok_response.response_mapping(&self.operation_type)
     )
-  }
-
-  fn to_get_if_block(&self, api_path: &String) -> String {
-    self.to_if_block(vec![
-      format!("GET {}", api_path),
-      self
-        .parameters
-        .iter()
-        .map(|(parameter_name, parameter_type)| format!("{}:{}", parameter_name, parameter_type))
-        .collect::<Vec<_>>()
-        .join(", "),
-      format!("{:?}", self.ok_response),
-    ])
-  }
-
-  fn to_put_if_block(&self, api_path: &String) -> String {
-    self.to_if_block(vec![
-      format!("PUT {}", api_path),
-      self
-        .parameters
-        .iter()
-        .map(|(parameter_name, parameter_type)| format!("{}:{}", parameter_name, parameter_type))
-        .collect::<Vec<_>>()
-        .join(", "),
-      format!("{:?} / {:?}", self.request_body, self.ok_response),
-    ])
   }
 }
 

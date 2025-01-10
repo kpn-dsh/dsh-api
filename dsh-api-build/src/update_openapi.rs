@@ -1,5 +1,5 @@
 use openapiv3::{OpenAPI, Operation, Parameter, ParameterData, ParameterSchemaOrContent, ReferenceOr};
-use std::fmt::{Display, Formatter};
+use {ApiOperation, PathElement};
 
 pub fn update_openapi(original_openapi_spec: &mut OpenAPI) -> Result<(), String> {
   // Add authorization headers to original openapi spec
@@ -107,82 +107,5 @@ fn add_description(openapi: &mut OpenAPI) {
     openapi.info.description = Some(format!("{}\n{}", description, DESC));
   } else {
     openapi.info.description = Some(DESC.to_string());
-  }
-}
-
-#[derive(Debug, PartialEq)]
-enum PathElement {
-  Literal(String),
-  Variable(String),
-}
-
-impl From<&PathElement> for String {
-  fn from(value: &PathElement) -> Self {
-    match value {
-      PathElement::Literal(literal) => literal.to_string(),
-      PathElement::Variable(variable) => variable.to_string(),
-    }
-  }
-}
-
-impl PathElement {
-  fn vec_from_str(string: &str) -> Vec<PathElement> {
-    string
-      .split('/')
-      .collect::<Vec<_>>()
-      .into_iter()
-      .filter_map(|element| {
-        if element.is_empty() {
-          None
-        } else if element.starts_with('{') && element.ends_with('}') {
-          Some(PathElement::Variable(element[1..element.len() - 1].to_string()))
-        } else {
-          Some(PathElement::Literal(element.to_string()))
-        }
-      })
-      .collect::<Vec<_>>()
-  }
-}
-
-struct ApiOperation {
-  method: String,
-  kind: String,
-  subjects: Vec<String>,
-  bys: Vec<String>,
-}
-
-impl ApiOperation {
-  fn new(method: &str, path_elements: &[PathElement]) -> Self {
-    let kind: String = path_elements.first().unwrap().into();
-    let subjects = path_elements
-      .iter()
-      .skip(1)
-      .filter_map(|element| match element {
-        PathElement::Literal(subject) => Some(subject.to_lowercase().to_string()),
-        PathElement::Variable(_) => None,
-      })
-      .collect::<Vec<_>>();
-    let bys = path_elements
-      .iter()
-      .filter_map(|element| match element {
-        PathElement::Literal(_) => None,
-        PathElement::Variable(variable) => Some(variable.to_lowercase().to_string()),
-      })
-      .collect::<Vec<_>>();
-    ApiOperation { method: method.to_string(), kind, subjects, bys }
-  }
-}
-
-impl Display for ApiOperation {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.method)?;
-    if self.kind != "allocation" {
-      write!(f, "_{}", self.kind)?;
-    }
-    if self.bys.is_empty() {
-      write!(f, "_{}", self.subjects.join("_"))
-    } else {
-      write!(f, "_{}_by_{}", self.subjects.join("_"), self.bys.join("_by_"))
-    }
   }
 }
