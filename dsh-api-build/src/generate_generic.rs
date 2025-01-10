@@ -102,11 +102,17 @@ pub fn generate_generic(writer: &mut dyn Write, openapi_spec: OpenAPI) -> Result
 }
 
 fn print_operations(writer: &mut dyn Write, operation_type: ApiOperationType, api_paths: &[ApiPath]) -> Result<(), Box<dyn Error>> {
-  writeln!(writer, "  {} {{", operation_type.signature())?;
   let operations: Vec<(&String, &ApiOperation)> = api_paths
     .iter()
     .filter_map(|api_path| api_path.operations.get(&operation_type).map(|api_operation| (&api_path.path, api_operation)))
     .collect::<Vec<_>>();
+
+  writeln!(writer, "  /// The following paths support the `{}` method:", operation_type)?;
+  for (api_path, _) in &operations {
+    writeln!(writer, "  /// * `{}`", api_path)?;
+  }
+
+  writeln!(writer, "  {} {{", operation_type.signature())?;
   let mut first = true;
   for (api_path, api_operation) in operations {
     if first {
