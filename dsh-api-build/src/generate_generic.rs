@@ -62,7 +62,12 @@ pub fn generate_generic(writer: &mut dyn Write, openapi_spec: &OpenAPI) -> Resul
 
 fn write_method_operations(writer: &mut dyn Write, method: &Method, operations: &[GenericOperation]) -> Result<(), Box<dyn Error>> {
   writeln!(writer, "  /// # Generic `{}` operations", method)?;
-  writeln!(writer, "  /// The following operation selectors are supported for the `{}` method:", method)?;
+  if let Some(method_comment) = method.comment() {
+    writeln!(writer, "  ///")?;
+    writeln!(writer, "{}", method_comment)?;
+    writeln!(writer, "  ///")?;
+  }
+  writeln!(writer, "  /// ## Supported operation selectors for the `{}` method", method)?;
   for operation in operations.iter() {
     writeln!(writer, "  ///")?;
     writeln!(writer, "  /// # __`{}`__", operation.selector)?;
@@ -80,11 +85,11 @@ fn write_method_operations(writer: &mut dyn Write, method: &Method, operations: 
         }
       }
     }
-    if let Some(request_body) = operation.request_body.clone().map(|request_body| request_body.to_string()) {
-      writeln!(writer, "  /// * `body` : `{}`", request_body)?;
+    if let Some(ref request_body) = operation.request_body {
+      writeln!(writer, "  /// * `body` : {}", request_body.doc_type())?;
     }
     writeln!(writer, "  ///")?;
-    writeln!(writer, "  /// Returns: [`{}`]", operation.ok_response)?;
+    writeln!(writer, "  /// Returns {}.", operation.ok_response.doc_return_value())?;
   }
   writeln!(writer, "  {} {{", method.signature())?;
   let mut first = true;
@@ -295,17 +300,33 @@ const METHODS: [Method; 6] = [Method::Delete, Method::Get, Method::Head, Method:
 impl Method {
   pub(crate) fn signature(&self) -> &str {
     match self {
-      Self::Get => "pub async fn get(&self, selector: &str, parameters: &[&str]) -> DshApiResult<Box<dyn Serialize>>",
       Self::Delete => "pub async fn delete(&self, selector: &str, parameters: &[&str]) -> DshApiResult<()>",
+      Self::Get => "pub async fn get(&self, selector: &str, parameters: &[&str]) -> DshApiResult<Box<dyn erased_serde::Serialize>>",
       Self::Head => "pub async fn head(&self, selector: &str, parameters: &[&str]) -> DshApiResult<()>",
-      Self::Patch => "pub async fn patch(&self, selector: &str, parameters: &[&str], body: &str) -> DshApiResult<()>",
-      Self::Post => "pub async fn post(&self, selector: &str, parameters: &[&str], body: &str) -> DshApiResult<()>",
-      Self::Put => "pub async fn put(&self, selector: &str, parameters: &[&str], body: &str) -> DshApiResult<()>",
+      Self::Patch => "pub async fn patch(&self, selector: &str, parameters: &[&str], body: Option<&str>) -> DshApiResult<()>",
+      Self::Post => "pub async fn post(&self, selector: &str, parameters: &[&str], body: Option<&str>) -> DshApiResult<()>",
+      Self::Put => "pub async fn put(&self, selector: &str, parameters: &[&str], body: Option<&str>) -> DshApiResult<()>",
+    }
+  }
+
+  pub(crate) fn has_body_argument(&self) -> bool {
+    match self {
+      Self::Get | Self::Delete | Self::Head => false,
+      Self::Patch | Self::Post | Self::Put => true,
+    }
+  }
+
+  fn comment(&self) -> Option<&'static str> {
+    match self {
+      Method::Delete => None,
+      Method::Get => Some(GET_COMMENT),
+      Method::Head => None,
+      Method::Patch => None,
+      Method::Post => None,
+      Method::Put => Some(PUT_COMMENT),
     }
   }
 }
-
-const _OPERATION_TYPES: [Method; 6] = [Method::Delete, Method::Get, Method::Head, Method::Patch, Method::Post, Method::Put];
 
 impl Display for Method {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -365,11 +386,20 @@ enum RequestBodyType {
   SerializableType(String),
 }
 
+impl RequestBodyType {
+  fn doc_type(&self) -> String {
+    match self {
+      Self::String => format!("`&str`"),
+      Self::SerializableType(serializable_type) => format!("serialized [`{}`]", serializable_type),
+    }
+  }
+}
+
 impl Display for RequestBodyType {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
       Self::String => write!(f, "String"),
-      Self::SerializableType(type_) => write!(f, "{}", type_),
+      Self::SerializableType(serializable_type) => write!(f, "{}", serializable_type),
     }
   }
 }
@@ -388,12 +418,12 @@ impl ResponseBodyType {
   fn response_mapping(&self, method: &Method) -> &str {
     match method {
       Method::Get => match self {
-        ResponseBodyType::Ids => ".map(|(_, result)| Box::new(result) as Box<dyn Serialize>)",
-        ResponseBodyType::Ok(_) => ".map(|(_, result)| result)",
-        ResponseBodyType::SerializableMap(_) => ".map(|(_, result)| Box::new(result) as Box<dyn Serialize>)",
-        ResponseBodyType::SerializableScalar(_) => ".map(|(_, result)| Box::new(result) as Box<dyn Serialize>)",
-        ResponseBodyType::SerializableVector(_) => ".map(|(_, result)| Box::new(result) as Box<dyn Serialize>)",
-        ResponseBodyType::String => ".await.map(|(_, result)| Box::new(result) as Box<dyn Serialize>)",
+        Self::Ids => ".map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
+        Self::Ok(_) => ".map(|(_, result)| result)",
+        Self::SerializableMap(_) => ".map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
+        Self::SerializableScalar(_) => ".map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
+        Self::SerializableVector(_) => ".map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
+        Self::String => ".await.map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
       },
       _ => ".map(|(_, _)| ())",
     }
@@ -401,12 +431,19 @@ impl ResponseBodyType {
 
   fn processing_function(&self) -> &str {
     match self {
-      ResponseBodyType::Ids => "process",
-      ResponseBodyType::Ok(_) => "process",
-      ResponseBodyType::SerializableMap(_) => "process",
-      ResponseBodyType::SerializableScalar(_) => "process",
-      ResponseBodyType::SerializableVector(_) => "process",
-      ResponseBodyType::String => "process_string",
+      Self::String => "process_string",
+      _ => "process",
+    }
+  }
+
+  fn doc_return_value(&self) -> String {
+    match self {
+      Self::Ids => format!("`Vec<String>`"),
+      Self::Ok(desc) => format!("`Ok(())` when {}", desc),
+      Self::SerializableMap(value_type) => format!("`HashMap<String, `[`{}`]`>`", value_type),
+      Self::SerializableScalar(scalar_type) => format!("[`{}`]", scalar_type),
+      Self::SerializableVector(element_type) => format!("`Vec<`[`{}`]`>`", element_type),
+      Self::String => format!("String"),
     }
   }
 }
@@ -416,9 +453,9 @@ impl Display for ResponseBodyType {
     match self {
       Self::Ids => write!(f, "Vec<String>"),
       Self::Ok(desc) => write!(f, "{}", desc),
-      Self::SerializableMap(type_) => write!(f, "HashMap<String, {}>", type_),
-      Self::SerializableScalar(type_) => write!(f, "{}", type_),
-      Self::SerializableVector(type_) => write!(f, "Vec<{}>", type_),
+      Self::SerializableMap(value_type) => write!(f, "HashMap<String, {}>", value_type),
+      Self::SerializableScalar(scalar_type) => write!(f, "{}", scalar_type),
+      Self::SerializableVector(element_type) => write!(f, "Vec<{}>", element_type),
       Self::String => write!(f, "str"),
     }
   }
@@ -453,7 +490,7 @@ impl GenericOperation {
     if let Some(request_body) = self.request_body.clone().map(|request_body| request_body.to_string()) {
       comments.push(format!("body: {}", request_body));
     }
-    comments.push(format!("{}", self.ok_response));
+    comments.push(format!("{}", self.ok_response.doc_return_value()));
     comments
   }
 
@@ -474,10 +511,11 @@ impl GenericOperation {
     if let Some(ref request_body_type) = self.request_body {
       match request_body_type {
         RequestBodyType::String => parameters.push(
-          "serde_json::from_str::<String>(body).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid String\".to_string()))?.to_string()".to_string(),
+          "serde_json::from_str::<String>(body.unwrap()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid String\".to_string()))?.to_string()"
+            .to_string(),
         ),
         RequestBodyType::SerializableType(serializable_type) => parameters.push(format!(
-          "&serde_json::from_str::<{}>(body).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid {}\".to_string()))?",
+          "&serde_json::from_str::<{}>(body.unwrap()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid {}\".to_string()))?",
           serializable_type, serializable_type
         )),
       }
@@ -491,13 +529,31 @@ impl GenericOperation {
         format!("{} parameters expected", number_of_expected_parameters),
       ),
     };
+    let body_check: Option<String> = if self.method.has_body_argument() {
+      match self.request_body {
+        Some(ref request_body) => Some(format!(
+          r#"}} else if body.is_none() {{
+        Err(DshApiError::Parameter("body expected ({})".to_string()))
+      "#,
+          request_body
+        )),
+        None => Some(
+          r#"} else if body.is_some() {
+        Err(DshApiError::Parameter("no body expected".to_string()))
+      "#
+          .to_string(),
+        ),
+      }
+    } else {
+      None
+    };
     formatdoc!(
       r#"
         if selector == "{}" || selector == "{}" {{
               // {}
               if {} {{
                 Err(DshApiError::Parameter("wrong number of parameters ({})".to_string()))
-              }} else {{
+              {}}} else {{
                 self
                   .{}(
                     self
@@ -516,6 +572,7 @@ impl GenericOperation {
       self.comments().join("\n      // "),
       parameter_length_check,
       wrong_parameter_length_error,
+      body_check.unwrap_or_default(),
       self.ok_response.processing_function(),
       self.operation_id,
       parameters.join(",\n                "),
@@ -525,8 +582,8 @@ impl GenericOperation {
 }
 
 impl From<&Type> for ResponseBodyType {
-  fn from(type_: &Type) -> Self {
-    match type_ {
+  fn from(openapi_type: &Type) -> Self {
+    match openapi_type {
       Type::String(_) => ResponseBodyType::String,
       Type::Number(_) => unimplemented!(),
       Type::Integer(_) => unimplemented!(),
@@ -546,8 +603,8 @@ impl From<&Type> for ResponseBodyType {
   }
 }
 
-fn type_to_string(type_: &Type) -> String {
-  match type_ {
+fn type_to_string(openapi_type: &Type) -> String {
+  match openapi_type {
     Type::String(_) => "str".to_string(),
     Type::Number(_) => unimplemented!(),
     Type::Integer(_) => unimplemented!(),
@@ -580,7 +637,7 @@ impl From<&ReferenceOr<Schema>> for ResponseBodyType {
       ReferenceOr::Item(schema) => {
         let schema_kind = schema.schema_kind.clone();
         match schema_kind {
-          SchemaKind::Type(ref type_) => ResponseBodyType::from(type_),
+          SchemaKind::Type(ref schema_kind_type) => ResponseBodyType::from(schema_kind_type),
           SchemaKind::OneOf { .. } => unimplemented!(),
           SchemaKind::AllOf { .. } => unimplemented!(),
           SchemaKind::AnyOf { .. } => unimplemented!(),
@@ -598,7 +655,7 @@ fn schema_to_string(schema: &ReferenceOr<Schema>) -> String {
     ReferenceOr::Item(schema) => {
       let schema_kind = schema.schema_kind.clone();
       match schema_kind {
-        SchemaKind::Type(ref type_) => type_to_string(type_),
+        SchemaKind::Type(ref schema_kind_type) => type_to_string(schema_kind_type),
         SchemaKind::OneOf { .. } => unimplemented!(),
         SchemaKind::AllOf { .. } => unimplemented!(),
         SchemaKind::AnyOf { .. } => unimplemented!(),
@@ -615,7 +672,7 @@ fn boxed_schema_to_string(parameter: &ReferenceOr<Box<Schema>>) -> String {
     ReferenceOr::Item(schema) => {
       let schema_kind = schema.schema_kind.clone();
       match schema_kind {
-        SchemaKind::Type(ref type_) => type_to_string(type_),
+        SchemaKind::Type(ref schema_kind_type) => type_to_string(schema_kind_type),
         _ => unimplemented!(),
       }
     }
@@ -662,7 +719,7 @@ fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>, operation_id:
             parameter_data.description.map(capitalize),
           ),
           ReferenceOr::Item(item) => match &item.schema_kind {
-            SchemaKind::Type(type_) => match type_ {
+            SchemaKind::Type(schema_kind_type) => match schema_kind_type {
               Type::String(string_type) => {
                 let has_pattern = string_type.pattern.is_some();
                 let has_enumeration = !string_type.enumeration.is_empty();
@@ -704,7 +761,7 @@ impl From<&ReferenceOr<Response>> for ResponseBodyType {
         },
         None => match response.content.get("text/plain") {
           Some(_) => ResponseBodyType::String,
-          None => ResponseBodyType::Ok(revise(response.description.clone())),
+          None => ResponseBodyType::Ok(response.description.clone()),
         },
       },
     }
@@ -713,7 +770,7 @@ impl From<&ReferenceOr<Response>> for ResponseBodyType {
 
 fn reference_to_string(reference: &str) -> String {
   match reference.strip_prefix("#/components/schemas/") {
-    Some(type_) => type_.to_string(),
+    Some(reference_type) => reference_type.to_string(),
     None => format!("$ref: {}", reference),
   }
 }
@@ -749,10 +806,10 @@ fn panic_on_duplicate_selectors(method_operations: &[GenericOperation], method: 
 }
 
 const METHOD_DESCRIPTOR_STRUCT: &str = r#"pub struct MethodDescriptor {
-  description: Option<&'static str>,
-  parameters: Vec<(&'static str, &'static str, Option<&'static str>)>,
-  body_type: Option<&'static str>,
-  response_type: Option<&'static str>
+  pub description: Option<&'static str>,
+  pub parameters: Vec<(&'static str, &'static str, Option<&'static str>)>,
+  pub body_type: Option<&'static str>,
+  pub response_type: Option<&'static str>
 }"#;
 
 const COMMENT_OUTER: &str = r#"/// # Generic API function calls
@@ -761,8 +818,8 @@ const COMMENT_OUTER: &str = r#"/// # Generic API function calls
 /// What this means is that the API functions can be called indirect,
 /// where the path of the method must be provided as an argument.
 ///
-/// This has a number of consequences,
-/// which are caused by the limitations of the `rust` language with respect to abstraction:
+/// This has a number of consequences which are caused by the limitations
+/// of the `rust` language with respect to abstraction:
 /// * The number and types of the required parameters for each method
 ///   are not known at compile time, which means that (emulated) dynamic typing is used
 ///   and parameters errors will occur at run-time instead of compile time.
@@ -813,16 +870,64 @@ const COMMENT_OUTER: &str = r#"/// # Generic API function calls
 /// [`DshApiClient`] methods that call the DSH resource management API.
 ///
 /// * [`delete(path, [parameters]) -> Ok`](DshApiClient::delete)
-/// * [`get(path, [parameters]) -> serialize`](DshApiClient::get)
+/// * [`get(path, [parameters]) -> serialized`](DshApiClient::get)
 /// * [`head(path, [parameters], body) -> Ok`](DshApiClient::head)
 /// * [`patch(path, [parameters], body) -> Ok`](DshApiClient::patch)
 /// * [`post(path, [parameters], body) -> Ok`](DshApiClient::post)
 /// * [`put(path, [parameters], body) -> Ok`](DshApiClient::put)"#;
 
+const GET_COMMENT: &str = r#"  /// The`get` function enables the generic calling of all
+  /// `get` functions of the Dsh API, where the specific function is
+  /// selected by the `selector` parameter.
+  /// By the generic nature of this function, the types of the parameters and the response
+  /// are not known at compile time. This has some consequences.
+  /// * All parameters must be provided as a list of strings in the form of a `&[&str]`.
+  /// * The results of this method will be returned as a dynamic trait object
+  ///   that implements [`erased_serde::Serialize`].
+  ///   This object can be used to serialize the result to json, yaml or toml or
+  ///   any other compatible `rust` serialization solution, without the need of any type information.
+  ///
+  /// This does however require a dependency to the
+  /// [`erased_serde`](https://crates.io/crates/erased-serde) crate.
+  /// Add the following line to the `dependencies` section of your `Cargo.toml` file.
+  /// ```
+  /// [dependencies]
+  /// erased-serde = "0.4"
+  /// ```
+  /// ## Example
+  ///
+  /// Get the configuration of the application `my-service` and print it as json.
+  ///
+  /// ```ignore
+  /// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+  /// # #[tokio::main]
+  /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+  /// let application = client.get(
+  ///   "get_application_configuration_by_tenant_by_appid",
+  ///   &["my-service"]
+  /// ).await?;
+  /// println!("{}", serde_json::to_string_pretty(&application)?);
+  /// # Ok(())
+  /// # }
+  /// ```"#;
+
+const PUT_COMMENT: &str = r#"  /// ## Example
+  /// Update the secret `abcdef` to the value `ABCDEF`.
+  ///
+  /// ```ignore
+  /// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+  /// # #[tokio::main]
+  /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+  ///  let secret = serde_json::to_string("ABCDEF")?;
+  ///  client.put("put_secret_by_tenant_by_id", &["abcdef"], &secret).await?;
+  /// # Ok(())
+  /// # }
+  /// ```"#;
+
 const USE: &str = r#"use crate::dsh_api_client::DshApiClient;
 use crate::types::*;
 use crate::{DshApiError, DshApiResult};
-use erased_serde::Serialize;
 use lazy_static::lazy_static;
-use std::collections::HashMap;
 use std::str::FromStr;"#;
