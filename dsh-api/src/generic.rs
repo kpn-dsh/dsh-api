@@ -57,6 +57,8 @@
 //!
 //! * [`delete(path, [parameters]) -> Ok`](DshApiClient::delete)
 //! * [`get(path, [parameters]) -> serialize`](DshApiClient::get)
+//! * [`head(path, [parameters]) -> serialize`](DshApiClient::head)
+//! * [`patch(path, [parameters]) -> serialize`](DshApiClient::patch)
 //! * [`post(path, [parameters], body) -> Ok`](DshApiClient::post)
 //! * [`put(path, [parameters], body) -> Ok`](DshApiClient::put)
 #[cfg(feature = "generic")]
