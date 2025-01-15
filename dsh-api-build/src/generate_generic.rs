@@ -27,7 +27,7 @@ pub fn generate_generic(writer: &mut dyn Write, openapi_spec: &OpenAPI) -> Resul
   let mut generic_operations: Vec<(Method, Vec<GenericOperation>)> = vec![];
   for method in &METHODS {
     let path_operations: Vec<(&String, &Operation)> = method_path_operations(method, openapi_spec);
-    generic_operations.push((method.to_owned(), method_generic_operations(method, &path_operations)));
+    generic_operations.push((method.to_owned(), method_generic_operations(method, &path_operations)?));
   }
 
   writeln!(writer, "#[cfg_attr(rustfmt, rustfmt_skip)]")?;
@@ -195,19 +195,19 @@ fn method_path_operations<'a>(method: &Method, openapi: &'a OpenAPI) -> Vec<(&'a
   method_path_items
 }
 
-fn method_generic_operations(method: &Method, path_operations: &Vec<(&String, &Operation)>) -> Vec<GenericOperation> {
+fn method_generic_operations(method: &Method, path_operations: &Vec<(&String, &Operation)>) -> Result<Vec<GenericOperation>, Box<dyn Error>> {
   let mut method_generic_operations: Vec<GenericOperation> = vec![];
   let mut selectors: HashSet<String> = HashSet::new();
   for (path, operation) in path_operations {
-    let mut generic_operation = create_generic_operation(method.clone(), path.to_string(), operation);
+    let mut generic_operation = create_generic_operation(method.clone(), path.to_string(), operation)?;
     if selectors.contains(&generic_operation.selector) {
       generic_operation.selector = selector_from_path_elements(&generic_operation.path_elements, &generic_operation.ok_response, true);
     }
     selectors.insert(generic_operation.selector.clone());
     method_generic_operations.push(generic_operation);
   }
-  panic_on_duplicate_selectors(&method_generic_operations, method);
-  method_generic_operations
+  check_duplicate_selectors(&method_generic_operations, method)?;
+  Ok(method_generic_operations)
 }
 
 fn selector_from_path_elements(path_elements: &[PathElement], ok_response: &ResponseBodyType, include_variables: bool) -> String {
@@ -244,7 +244,7 @@ fn selector_from_path_elements(path_elements: &[PathElement], ok_response: &Resp
   selector
 }
 
-fn create_generic_operation(method: Method, path: String, operation: &Operation) -> GenericOperation {
+fn create_generic_operation(method: Method, path: String, operation: &Operation) -> Result<GenericOperation, Box<dyn Error>> {
   let operation_id = operation.operation_id.clone().expect("missing operation id");
   let parameters: Vec<(String, ParameterType, Option<String>)> = operation
     .parameters
@@ -256,21 +256,21 @@ fn create_generic_operation(method: Method, path: String, operation: &Operation)
     ReferenceOr::Reference { reference } => RequestBodyType::SerializableType(reference_to_string(reference.as_ref())),
     ReferenceOr::Item(request_body_item) => RequestBodyType::from(&request_body_item),
   });
-  let mut _ok_responses: Vec<(u16, ResponseBodyType)> = vec![];
-  let mut _error_responses: Vec<(u16, ResponseBodyType)> = vec![];
+  let mut ok_responses: Vec<(u16, ResponseBodyType)> = vec![];
+  let mut error_responses: Vec<(u16, ResponseBodyType)> = vec![];
   for (status_code, response) in operation.responses.responses.clone() {
     if let StatusCode::Code(numerical_status_code) = status_code {
       if (200..300).contains(&numerical_status_code) {
-        _ok_responses.push((numerical_status_code, ResponseBodyType::from(&response)))
+        ok_responses.push((numerical_status_code, ResponseBodyType::from(&response)))
       } else {
-        _error_responses.push((numerical_status_code, ResponseBodyType::from(&response)))
+        error_responses.push((numerical_status_code, ResponseBodyType::from(&response)))
       }
     }
   }
-  let ok_response = _ok_responses.iter().min_by_key(|(status_code, _)| status_code).unwrap().1.clone();
+  let ok_response = ok_responses.iter().min_by_key(|(status_code, _)| status_code).ok_or("")?.1.clone();
   let path_elements = PathElement::vec_from_str(&path);
   let selector = selector_from_path_elements(&path_elements, &ok_response, false);
-  GenericOperation {
+  Ok(GenericOperation {
     method,
     selector,
     path,
@@ -280,9 +280,9 @@ fn create_generic_operation(method: Method, path: String, operation: &Operation)
     request_body,
     operation_id,
     ok_response,
-    _ok_responses,
-    _error_responses,
-  }
+    ok_responses,
+    error_responses,
+  })
 }
 
 #[derive(Clone, Eq, Hash, PartialEq)]
@@ -389,7 +389,7 @@ enum RequestBodyType {
 impl RequestBodyType {
   fn doc_type(&self) -> String {
     match self {
-      Self::String => format!("`&str`"),
+      Self::String => "`&str`".to_string(),
       Self::SerializableType(serializable_type) => format!("serialized [`{}`]", serializable_type),
     }
   }
@@ -438,12 +438,12 @@ impl ResponseBodyType {
 
   fn doc_return_value(&self) -> String {
     match self {
-      Self::Ids => format!("`Vec<String>`"),
+      Self::Ids => "`Vec<String>`".to_string(),
       Self::Ok(desc) => format!("`Ok(())` when {}", desc),
       Self::SerializableMap(value_type) => format!("`HashMap<String, `[`{}`]`>`", value_type),
       Self::SerializableScalar(scalar_type) => format!("[`{}`]", scalar_type),
       Self::SerializableVector(element_type) => format!("`Vec<`[`{}`]`>`", element_type),
-      Self::String => format!("String"),
+      Self::String => "String".to_string(),
     }
   }
 }
@@ -471,8 +471,10 @@ struct GenericOperation {
   request_body: Option<RequestBodyType>,
   operation_id: String,
   ok_response: ResponseBodyType,
-  _ok_responses: Vec<(u16, ResponseBodyType)>,
-  _error_responses: Vec<(u16, ResponseBodyType)>,
+  #[allow(dead_code)]
+  ok_responses: Vec<(u16, ResponseBodyType)>,
+  #[allow(dead_code)]
+  error_responses: Vec<(u16, ResponseBodyType)>,
 }
 
 impl GenericOperation {
@@ -490,7 +492,7 @@ impl GenericOperation {
     if let Some(request_body) = self.request_body.clone().map(|request_body| request_body.to_string()) {
       comments.push(format!("body: {}", request_body));
     }
-    comments.push(format!("{}", self.ok_response.doc_return_value()));
+    comments.push(self.ok_response.doc_return_value().to_string());
     comments
   }
 
@@ -756,7 +758,6 @@ impl From<&ReferenceOr<Response>> for ResponseBodyType {
       ReferenceOr::Item(response) => match response.content.get("application/json") {
         Some(media_type) => match &media_type.schema {
           Some(schema) => ResponseBodyType::from(schema),
-          // Some(schema) => ResponseBodyType::SerializableScalar(schema_to_string(schema)),
           None => unimplemented!(),
         },
         None => match response.content.get("text/plain") {
@@ -790,8 +791,8 @@ impl From<&RequestBody> for RequestBodyType {
   }
 }
 
-// Method will panic when duplicate selectors exist
-fn panic_on_duplicate_selectors(method_operations: &[GenericOperation], method: &Method) {
+// Method will check whether duplicate selectors exist
+fn check_duplicate_selectors(method_operations: &[GenericOperation], method: &Method) -> Result<(), Box<dyn Error>> {
   let mut selectors = method_operations.iter().map(|operation| operation.selector.clone()).collect::<Vec<_>>();
   selectors.sort();
   let mut duplicate_selectors = Vec::new();
@@ -801,7 +802,13 @@ fn panic_on_duplicate_selectors(method_operations: &[GenericOperation], method: 
     }
   }
   if !duplicate_selectors.is_empty() {
-    panic!("duplicate selectors for {} method ({})", method, duplicate_selectors.into_iter().join(", "));
+    Err(Box::from(format!(
+      "duplicate selectors for {} method ({})",
+      method,
+      duplicate_selectors.into_iter().join(", ")
+    )))
+  } else {
+    Ok(())
   }
 }
 
@@ -890,7 +897,7 @@ const GET_COMMENT: &str = r#"  /// The`get` function enables the generic calling
   /// This does however require a dependency to the
   /// [`erased_serde`](https://crates.io/crates/erased-serde) crate.
   /// Add the following line to the `dependencies` section of your `Cargo.toml` file.
-  /// ```
+  /// ```toml
   /// [dependencies]
   /// erased-serde = "0.4"
   /// ```
