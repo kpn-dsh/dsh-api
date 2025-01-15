@@ -14,6 +14,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let mut openapi_spec: OpenAPI = serde_json::from_reader(original_openapi_spec_file).unwrap();
   update_openapi(&mut openapi_spec)?;
   let mut writer: BufWriter<std::io::Stdout> = BufWriter::new(std::io::stdout());
-  generate_generic(&mut writer, openapi_spec)?;
+  // let mut writer: BufWriter<std::io::Sink> = BufWriter::new(std::io::sink());
+  generate_generic(&mut writer, &openapi_spec)?;
   Ok(())
 }
