@@ -1,5 +1,5 @@
 use openapiv3::{OpenAPI, Operation, Parameter, ParameterData, ParameterSchemaOrContent, ReferenceOr};
-use {ApiOperation, PathElement};
+use {OpenApiOperation, PathElement};
 
 pub fn update_openapi(original_openapi_spec: &mut OpenAPI) -> Result<(), String> {
   // Add authorization headers to original openapi spec
@@ -98,7 +98,7 @@ fn add_operation_ids(openapi: &mut OpenAPI) -> Result<(), String> {
 }
 
 fn add_operation_id(operation: &mut Operation, method: &str, path_elements: &[PathElement]) {
-  operation.operation_id = Some(ApiOperation::new(method, path_elements).to_string())
+  operation.operation_id = Some(OpenApiOperation::new(method, path_elements).operation_id())
 }
 
 fn add_description(openapi: &mut OpenAPI) {

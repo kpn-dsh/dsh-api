@@ -1,4 +1,6 @@
 extern crate indoc;
+extern crate itertools;
+extern crate lazy_static;
 extern crate openapiv3;
 extern crate progenitor;
 extern crate serde_json;
@@ -20,17 +22,19 @@ impl PathElement {
     string
       .split('/')
       .collect::<Vec<_>>()
-      .into_iter()
-      .filter_map(|element| {
-        if element.is_empty() {
-          None
-        } else if element.starts_with('{') && element.ends_with('}') {
-          Some(PathElement::Variable(element[1..element.len() - 1].to_string()))
-        } else {
-          Some(PathElement::Literal(element.to_string()))
-        }
-      })
+      .iter()
+      .filter_map(|element| if element.is_empty() { None } else { Some(PathElement::from(*element)) })
       .collect::<Vec<_>>()
+  }
+}
+
+impl From<&str> for PathElement {
+  fn from(string: &str) -> Self {
+    if string.starts_with('{') && string.ends_with('}') {
+      PathElement::Variable(string[1..string.len() - 1].to_string())
+    } else {
+      PathElement::Literal(string.to_string())
+    }
   }
 }
 
@@ -53,16 +57,49 @@ impl From<&PathElement> for String {
 }
 
 #[derive(Debug)]
-struct ApiOperation {
+enum OpenApiOperationKind {
+  Allocation,
+  AppCatalog,
+  Manage,
+  Robot,
+}
+
+impl From<&str> for OpenApiOperationKind {
+  fn from(kind: &str) -> Self {
+    match kind {
+      "allocation" => Self::Allocation,
+      "manage" => Self::Manage,
+      "appcatalog" => Self::AppCatalog,
+      "robot" => Self::Robot,
+      _ => {
+        panic!("unrecognized operation kind '{}'", kind)
+      }
+    }
+  }
+}
+
+impl Display for OpenApiOperationKind {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Allocation => write!(f, "allocation"),
+      Self::Manage => write!(f, "manage"),
+      Self::AppCatalog => write!(f, "appcatalog"),
+      Self::Robot => write!(f, "robot"),
+    }
+  }
+}
+
+#[derive(Debug)]
+struct OpenApiOperation {
   method: String,
-  kind: String,
+  kind: OpenApiOperationKind,
   subjects: Vec<String>,
   by_parameters: Vec<String>,
 }
 
-impl ApiOperation {
+impl OpenApiOperation {
   fn new(method: &str, path_elements: &[PathElement]) -> Self {
-    let kind: String = path_elements.first().unwrap().into();
+    let kind: OpenApiOperationKind = OpenApiOperationKind::from(path_elements.first().unwrap().to_string().as_str());
     let subjects = path_elements
       .iter()
       .skip(1)
@@ -78,20 +115,16 @@ impl ApiOperation {
         PathElement::Variable(variable) => Some(variable.to_lowercase().replace('-', "_").to_string()),
       })
       .collect::<Vec<_>>();
-    ApiOperation { method: method.to_string(), kind, subjects, by_parameters }
+    OpenApiOperation { method: method.to_string(), kind, subjects, by_parameters }
   }
-}
 
-impl Display for ApiOperation {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.method)?;
-    if self.kind != "allocation" {
-      write!(f, "_{}", self.kind)?;
-    }
-    if self.by_parameters.is_empty() {
-      write!(f, "_{}", self.subjects.join("_"))
-    } else {
-      write!(f, "_{}_by_{}", self.subjects.join("_"), self.by_parameters.join("_by_"))
-    }
+  fn operation_id(&self) -> String {
+    let kind = match self.kind {
+      OpenApiOperationKind::AppCatalog => "_appcatalog",
+      _ => "",
+    };
+    let parameters =
+      if self.by_parameters.is_empty() { format!("_{}", self.subjects.join("_")) } else { format!("_{}_by_{}", self.subjects.join("_"), self.by_parameters.join("_by_")) };
+    format!("{}{}{}", self.method, kind, parameters)
   }
 }
