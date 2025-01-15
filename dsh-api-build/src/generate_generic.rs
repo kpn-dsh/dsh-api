@@ -483,11 +483,21 @@ impl GenericOperation {
       }
     }
     let number_of_expected_parameters = if self.request_body.is_none() { parameters.len() as i64 - 1 } else { parameters.len() as i64 - 2 };
+    let (parameter_length_check, wrong_parameter_length_error) = match number_of_expected_parameters {
+      0 => ("!parameters.is_empty()".to_string(), "none expected".to_string()),
+      1 => ("parameters.len() != 1".to_string(), "one parameter expected".to_string()),
+      _ => (
+        format!("parameters.len() != {}", number_of_expected_parameters),
+        format!("{} parameters expected", number_of_expected_parameters),
+      ),
+    };
     formatdoc!(
       r#"
         if selector == "{}" || selector == "{}" {{
               // {}
-              if parameters.len() == {} {{
+              if {} {{
+                Err(DshApiError::Parameter("wrong number of parameters ({})".to_string()))
+              }} else {{
                 self
                   .{}(
                     self
@@ -499,19 +509,17 @@ impl GenericOperation {
                       .await,
                   )
                   {}
-                }} else {{
-                  Err(DshApiError::Parameter("wrong number of parameters ({} expected)".to_string()))
-                }}
+              }}
             }}"#,
       self.selector,
       self.path,
       self.comments().join("\n      // "),
-      number_of_expected_parameters,
+      parameter_length_check,
+      wrong_parameter_length_error,
       self.ok_response.processing_function(),
       self.operation_id,
       parameters.join(",\n                "),
       self.ok_response.response_mapping(&self.method),
-      number_of_expected_parameters
     )
   }
 }
