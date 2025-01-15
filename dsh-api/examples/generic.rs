@@ -20,13 +20,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
   print_header("toml");
   println!("{}", toml::to_string_pretty(&application)?);
 
-  print_header("get get_secret_by_tenant");
+  print_header("get secret");
   let application = client.get("secret", &["abcdef"]).await?;
   println!("{}", serde_json::to_string_pretty(&application)?);
 
   print_header("put secret");
   let secret = serde_json::to_string("ABCDEF")?;
-  client.put("secret", &["abcdef"], &secret).await?;
+  client.put("secret", &["abcdef"], Some(&secret)).await?;
 
   Ok(())
 }
