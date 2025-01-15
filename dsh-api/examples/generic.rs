@@ -12,7 +12,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
   let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
 
   print_header("get application_configuration_by_tenant_by_appid");
-  let application = client.get("get_application_configuration_by_tenant_by_appid", &[APPLICATION_ID]).await?;
+  let application = client.get("application-configuration", &[APPLICATION_ID]).await?;
   print_header("json");
   println!("{}", serde_json::to_string_pretty(&application)?);
   print_header("yaml");
@@ -21,12 +21,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
   println!("{}", toml::to_string_pretty(&application)?);
 
   print_header("get get_secret_by_tenant");
-  let application = client.get("get_secret_by_tenant", &[]).await?;
+  let application = client.get("secret", &["abcdef"]).await?;
   println!("{}", serde_json::to_string_pretty(&application)?);
 
-  print_header("put secret_by_tenant");
+  print_header("put secret");
   let secret = serde_json::to_string("ABCDEF")?;
-  client.put("put_secret_by_tenant_by_id", &["abcdef"], &secret).await?;
+  client.put("secret", &["abcdef"], &secret).await?;
 
   Ok(())
 }
