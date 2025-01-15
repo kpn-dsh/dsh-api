@@ -42,8 +42,8 @@ use crate::dsh_api_tenant::DshApiTenant;
 use crate::generated::Client as GeneratedClient;
 use crate::platform::DshPlatform;
 use crate::DshApiError;
+use dsh_sdk::Platform as SdkPlatform;
 use dsh_sdk::RestTokenFetcherBuilder;
-use dsh_sdk::{Platform as SdkPlatform, RestTokenFetcher};
 use lazy_static::lazy_static;
 use log::info;
 use std::env;
@@ -51,9 +51,9 @@ use std::env;
 /// # Factory for DSH API client
 #[derive(Debug)]
 pub struct DshApiClientFactory {
-  token_fetcher: RestTokenFetcher,
   generated_client: GeneratedClient,
   tenant: DshApiTenant,
+  secret: String,
 }
 
 impl DshApiClientFactory {
@@ -109,20 +109,7 @@ impl DshApiClientFactory {
   /// # }
   /// ```
   pub fn create(tenant: DshApiTenant, secret: String) -> Result<Self, DshApiError> {
-    match RestTokenFetcherBuilder::new(SdkPlatform::try_from(tenant.platform())?)
-      .tenant_name(tenant.name().clone())
-      .client_secret(secret)
-      .build()
-    {
-      Ok(token_fetcher) => {
-        let generated_client = GeneratedClient::new(&tenant.platform().api_rest_endpoint());
-        Ok(DshApiClientFactory { token_fetcher, generated_client, tenant })
-      }
-      Err(rest_token_error) => Err(DshApiError::Unexpected(
-        format!("could not create token fetcher ({})", rest_token_error),
-        Some(Box::new(rest_token_error)),
-      )),
-    }
+    Ok(DshApiClientFactory { generated_client: GeneratedClient::new(tenant.platform().api_rest_endpoint().as_str()), tenant, secret })
   }
 
   /// # Create default factory for DSH API client
@@ -204,7 +191,17 @@ impl DshApiClientFactory {
   /// # }
   /// ```
   pub async fn client(&self) -> Result<DshApiClient, DshApiError> {
-    Ok(DshApiClient::new(self.token_fetcher.get_token().await?, &self.generated_client, &self.tenant))
+    match RestTokenFetcherBuilder::new(SdkPlatform::try_from(self.tenant.platform())?)
+      .tenant_name(self.tenant.name().clone())
+      .client_secret(self.secret.clone())
+      .build()
+    {
+      Ok(token_fetcher) => Ok(DshApiClient::new(token_fetcher, &self.generated_client, &self.tenant)),
+      Err(rest_token_error) => Err(DshApiError::Unexpected(
+        format!("could not create token fetcher ({})", rest_token_error),
+        Some(Box::new(rest_token_error)),
+      )),
+    }
   }
 }
 

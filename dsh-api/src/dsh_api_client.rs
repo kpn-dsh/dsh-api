@@ -6,6 +6,7 @@ use crate::platform::DshPlatform;
 use crate::types::error::ConversionError;
 use crate::{DshApiError, OPENAPI_SPEC};
 use bytes::Bytes;
+use dsh_sdk::RestTokenFetcher;
 use futures::TryStreamExt;
 use progenitor_client::{ByteStream, Error as ProgenitorError, ResponseValue as ProgenitorResponseValue};
 use reqwest::StatusCode as ReqwestStatusCode;
@@ -14,7 +15,7 @@ use std::fmt::{Display, Formatter};
 
 #[derive(Debug)]
 pub struct DshApiClient<'a> {
-  token: String,
+  token_fetcher: RestTokenFetcher,
   pub(crate) generated_client: &'a GeneratedClient,
   tenant: &'a DshApiTenant,
 }
@@ -30,8 +31,8 @@ pub(crate) enum DshApiResponseStatus {
 pub(crate) type DshApiProcessResult<T> = Result<(DshApiResponseStatus, T), DshApiError>;
 
 impl<'a> DshApiClient<'a> {
-  pub fn new(token: String, generated_client: &'a GeneratedClient, tenant: &'a DshApiTenant) -> Self {
-    Self { token, generated_client, tenant }
+  pub fn new(token_fetcher: RestTokenFetcher, generated_client: &'a GeneratedClient, tenant: &'a DshApiTenant) -> Self {
+    Self { token_fetcher, generated_client, tenant }
   }
 
   /// # Returns the version of the openapi spec
@@ -108,8 +109,8 @@ impl<'a> DshApiClient<'a> {
     self.tenant.guid()
   }
 
-  pub fn token(&self) -> &str {
-    &self.token
+  pub async fn token(&self) -> Result<String, DshApiError> {
+    self.token_fetcher.get_token().await.map_err(DshApiError::from)
   }
 }
 
