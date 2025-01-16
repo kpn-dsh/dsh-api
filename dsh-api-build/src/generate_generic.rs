@@ -35,8 +35,6 @@ pub fn generate_generic(writer: &mut dyn Write, openapi_spec: &OpenAPI) -> Resul
   writeln!(writer)?;
   writeln!(writer, "{}", COMMENT_OUTER)?;
   writeln!(writer)?;
-  writeln!(writer, "{}", METHOD_DESCRIPTOR_STRUCT)?;
-  writeln!(writer)?;
   writeln!(writer, "impl DshApiClient<'_> {{")?;
 
   let mut first = true;
@@ -50,12 +48,12 @@ pub fn generate_generic(writer: &mut dyn Write, openapi_spec: &OpenAPI) -> Resul
     }
   }
   writeln!(writer, "}}")?;
+  writeln!(writer)?;
+  writeln!(writer, "{}", METHOD_DESCRIPTOR_STRUCT)?;
 
   for (method, operations) in &generic_operations {
-    if !operations.is_empty() {
-      writeln!(writer)?;
-      write_method_operations_descriptors(writer, method, operations)?;
-    }
+    writeln!(writer)?;
+    write_method_operations_descriptors(writer, method, operations)?;
   }
   Ok(())
 }
@@ -115,55 +113,64 @@ fn write_method_operations(writer: &mut dyn Write, method: &Method, operations: 
 const MANAGED_PARAMETERS: [&str; 1] = ["Authorization"];
 
 fn write_method_operations_descriptors(writer: &mut dyn Write, method: &Method, operations: &[GenericOperation]) -> Result<(), Box<dyn Error>> {
-  writeln!(writer, "lazy_static! {{")?;
-  writeln!(
-    writer,
-    "  pub static ref {}_METHODS: Vec<(&'static str, MethodDescriptor)> = vec![",
-    method.to_string().as_str().to_uppercase()
-  )?;
-  for operation in operations.iter() {
-    let parameters = operation
-      .parameters
-      .iter()
-      .filter(|(name, _, _)| !MANAGED_PARAMETERS.contains(&name.as_str()))
-      .map(|(parameter, parameter_type, description)| {
-        format!(
-          "(\"{}\", \"{}\", {})",
-          parameter,
-          parameter_type,
-          match description {
-            None => "None".to_string(),
-            Some(description) => format!("Some(\"{}\")", description),
-          }
-        )
-      })
-      .collect::<Vec<_>>();
-    writeln!(writer, "    (\"{}\",", operation.selector)?;
-    writeln!(writer, "      MethodDescriptor {{")?;
-    if let Some(ref description) = operation.description {
-      writeln!(writer, "        description: Some(\"{}\"),", description)?;
-    } else {
-      writeln!(writer, "        description: None,")?;
+  writeln!(writer, "/// `{}` method descriptors", method)?;
+  if operations.is_empty() {
+    writeln!(
+      writer,
+      "pub const {}_METHODS: [(&str, MethodDescriptor); {}] = [];",
+      method.to_string().as_str().to_uppercase(),
+      operations.len()
+    )?;
+  } else {
+    writeln!(
+      writer,
+      "pub const {}_METHODS: [(&str, MethodDescriptor); {}] = [",
+      method.to_string().as_str().to_uppercase(),
+      operations.len()
+    )?;
+    for operation in operations.iter() {
+      writeln!(writer, "  (")?;
+      let parameters = operation
+        .parameters
+        .iter()
+        .filter(|(name, _, _)| !MANAGED_PARAMETERS.contains(&name.as_str()))
+        .map(|(parameter, parameter_type, description)| {
+          format!(
+            "(\"{}\", \"{}\", {})",
+            parameter,
+            parameter_type,
+            match description {
+              None => "None".to_string(),
+              Some(description) => format!("Some(\"{}\")", description),
+            }
+          )
+        })
+        .collect::<Vec<_>>();
+      writeln!(writer, "    \"{}\",", operation.selector)?;
+      writeln!(writer, "    MethodDescriptor {{")?;
+      if let Some(ref description) = operation.description {
+        writeln!(writer, "      description: Some(\"{}\"),", description)?;
+      } else {
+        writeln!(writer, "      description: None,")?;
+      }
+      if parameters.is_empty() {
+        writeln!(writer, "      parameters: &[],")?;
+      } else {
+        writeln!(writer, "      parameters: &[")?;
+        writeln!(writer, "        {},", parameters.join(",\n        "))?;
+        writeln!(writer, "      ],")?;
+      }
+      if let Some(ref body_type) = operation.request_body {
+        writeln!(writer, "      body_type: Some(\"{}\"),", body_type)?;
+      } else {
+        writeln!(writer, "      body_type: None,")?;
+      }
+      writeln!(writer, "      response_type: Some(\"{}\")", operation.ok_response)?;
+      writeln!(writer, "    }}")?;
+      writeln!(writer, "  ),")?;
     }
-    if parameters.is_empty() {
-      writeln!(writer, "        parameters: vec![],")?;
-    } else {
-      writeln!(writer, "        parameters: vec![")?;
-      writeln!(writer, "          {},", parameters.join(",\n          "))?;
-      writeln!(writer, "        ],")?;
-    }
-    if let Some(ref body_type) = operation.request_body {
-      writeln!(writer, "        body_type: Some(\"{}\"),", body_type)?;
-    } else {
-      writeln!(writer, "        body_type: None,")?;
-    }
-    writeln!(writer, "        response_type: Some(\"{}\")", operation.ok_response)?;
-    writeln!(writer, "      }}")?;
-    writeln!(writer, "    ),")?;
+    writeln!(writer, "];")?;
   }
-  writeln!(writer, "  ];")?;
-  writeln!(writer, "}}")?;
-  writeln!(writer)?;
 
   Ok(())
 }
@@ -812,9 +819,31 @@ fn check_duplicate_selectors(method_operations: &[GenericOperation], method: &Me
   }
 }
 
-const METHOD_DESCRIPTOR_STRUCT: &str = r#"pub struct MethodDescriptor {
+const METHOD_DESCRIPTOR_STRUCT: &str = r#"/// # Describes one method
+///
+/// This structure is used to describe the available generic methods.
+/// For each method type there is constant vector defined that consists of
+/// `(&str, MethodDescriptor)` pairs,
+/// listing the selectors and method descriptions for the method type.
+///
+/// # Example
+///
+/// This example will list all `get` selectors with a description of the
+/// method indicated by the selector.
+///
+/// ```ignore
+/// use dsh_api::generic::GET_METHODS;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// for (selector, method_descriptor) in GET_METHODS {
+///   println!("{}: {}", selector, method_descriptor.description);
+/// }
+/// # }
+/// ```
+#[derive(Debug)]
+pub struct MethodDescriptor {
   pub description: Option<&'static str>,
-  pub parameters: Vec<(&'static str, &'static str, Option<&'static str>)>,
+  pub parameters: &'static[(&'static str, &'static str, Option<&'static str>)],
   pub body_type: Option<&'static str>,
   pub response_type: Option<&'static str>
 }"#;
@@ -936,5 +965,4 @@ const PUT_COMMENT: &str = r#"  /// ## Example
 const USE: &str = r#"use crate::dsh_api_client::DshApiClient;
 use crate::types::*;
 use crate::{DshApiError, DshApiResult};
-use lazy_static::lazy_static;
 use std::str::FromStr;"#;
