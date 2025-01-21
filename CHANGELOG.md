@@ -10,6 +10,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 * Support DSH open api specification version 1.9.0.
 * Generic api function.
+* Platform swagger url method.
 
 ### Changed
 
