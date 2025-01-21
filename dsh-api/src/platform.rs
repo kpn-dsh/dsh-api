@@ -399,11 +399,11 @@ impl DshPlatform {
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
   ///   DshPlatform::NpAwsLzDsh.monitoring_domain_for_tenant("my-tenant"),
-  ///   "https://monitoring-my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
+  ///   "monitoring-my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
   /// );
   /// ```
   pub fn monitoring_domain_for_tenant<T: AsRef<str>>(&self, tenant: T) -> String {
-    format!("https://monitoring-{}.{}", tenant.as_ref(), self.vhost_domain())
+    format!("monitoring-{}.{}", tenant.as_ref(), self.vhost_domain())
   }
 
   /// Returns the endpoint for fetching an MQTT token
@@ -491,6 +491,20 @@ impl DshPlatform {
   /// ```
   pub fn rest_client_id_for_tenant<T: AsRef<str>>(&self, tenant: T) -> String {
     format!("{}${}", self.rest_client_id(), tenant.as_ref())
+  }
+
+  /// # Returns the url of the platform swagger page
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::NpAwsLzDsh.swagger_url(),
+  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/tenant-api/spec?url=/tenant-api/assets/openapi.json".to_string()
+  /// );
+  /// ```
+  pub fn swagger_url(&self) -> String {
+    format!("https://{}/tenant-api/spec?url=/tenant-api/assets/openapi.json", self.console_domain())
   }
 
   /// # Returns the domain used for public vhosts
