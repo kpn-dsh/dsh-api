@@ -11,7 +11,7 @@ use futures::TryStreamExt;
 use progenitor_client::{ByteStream, Error as ProgenitorError, ResponseValue as ProgenitorResponseValue};
 use reqwest::StatusCode as ReqwestStatusCode;
 use serde::Serialize;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
 pub struct DshApiClient<'a> {
@@ -63,18 +63,37 @@ impl<'a> DshApiClient<'a> {
 
   pub(crate) fn process<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
   where
-    T: Serialize,
+    T: Debug + Serialize,
   {
     match progenitor_response {
-      Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => Ok((DshApiResponseStatus::from(response.status()), response.into_inner())),
-      Err(progenitor_error) => Err(DshApiError::from(progenitor_error)),
+      Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => {
+        let status = DshApiResponseStatus::from(response.status());
+        let response = response.into_inner();
+        log::debug!("response / {} / {:?}", status, response);
+        Ok((status, response))
+      }
+      Err(progenitor_error) => {
+        log::debug!("progenitor error: {}", progenitor_error);
+        Err(DshApiError::from(progenitor_error))
+      }
     }
   }
 
-  pub(crate) fn process_raw<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T> {
+  pub(crate) fn process_raw<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
+  where
+    T: Debug,
+  {
     match progenitor_response {
-      Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => Ok((DshApiResponseStatus::from(response.status()), response.into_inner())),
-      Err(progenitor_error) => Err(DshApiError::from(progenitor_error)),
+      Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => {
+        let status = DshApiResponseStatus::from(response.status());
+        let response = response.into_inner();
+        log::debug!("raw response / {} / {:?}", status, response);
+        Ok((status, response))
+      }
+      Err(progenitor_error) => {
+        log::debug!("progenitor error: {}", progenitor_error);
+        Err(DshApiError::from(progenitor_error))
+      }
     }
   }
 
@@ -84,12 +103,16 @@ impl<'a> DshApiClient<'a> {
         let status = DshApiResponseStatus::from(response.status());
         let mut inner = response.into_inner();
         let mut string = String::new();
+        log::debug!("string response / {} / {}", status, string);
         while let Some::<Bytes>(ref bytes) = inner.try_next().await? {
           string.push_str(std::str::from_utf8(bytes)?)
         }
         Ok((status, string))
       }
-      Err(progenitor_error) => Err(DshApiError::from(progenitor_error)),
+      Err(progenitor_error) => {
+        log::debug!("progenitor error: {}", progenitor_error);
+        Err(DshApiError::from(progenitor_error))
+      }
     }
   }
 
