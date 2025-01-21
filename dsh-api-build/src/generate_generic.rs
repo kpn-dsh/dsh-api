@@ -148,6 +148,7 @@ fn write_method_operations_descriptors(writer: &mut dyn Write, method: &Method, 
         .collect::<Vec<_>>();
       writeln!(writer, "    \"{}\",", operation.selector)?;
       writeln!(writer, "    MethodDescriptor {{")?;
+      writeln!(writer, "      path: \"{}\",", operation.path)?;
       if let Some(ref description) = operation.description {
         writeln!(writer, "      description: Some(\"{}\"),", description)?;
       } else {
@@ -310,9 +311,9 @@ impl Method {
       Self::Delete => "pub async fn delete(&self, selector: &str, parameters: &[&str]) -> DshApiResult<()>",
       Self::Get => "pub async fn get(&self, selector: &str, parameters: &[&str]) -> DshApiResult<Box<dyn erased_serde::Serialize>>",
       Self::Head => "pub async fn head(&self, selector: &str, parameters: &[&str]) -> DshApiResult<()>",
-      Self::Patch => "pub async fn patch(&self, selector: &str, parameters: &[&str], body: Option<&str>) -> DshApiResult<()>",
-      Self::Post => "pub async fn post(&self, selector: &str, parameters: &[&str], body: Option<&str>) -> DshApiResult<()>",
-      Self::Put => "pub async fn put(&self, selector: &str, parameters: &[&str], body: Option<&str>) -> DshApiResult<()>",
+      Self::Patch => "pub async fn patch(&self, selector: &str, parameters: &[&str], body: Option<String>) -> DshApiResult<()>",
+      Self::Post => "pub async fn post(&self, selector: &str, parameters: &[&str], body: Option<String>) -> DshApiResult<()>",
+      Self::Put => "pub async fn put(&self, selector: &str, parameters: &[&str], body: Option<String>) -> DshApiResult<()>",
     }
   }
 
@@ -520,11 +521,11 @@ impl GenericOperation {
     if let Some(ref request_body_type) = self.request_body {
       match request_body_type {
         RequestBodyType::String => parameters.push(
-          "serde_json::from_str::<String>(body.unwrap()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid String\".to_string()))?.to_string()"
+          "serde_json::from_str::<String>(body.unwrap().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid String\".to_string()))?.to_string()"
             .to_string(),
         ),
         RequestBodyType::SerializableType(serializable_type) => parameters.push(format!(
-          "&serde_json::from_str::<{}>(body.unwrap()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid {}\".to_string()))?",
+          "&serde_json::from_str::<{}>(body.unwrap().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid {}\".to_string()))?",
           serializable_type, serializable_type
         )),
       }
@@ -842,6 +843,7 @@ const METHOD_DESCRIPTOR_STRUCT: &str = r#"/// # Describes one method
 /// ```
 #[derive(Debug)]
 pub struct MethodDescriptor {
+  pub path: &'static str,
   pub description: Option<&'static str>,
   pub parameters: &'static[(&'static str, &'static str, Option<&'static str>)],
   pub body_type: Option<&'static str>,

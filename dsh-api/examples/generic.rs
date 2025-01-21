@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
   print_header("put secret");
   let secret = serde_json::to_string("ABCDEF")?;
-  client.put("secret", &["abcdef"], Some(&secret)).await?;
+  client.put("secret", &["abcdef"], Some(secret)).await?;
 
   Ok(())
 }
