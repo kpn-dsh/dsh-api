@@ -15,6 +15,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 ### Changed
 
 * Implementation of methods that provide the api and the openapi versions.
+* Embedded logo and favicon in generated docs.
 
 ## [0.3.1]
 
