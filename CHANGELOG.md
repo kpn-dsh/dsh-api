@@ -4,7 +4,13 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
-## [0.3.2]
+## [0.4.0]
+
+### Breaking change
+
+* Platform module now reads the platform definitions from an internal configuration file
+  or from an explicit given configuration file.
+  The old platform enum data structure is no longer available.
 
 ### Added
 
@@ -16,6 +22,8 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 * Implementation of methods that provide the api and the openapi versions.
 * Embedded logo and favicon in generated docs.
+* Changed platform enum to struct.
+* Dedicated readme file for creates.io.
 
 ## [0.3.1]
 

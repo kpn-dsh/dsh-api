@@ -1,0 +1,63 @@
+[
+  {
+    "name": "np-aws-lz-dsh",
+    "description": "Staging platform for KPN internal tenants",
+    "alias": "nplz",
+    "is-production": false,
+    "cloud-provider": "aws",
+    "key-cloak-url": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth",
+    "realm": "dev-lz-dsh",
+    "public-domain": "dsh-dev.dsh.np.aws.kpn.com",
+    "private-domain": "dsh-dev.dsh.np.aws.kpn.org"
+  },
+  {
+    "name": "poc-aws-dsh",
+    "description": "Staging platform for non KPN tenants",
+    "alias": "poc",
+    "is-production": true,
+    "cloud-provider": "aws",
+    "key-cloak-url": "https://auth.prod.cp.kpn-dsh.com/auth",
+    "realm": "poc-dsh",
+    "public-domain": "poc.kpn-dsh.com"
+  },
+  {
+    "name": "prod-aws-dsh",
+    "description": "Production platform for non KPN tenants",
+    "alias": "prod",
+    "is-production": true,
+    "cloud-provider": "aws",
+    "key-cloak-url": "https://auth.prod.cp.kpn-dsh.com/auth//auth",
+    "realm": "tt-dsh",
+    "public-domain": "kpn-dsh.com"
+  },
+  {
+    "name": "prod-aws-lz-dsh",
+    "description": "Production platform for KPN internal tenants",
+    "alias": "prodlz",
+    "is-production": true,
+    "cloud-provider": "aws",
+    "key-cloak-url": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth",
+    "realm": "prod-lz-dsh",
+    "public-domain": "dsh-prod.dsh.prod.aws.kpn.com"
+  },
+  {
+    "name": "prod-aws-lz-laas",
+    "description": "Production platform for logstash as a service",
+    "alias": "prodls",
+    "is-production": true,
+    "cloud-provider": "aws",
+    "key-cloak-url": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth",
+    "realm": "prod-aws-lz-laas",
+    "public-domain": "laas-prod.dsh.prod.aws.kpn.com"
+  },
+  {
+    "name": "prod-azure-dsh",
+    "description": "Production platform for non KPN tenants",
+    "alias": "prodaz",
+    "is-production": true,
+    "cloud-provider": "azure",
+    "key-cloak-url": "https://auth.prod.cp.kpn-dsh.com/auth//auth",
+    "realm": "prod-azure-dsh",
+    "public-domain": "az.kpn-dsh.com"
+  }
+]
