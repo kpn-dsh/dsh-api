@@ -6,6 +6,8 @@ use serde_json::Value;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+  env_logger::init();
+
   let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
   let client = client_factory.client().await?;
 

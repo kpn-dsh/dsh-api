@@ -7,20 +7,12 @@ mod common;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+  env_logger::init();
   let secret_id = "boss-account-ids";
   let test_secret_id = "test_create_delete_update_secret";
 
   let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
   let client = client_factory.client().await?;
-
-  // let test_secret = Secret { name: test_secret_id.to_string(), value: "TEST_SECRET".to_string() };
-  // let test_secret_update = "TEST_SECRET_UPDATE".to_string();
-  // print_header("create_secret");
-  // println!("{:?}", client.create_secret(&test_secret).await?);
-  // print_header("delete_secret");
-  // println!("{:?}", client.delete_secret(secret_id).await?);
-  // print_header("update_secret");
-  // println!("{:?}", client.update_secret(secret_id, test_secret_update).await?);
 
   print_header("list_secret_ids");
   for secret in client.list_secret_ids().await? {
@@ -28,7 +20,7 @@ async fn main() -> Result<(), String> {
   }
 
   print_header("get_secret");
-  println!("get_secret(greenbox_backend_password)\n{}", client.get_secret(secret_id).await?);
+  println!("get_secret(backend_password)\n{}", client.get_secret(secret_id).await?);
 
   #[cfg(feature = "actual")]
   {

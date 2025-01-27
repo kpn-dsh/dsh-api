@@ -11,6 +11,8 @@ static CERTIFICATE_ID: &str = "broker-kafka-proxy-certificate";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+  env_logger::init();
+
   let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
 
   print_header("get_certificate");

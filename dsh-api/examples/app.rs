@@ -2,16 +2,10 @@ use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
 use dsh_api::types::{AppCatalogApp, AppCatalogAppConfiguration};
 use std::collections::HashMap;
 
-// get_app_actual_configuration
-// get_app_actual_configurations
-// get_app_configuration
-// get_app_configurations
-// list_app_configurations
-// list_app_ids
-// application_from_app
-
 #[tokio::main]
 async fn main() -> Result<(), String> {
+  env_logger::init();
+
   let app_catalog_id = "keyring-050";
 
   let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
