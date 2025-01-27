@@ -26,16 +26,16 @@ use futures::try_join;
 use std::collections::HashMap;
 
 impl DshApiClient<'_> {
-  /// # Get vhost with usage
-  ///
-  /// Returns usage for a given vhost.
-  ///
-  /// # Parameters
-  /// * `vhost_id` - name of the requested vhost
-  ///
-  /// # Returns
-  /// * `Ok<Vec<UsedBy>>` - vhost usage.
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  //  /// # Get vhost with usage
+  //  ///
+  //  /// Returns usage for a given vhost.
+  //  ///
+  //  /// # Parameters
+  //  /// * `vhost_id` - name of the requested vhost
+  //  ///
+  //  /// # Returns
+  //  /// * `Ok<Vec<UsedBy>>` - vhost usage.
+  //  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   // pub async fn get_vhost_usage(&self, _vhost_id: &str) -> DshApiResult<Vec<UsedBy>> {
   //   let (_applications, _apps) = try_join!(self.get_applications(), self.get_app_configurations())?;
   //   let usages: Vec<UsedBy> = vec![];
