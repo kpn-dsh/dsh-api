@@ -1,5 +1,5 @@
+use crate::{OpenApiOperation, PathElement};
 use openapiv3::{OpenAPI, Operation, Parameter, ParameterData, ParameterSchemaOrContent, ReferenceOr};
-use {OpenApiOperation, PathElement};
 
 pub fn update_openapi(original_openapi_spec: &mut OpenAPI) -> Result<(), String> {
   // Add authorization headers to original openapi spec
