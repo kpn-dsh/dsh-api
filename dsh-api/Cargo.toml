@@ -1,6 +1,7 @@
 # dsh-api
 [package]
 name = "dsh_api"
+readme = "README_CRATES_IO.md"
 authors.workspace = true
 description.workspace = true
 edition.workspace = true
@@ -10,6 +11,9 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
 
 [features]
 actual = []
@@ -33,6 +37,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [dev-dependencies]
+env_logger = "0.11"
 serde_yaml = "0.9.33"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 toml = { version = "0.8", features = ["display"] }

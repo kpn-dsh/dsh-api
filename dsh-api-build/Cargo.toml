@@ -2,6 +2,8 @@
 [package]
 publish = false
 name = "dsh_api_build"
+readme = "README.md"
+edition.workspace = true
 
 [dependencies]
 indoc = "2.0"
