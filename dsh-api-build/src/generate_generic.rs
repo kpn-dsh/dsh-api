@@ -1,3 +1,4 @@
+use crate::PathElement;
 use indoc::formatdoc;
 use itertools::Itertools;
 use openapiv3::{
@@ -7,7 +8,6 @@ use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::io::Write;
-use PathElement;
 
 // TODO For development testing only
 #[allow(dead_code)]
@@ -60,11 +60,16 @@ pub fn generate_generic(writer: &mut dyn Write, openapi_spec: &OpenAPI) -> Resul
 
 fn write_method_operations(writer: &mut dyn Write, method: &Method, operations: &[GenericOperation]) -> Result<(), Box<dyn Error>> {
   writeln!(writer, "  /// # Generic `{}` operations", method)?;
+  writeln!(writer, "  ///")?;
+  writeln!(writer, "  /// <div class=\"warning\">")?;
+  writeln!(writer, "  ///   This function is only available when the <code>generic</code> feature is enabled.")?;
+  writeln!(writer, "  /// </div>")?;
+
   if let Some(method_comment) = method.comment() {
     writeln!(writer, "  ///")?;
     writeln!(writer, "{}", method_comment)?;
-    writeln!(writer, "  ///")?;
   }
+  writeln!(writer, "  ///")?;
   writeln!(writer, "  /// ## Supported operation selectors for the `{}` method", method)?;
   for operation in operations.iter() {
     writeln!(writer, "  ///")?;
@@ -114,6 +119,13 @@ const MANAGED_PARAMETERS: [&str; 1] = ["Authorization"];
 
 fn write_method_operations_descriptors(writer: &mut dyn Write, method: &Method, operations: &[GenericOperation]) -> Result<(), Box<dyn Error>> {
   writeln!(writer, "/// `{}` method descriptors", method)?;
+  writeln!(writer, "///")?;
+  writeln!(writer, "/// <div class=\"warning\">")?;
+  writeln!(writer, "///   This constant is only available when the <code>generic</code> feature is enabled.")?;
+  writeln!(writer, "/// </div>")?;
+  writeln!(writer, "///")?;
+  writeln!(writer, "/// Vector that describes all available `{}` methods.", method)?;
+  writeln!(writer, "///")?;
   if operations.is_empty() {
     writeln!(
       writer,
@@ -130,22 +142,7 @@ fn write_method_operations_descriptors(writer: &mut dyn Write, method: &Method, 
     )?;
     for operation in operations.iter() {
       writeln!(writer, "  (")?;
-      let parameters = operation
-        .parameters
-        .iter()
-        .filter(|(name, _, _)| !MANAGED_PARAMETERS.contains(&name.as_str()))
-        .map(|(parameter, parameter_type, description)| {
-          format!(
-            "(\"{}\", \"{}\", {})",
-            parameter,
-            parameter_type,
-            match description {
-              None => "None".to_string(),
-              Some(description) => format!("Some(\"{}\")", description),
-            }
-          )
-        })
-        .collect::<Vec<_>>();
+      let parameters = create_parameters(operation);
       writeln!(writer, "    \"{}\",", operation.selector)?;
       writeln!(writer, "    MethodDescriptor {{")?;
       writeln!(writer, "      path: \"{}\",", operation.path)?;
@@ -174,6 +171,22 @@ fn write_method_operations_descriptors(writer: &mut dyn Write, method: &Method, 
   }
 
   Ok(())
+}
+
+fn create_parameters(operation: &GenericOperation) -> Vec<String> {
+  operation
+    .parameters
+    .iter()
+    .filter(|(name, _, _)| !MANAGED_PARAMETERS.contains(&name.as_str()))
+    .map(|(parameter, parameter_type, description)| {
+      format!(
+        "(\"{}\", \"{}\", {})",
+        parameter,
+        parameter_type,
+        description.clone().map(|d| format!("Some(\"{}\")", d)).unwrap_or("None".to_string())
+      )
+    })
+    .collect::<Vec<_>>()
 }
 
 fn get_method_operation<'a>(method: &Method, path_item: &'a PathItem) -> Option<&'a Operation> {
@@ -311,9 +324,9 @@ impl Method {
       Self::Delete => "pub async fn delete(&self, selector: &str, parameters: &[&str]) -> DshApiResult<()>",
       Self::Get => "pub async fn get(&self, selector: &str, parameters: &[&str]) -> DshApiResult<Box<dyn erased_serde::Serialize>>",
       Self::Head => "pub async fn head(&self, selector: &str, parameters: &[&str]) -> DshApiResult<()>",
-      Self::Patch => "pub async fn patch(&self, selector: &str, parameters: &[&str], body: Option<String>) -> DshApiResult<()>",
-      Self::Post => "pub async fn post(&self, selector: &str, parameters: &[&str], body: Option<String>) -> DshApiResult<()>",
-      Self::Put => "pub async fn put(&self, selector: &str, parameters: &[&str], body: Option<String>) -> DshApiResult<()>",
+      Self::Patch => "pub async fn patch<T: Into<String>>(&self, selector: &str, parameters: &[&str], body: Option<T>) -> DshApiResult<()>",
+      Self::Post => "pub async fn post<T: Into<String>>(&self, selector: &str, parameters: &[&str], body: Option<T>) -> DshApiResult<()>",
+      Self::Put => "pub async fn put<T: Into<String>>(&self, selector: &str, parameters: &[&str], body: Option<T>) -> DshApiResult<()>",
     }
   }
 
@@ -521,11 +534,11 @@ impl GenericOperation {
     if let Some(ref request_body_type) = self.request_body {
       match request_body_type {
         RequestBodyType::String => parameters.push(
-          "serde_json::from_str::<String>(body.unwrap().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid String\".to_string()))?.to_string()"
+          "serde_json::from_str::<String>(body.unwrap().into().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid String\".to_string()))?.to_string()"
             .to_string(),
         ),
         RequestBodyType::SerializableType(serializable_type) => parameters.push(format!(
-          "&serde_json::from_str::<{}>(body.unwrap().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid {}\".to_string()))?",
+          "&serde_json::from_str::<{}>(body.unwrap().into().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid {}\".to_string()))?",
           serializable_type, serializable_type
         )),
       }
