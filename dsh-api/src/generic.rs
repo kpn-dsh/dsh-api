@@ -1,5 +1,9 @@
 //! # Generic API function calls
 //!
+//! <div class="warning">
+//!   These functions are only available when the <code>generic</code> feature is enabled.
+//! </div>
+//!
 //! Module that contains methods to call the api methods in a generic way.
 //! What this means is that the API functions can be called indirect,
 //! where the path of the method must be provided as an argument.
