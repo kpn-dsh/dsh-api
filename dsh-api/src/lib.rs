@@ -16,7 +16,7 @@
 //!
 //! The first minimal example will print a list of all the applications that are deployed
 //! in a tenant environment. This example requires that the tenant's name, group id, user id,
-//! platform and API secret are configured via [environment variables](dsh_api_client_factory).
+//! platform and API password are configured via [environment variables](dsh_api_client_factory).
 //!
 //! ```ignore
 //! use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
@@ -50,12 +50,12 @@
 //! # use dsh_api::DshApiError;
 //! # async fn hide() -> Result<(), DshApiError> {
 //! let tenant = DshApiTenant::new(
-//!   "greenbox".to_string(),
-//!   "2067:2067".to_string(),
-//!   DshPlatform::NpLz
+//!   "my-tenant".to_string(),
+//!   1234,
+//!   DshPlatform::try_from("np-aws-lz-dsh")?
 //! );
-//! let secret = "...".to_string();
-//! let client_factory = DshApiClientFactory::create(tenant, secret)?;
+//! let password = "...".to_string();
+//! let client_factory = DshApiClientFactory::create(tenant, password)?;
 //! let client = client_factory.client().await?;
 //! let predicate = |application: &Application| application.needs_token;
 //! let applications = client.find_applications(&predicate).await?;
@@ -74,6 +74,8 @@ pub(crate) mod generated {
 }
 
 pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/openapi.json"));
+
+pub static DEFAULT_PLATFORMS: &str = include_str!("../default-platforms.json");
 
 use dsh_sdk::error::DshRestTokenError;
 
@@ -95,6 +97,7 @@ pub mod display;
 pub mod dsh_api_client;
 pub mod dsh_api_client_factory;
 pub mod dsh_api_tenant;
+#[cfg(feature = "generic")]
 pub mod generic;
 pub mod platform;
 pub mod proxy;
@@ -106,11 +109,25 @@ pub mod vhost;
 pub mod volume;
 
 /// # Returns the version of the lib crate
+///
+/// ## Example
+///
+/// ```
+/// assert_eq!(dsh_api::crate_version(), "0.4.0");
+/// ```
 pub fn crate_version() -> &'static str {
-  "0.3.2"
+  "0.4.0"
 }
 
 /// # Returns the version of the openapi spec
+///
+/// Version number of the open api file that the crate has been generated from.
+///
+/// ## Example
+///
+/// ```
+/// assert_eq!(dsh_api::api_version(), "1.9.0");
+/// ```
 pub fn api_version() -> &'static str {
   generated::Client::new("").api_version()
 }
@@ -276,78 +293,104 @@ impl From<DshApiError> for String {
   }
 }
 
+/// Environment variable used to specify the name of a file with an alternative list of platforms
+pub const ENV_VAR_PLATFORMS_FILE_NAME: &str = "DSH_API_PLATFORMS_FILE";
+
 /// Environment variable used to define the target platform.
-pub const PLATFORM_ENVIRONMENT_VARIABLE: &str = "DSH_API_PLATFORM";
-/// Environment variable used to define the target tenant.
-pub const TENANT_ENVIRONMENT_VARIABLE: &str = "DSH_API_TENANT";
+pub const ENV_VAR_PLATFORM: &str = "DSH_API_PLATFORM";
 
-pub(crate) const SECRET_ENVIRONMENT_VARIABLE_PREFIX: &str = "DSH_API_SECRET";
-pub(crate) const GUID_ENVIRONMENT_VARIABLE_PREFIX: &str = "DSH_API_GUID";
+/// Environment variable used to define the client tenant.
+pub const ENV_VAR_TENANT: &str = "DSH_API_TENANT";
 
-/// # Create target secret environment variable
+pub(crate) const ENV_VAR_PREFIX_PASSWORD: &str = "DSH_API_PASSWORD";
+pub(crate) const ENV_VAR_PREFIX_PASSWORD_FILE: &str = "DSH_API_PASSWORD_FILE";
+pub(crate) const ENV_VAR_PREFIX_GUID: &str = "DSH_API_GUID";
+
+/// # Create client password environment variable
 ///
-/// This function creates the environment variable used to define the target's secret
+/// This function creates the environment variable used to define the client tenant's password
 /// from the platform name and the tenant name. The format of the environment variable is
-/// `DSH_API_SECRET_[platform_name]_[tenant_name]`,
+/// `DSH_API_PASSWORD_[platform_name]_[tenant_name]`,
 /// where the `platform_name` and the `tenant_name` will be converted to uppercase and
 /// `-` will be replaced by `_`.
 ///
 /// # Parameters
 /// * `platform_name` - target's platform name
-/// * `tenant_name` - target's tenant name
+/// * `tenant_name` - client tenant name
 ///
 /// # Returns
-/// Target secret environment variable.
+/// Client password environment variable.
 ///
 /// # Example
 /// ```
-/// use dsh_api::secret_environment_variable;
+/// use dsh_api::password_environment_variable;
 ///
-/// let env_var = secret_environment_variable("nplz", "greenbox-dev");
-/// assert_eq!(env_var, "DSH_API_SECRET_NPLZ_GREENBOX_DEV".to_string());
+/// let env_var = password_environment_variable("np-aws-lz-dsh", "my-tenant");
+/// assert_eq!(env_var, "DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT".to_string());
 /// ```
-pub fn secret_environment_variable(platform_name: &str, tenant_name: &str) -> String {
+pub fn password_environment_variable(platform_name: &str, tenant_name: &str) -> String {
   format!(
     "{}_{}_{}",
-    SECRET_ENVIRONMENT_VARIABLE_PREFIX,
+    ENV_VAR_PREFIX_PASSWORD,
     platform_name.to_ascii_uppercase().replace('-', "_"),
     tenant_name.to_ascii_uppercase().replace('-', "_")
   )
 }
 
-/// # Create target guid environment variable
+/// # Create client password file environment variable
 ///
-/// This function creates the environment variable used to define the target's guid
-/// from the tenant name. The format of the environment variable is
+/// This function creates the environment variable used to define the client tenant's password file
+/// from the platform name and the tenant name. The format of the environment variable is
+/// `DSH_API_PASSWORD_FILE_[platform_name]_[tenant_name]`,
+/// where the `platform_name` and the `tenant_name` will be converted to uppercase and
+/// `-` will be replaced by `_`.
+///
+/// # Parameters
+/// * `platform_name` - target's platform name
+/// * `tenant_name` - client tenant name
+///
+/// # Returns
+/// Client password file environment variable.
+///
+/// # Example
+/// ```
+/// use dsh_api::password_file_environment_variable;
+///
+/// let env_var = password_file_environment_variable("np-aws-lz-dsh", "my-tenant");
+/// assert_eq!(env_var, "DSH_API_PASSWORD_FILE_NP_AWS_LZ_DSH_MY_TENANT".to_string());
+/// ```
+pub fn password_file_environment_variable(platform_name: &str, tenant_name: &str) -> String {
+  format!(
+    "{}_{}_{}",
+    ENV_VAR_PREFIX_PASSWORD_FILE,
+    platform_name.to_ascii_uppercase().replace('-', "_"),
+    tenant_name.to_ascii_uppercase().replace('-', "_")
+  )
+}
+
+/// # Create client tenant guid environment variable
+///
+/// This function creates the environment variable used to define the client tenant's guid
+/// from the tenant's name. The format of the environment variable is
 /// `DSH_API_GUID_[tenant_name]`,
 /// where the `tenant_name` will be converted to uppercase and
 /// `-` will be replaced by `_`.
 ///
 /// # Parameters
-/// * `tenant_name` - target's tenant name
+/// * `tenant_name` - client tenant name
 ///
 /// # Returns
-/// Target guid environment variable.
+/// Client tenants guid environment variable.
 ///
 /// # Example
 /// ```
 /// use dsh_api::guid_environment_variable;
 ///
-/// let env_var = guid_environment_variable("greenbox-dev");
-/// assert_eq!(env_var, "DSH_API_GUID_GREENBOX_DEV".to_string());
+/// let env_var = guid_environment_variable("my-tenant");
+/// assert_eq!(env_var, "DSH_API_GUID_MY_TENANT".to_string());
 /// ```
 pub fn guid_environment_variable(tenant_name: &str) -> String {
-  format!("{}_{}", GUID_ENVIRONMENT_VARIABLE_PREFIX, tenant_name.to_ascii_uppercase().replace('-', "_"))
-}
-
-#[test]
-fn test_api_version() {
-  assert_eq!(api_version(), "1.9.0");
-}
-
-#[test]
-fn test_crate_version() {
-  assert_eq!(crate_version(), "0.3.2");
+  format!("{}_{}", ENV_VAR_PREFIX_GUID, tenant_name.to_ascii_uppercase().replace('-', "_"))
 }
 
 #[test]

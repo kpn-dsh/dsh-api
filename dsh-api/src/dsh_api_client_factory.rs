@@ -8,40 +8,42 @@
 //! # Environment variables
 //!
 //! ## `DSH_API_PLATFORM`
-//! Target platform on which the tenant's environment lives.
-//! * `nplz` - Non production landing zone
-//! * `poc` - Proof of concept platform
-//! * `prod` - Production landing zone
-//! * `prodaz` -
-//! * `prodlz` -
+//! Platform on which the tenant's environment lives. The default platforms are:
+//! * `np-aws-lz-dsh / nplz` - Staging platform for KPN internal tenants.
+//! * `poc-aws-dsh / poc` - Staging platform for non KPN tenants.
+//! * `prod-aws-dsh / prod` - Production platform for non KPN tenants.
+//! * `prod-aws-lz-dsh / prodlz` - Production platform for KPN internal tenants.
+//! * `prod-aws-lz-laas / prodls` - Production platform for logstash as a service.
+//! * `prod-azure-dsh / prodaz` - Production platform for non KPN tenants.
 //!
 //! ## `DSH_API_TENANT`
-//! Tenant id for the target tenant. The target tenant is the tenant whose resources
-//! will be managed via the api.
+//! Tenant id for the client tenant that is making the api requests.
+//! In some cases this is not the same tenant as the tenant whose resources
+//! will be managed via the api. The latter will be called the target client.
 //!
-//! ## `DSH_API_SECRET_[platform]_[tenant]`
-//! Secret api token for the target tenant.
+//! ## `DSH_API_PASSWORD_[platform]_[tenant]`
+//! Secret api token for the client tenant.
 //! The placeholders `[platform]` and `[tenant]`
 //! need to be substituted with the platform name and the tenant name in all capitals,
 //! with hyphens (`-`) replaced by underscores (`_`).
 //!
-//! E.g. if the platform is `nplz` and the tenant name is
-//! `greenbox-dev`, the environment variable must be
-//! `DSH_API_SECRET_NPLZ_GREENBOX_DEV`.
+//! E.g. if the platform is `np-aws-lz-dsh` and the tenant name is
+//! `my-tenant`, the environment variable must be
+//! `DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT`.
 //!
 //! ## `DSH_API_GUID_[tenant]`
-//! Group id and user id for the target tenant.
+//! Group id and user id for the clienttenant.
 //! The placeholder `[tenant]` needs to be substituted
 //! with the tenant name in all capitals, with hyphens (`-`)
 //! replaced by underscores (`_`).
 //!
-//! E.g. if the tenant name is `greenbox-dev`, the environment variable must be
-//! `DSH_API_GUID_GREENBOX_DEV`.
+//! E.g. if the tenant name is `my-tenant`, the environment variable must be
+//! `DSH_API_GUID_MY_TENANT`.
 use crate::dsh_api_client::DshApiClient;
 use crate::dsh_api_tenant::DshApiTenant;
 use crate::generated::Client as GeneratedClient;
 use crate::platform::DshPlatform;
-use crate::DshApiError;
+use crate::{password_environment_variable, password_file_environment_variable, DshApiError};
 use dsh_sdk::Platform as SdkPlatform;
 use dsh_sdk::RestTokenFetcherBuilder;
 use lazy_static::lazy_static;
@@ -53,7 +55,7 @@ use std::env;
 pub struct DshApiClientFactory {
   generated_client: GeneratedClient,
   tenant: DshApiTenant,
-  secret: String,
+  password: String,
 }
 
 impl DshApiClientFactory {
@@ -87,7 +89,7 @@ impl DshApiClientFactory {
   /// # Parameters
   /// * `tenant` - Tenant struct, containing the platform, tenant name and the
   ///   tenant's group and user id.
-  /// * `secret` - The secret used to retrieve the DSH API tokens.
+  /// * `password` - The secret password used to retrieve the DSH API tokens.
   ///
   /// # Returns
   /// * `Ok<DshApiClientFactory>` - the created client factory
@@ -100,16 +102,16 @@ impl DshApiClientFactory {
   ///
   /// # use dsh_api::DshApiError;
   /// # async fn hide() -> Result<(), DshApiError> {
-  /// let secret = "...".to_string();
-  /// let tenant = DshApiTenant::from_tenant("greenbox".to_string())?;
-  /// let client_factory = DshApiClientFactory::create(tenant, secret)?;
+  /// let password = "...".to_string();
+  /// let tenant = DshApiTenant::from_tenant("my-tenant".to_string())?;
+  /// let client_factory = DshApiClientFactory::create(tenant, password)?;
   /// let client = client_factory.client().await?;
   /// println!("rest api version is {}", client.api_version());
   /// # Ok(())
   /// # }
   /// ```
-  pub fn create(tenant: DshApiTenant, secret: String) -> Result<Self, DshApiError> {
-    Ok(DshApiClientFactory { generated_client: GeneratedClient::new(tenant.platform().api_rest_endpoint().as_str()), tenant, secret })
+  pub fn create(tenant: DshApiTenant, password: String) -> Result<Self, DshApiError> {
+    Ok(DshApiClientFactory { generated_client: GeneratedClient::new(tenant.platform().endpoint_rest_api().as_str()), tenant, password })
   }
 
   /// # Create default factory for DSH API client
@@ -135,11 +137,11 @@ impl DshApiClientFactory {
   pub fn try_default() -> Result<Self, DshApiError> {
     let platform = DshPlatform::try_default()?;
     let tenant = DshApiTenant::try_default()?;
-    let secret = match get_secret(&tenant) {
-      Ok(secret) => secret,
+    let password = match get_password(&tenant) {
+      Ok(password) => password,
       Err(error) => panic!("{}", error),
     };
-    match DshApiClientFactory::create(tenant.clone(), secret) {
+    match DshApiClientFactory::create(tenant.clone(), password) {
       Ok(factory) => {
         info!("default dsh api client factory for {}@{} created", tenant.name(), platform.to_string());
         Ok(factory)
@@ -193,7 +195,7 @@ impl DshApiClientFactory {
   pub async fn client(&self) -> Result<DshApiClient, DshApiError> {
     match RestTokenFetcherBuilder::new(SdkPlatform::try_from(self.tenant.platform())?)
       .tenant_name(self.tenant.name().clone())
-      .client_secret(self.secret.clone())
+      .client_secret(self.password.clone())
       .build()
     {
       Ok(token_fetcher) => Ok(DshApiClient::new(token_fetcher, &self.generated_client, &self.tenant)),
@@ -280,24 +282,29 @@ lazy_static! {
   pub static ref TRY_DEFAULT_DSH_API_CLIENT_FACTORY: Result<DshApiClientFactory, DshApiError> = DshApiClientFactory::try_default();
 }
 
-fn get_secret(tenant: &DshApiTenant) -> Result<String, DshApiError> {
-  let environment_variable_full = secret_environment_variable(tenant.platform().full_name(), tenant.name());
-  match env::var(&environment_variable_full) {
-    Ok(secret_from_environment_variable_full) => Ok(secret_from_environment_variable_full),
+fn get_password(tenant: &DshApiTenant) -> Result<String, DshApiError> {
+  let password_file_env_var = password_file_environment_variable(tenant.platform().name(), tenant.name());
+  match env::var(&password_file_env_var) {
+    Ok(password_file_from_env_var) => match std::fs::read_to_string(&password_file_from_env_var) {
+      Ok(password_from_file) => {
+        let trimmed_password = password_from_file.trim();
+        if trimmed_password.is_empty() {
+          Err(DshApiError::Configuration(format!("password file '{}' is empty", password_file_from_env_var)))
+        } else {
+          Ok(trimmed_password.to_string())
+        }
+      }
+      Err(_) => Err(DshApiError::Configuration(format!(
+        "password file '{}' could not be read",
+        password_file_from_env_var
+      ))),
+    },
     Err(_) => {
-      let environment_variable_alias = secret_environment_variable(tenant.platform().alias(), tenant.name());
-      match env::var(environment_variable_alias) {
-        Ok(secret_from_environment_variable_alias) => Ok(secret_from_environment_variable_alias),
-        Err(_) => Err(DshApiError::Configuration(format!("environment variable {} not set", environment_variable_full))),
+      let password_env_var = password_environment_variable(tenant.platform().name(), tenant.name());
+      match env::var(&password_env_var) {
+        Ok(password_from_env_var) => Ok(password_from_env_var),
+        Err(_) => Err(DshApiError::Configuration(format!("environment variable {} not set", password_env_var))),
       }
     }
   }
-}
-
-fn secret_environment_variable(platform_name: &str, tenant_name: &str) -> String {
-  format!(
-    "DSH_API_SECRET_{}_{}",
-    platform_name.to_ascii_uppercase().replace('-', "_"),
-    tenant_name.to_ascii_uppercase().replace('-', "_")
-  )
 }
