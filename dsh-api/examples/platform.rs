@@ -52,11 +52,11 @@ fn print_platform(platform: DshPlatform) {
   println!("client id                   {}", platform.client_id());
   println!("client id tenant            {}", platform.client_id_tenant(TENANT_NAME));
   println!("domain console              {}", platform.domain_console());
+  println!("domain internal service     {}", platform.domain_internal_service(SERVICE_NAME));
   println!("domain rest api             {}", platform.domain_rest_api());
   println!("endpoint access token       {}", platform.endpoint_access_token());
   println!("endpoint mqtt token         {}", platform.endpoint_mqtt_token());
   println!("endpoint rest api           {}", platform.endpoint_rest_api());
-  println!("internal domain service     {}", platform.internal_domain_service(SERVICE_NAME));
   match platform.private_domain_vhost(TENANT_NAME, VHOST) {
     Ok(private_vhost_domain) => println!("private domain vhost        {}", private_vhost_domain),
     Err(error) => println!("private domain vhost        {}", error),

@@ -229,6 +229,23 @@ impl DshPlatform {
     format!("console.{}", self.public_domain())
   }
 
+  /// # Returns the internal domain name for a service
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.domain_internal_service("my-service"),
+  ///   "my-service.marathon.mesos".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn domain_internal_service<T: AsRef<str>>(&self, service: T) -> String {
+    format!("{}.marathon.mesos", service.as_ref())
+  }
+
   /// # Returns the domain for the DSH Rest API
   ///
   /// # Example
@@ -296,23 +313,6 @@ impl DshPlatform {
   /// ```
   pub fn endpoint_rest_api(&self) -> String {
     format!("https://{}/resources/v0", self.domain_rest_api())
-  }
-
-  /// # Returns the internal domain name for a service
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.internal_domain_service("my-service"),
-  ///   "my-service.marathon.mesos".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn internal_domain_service<T: AsRef<str>>(&self, service: T) -> String {
-    format!("{}.marathon.mesos", service.as_ref())
   }
 
   /// # Returns whether the platform is production

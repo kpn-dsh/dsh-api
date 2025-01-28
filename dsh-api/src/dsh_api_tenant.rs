@@ -32,7 +32,7 @@ impl DshApiTenant {
   /// let platform = DshPlatform::try_from("nplz")?;
   /// let dsh_api_tenant = DshApiTenant::new(name, guid, platform);
   /// assert_eq!(
-  ///   dsh_api_tenant.platform().internal_domain_service("my-service"),
+  ///   dsh_api_tenant.platform().domain_internal_service("my-service"),
   ///   "my-service.marathon.mesos".to_string()
   /// );
   /// # Ok(())
