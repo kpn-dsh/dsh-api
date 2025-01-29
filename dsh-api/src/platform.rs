@@ -23,7 +23,10 @@ use std::{env, fs};
 /// println!("start the 'my_app' app for tenant 'my-tenant' at platform 'my-platform'");
 /// match DshPlatform::try_from("my-platform") {
 ///   Ok(platform) => {
-///     println!("open the url {} in your browser", platform.public_domain_app("my-tenant", "my_app"))
+///     println!(
+///       "open the url {} in your browser",
+///       platform.tenant_public_app_domain("my-tenant", "my_app")
+///     )
 ///   }
 ///   Err(_) => println!("platform 'my-platform' is not recognized"),
 /// }
@@ -120,6 +123,24 @@ fn check_for_duplicate_names_or_aliases(platforms: &Vec<DshPlatform>) -> Result<
 }
 
 impl DshPlatform {
+  /// Returns the endpoint for the DSH Rest API access token
+  ///
+  /// # Example
+  /// ```
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.access_token_endpoint(),
+  ///   "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/dev-lz-dsh/protocol/openid-connect/token"
+  ///     .to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn access_token_endpoint(&self) -> String {
+    format!("{}/{}/protocol/openid-connect/token", self.key_cloak_url(), self.realm())
+  }
+
   /// # Returns the optional short/alias platform name
   ///
   /// # Examples
@@ -164,23 +185,6 @@ impl DshPlatform {
     format!("robot${}", self.realm())
   }
 
-  /// # Returns properly formatted client_id for tenant
-  ///
-  /// # Example
-  /// ```
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.client_id_tenant("my-tenant"),
-  ///   "robot$dev-lz-dsh$my-tenant".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn client_id_tenant<T: AsRef<str>>(&self, tenant: T) -> String {
-    format!("{}${}", self.client_id(), tenant.as_ref())
-  }
-
   /// # Returns the cloud provider for the platform
   ///
   /// # Examples
@@ -193,6 +197,40 @@ impl DshPlatform {
   /// ```
   pub fn cloud_provider(&self) -> &CloudProvider {
     &self.cloud_provider
+  }
+
+  /// # Returns the domain of the platform console
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.console_domain(),
+  ///   "console.dsh-dev.dsh.np.aws.kpn.com".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn console_domain(&self) -> String {
+    format!("console.{}", self.public_domain())
+  }
+
+  /// # Returns the url of the platform console
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.console_url(),
+  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn console_url(&self) -> String {
+    format!("https://{}", self.console_domain())
   }
 
   /// # Returns a description of the platform
@@ -212,23 +250,6 @@ impl DshPlatform {
     &self.description
   }
 
-  /// # Returns the domain of the platform console
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.domain_console(),
-  ///   "console.dsh-dev.dsh.np.aws.kpn.com".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn domain_console(&self) -> String {
-    format!("console.{}", self.public_domain())
-  }
-
   /// # Returns the internal domain name for a service
   ///
   /// # Examples
@@ -236,83 +257,14 @@ impl DshPlatform {
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.domain_internal_service("my-service"),
+  ///   DshPlatform::try_from("nplz")?.internal_service_domain("my-service"),
   ///   "my-service.marathon.mesos".to_string()
   /// );
   /// # Ok(())
   /// # }
   /// ```
-  pub fn domain_internal_service<T: AsRef<str>>(&self, service: T) -> String {
+  pub fn internal_service_domain<S: AsRef<str>>(&self, service: S) -> String {
     format!("{}.marathon.mesos", service.as_ref())
-  }
-
-  /// # Returns the domain for the DSH Rest API
-  ///
-  /// # Example
-  /// ```
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.domain_rest_api(),
-  ///   "api.dsh-dev.dsh.np.aws.kpn.com".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn domain_rest_api(&self) -> String {
-    format!("api.{}", self.public_domain())
-  }
-
-  /// Returns the endpoint for the DSH Rest API access token
-  ///
-  /// # Example
-  /// ```
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.endpoint_access_token(),
-  ///   "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/dev-lz-dsh/protocol/openid-connect/token"
-  ///     .to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn endpoint_access_token(&self) -> String {
-    format!("{}/{}/protocol/openid-connect/token", self.url_key_cloak(), self.realm())
-  }
-
-  /// Returns the endpoint for fetching an MQTT token
-  ///
-  /// # Example
-  /// ```
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.endpoint_mqtt_token(),
-  ///   "https://api.dsh-dev.dsh.np.aws.kpn.com/datastreams/v0/mqtt/token".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn endpoint_mqtt_token(&self) -> String {
-    format!("https://{}/datastreams/v0/mqtt/token", self.domain_rest_api())
-  }
-
-  /// # Returns the endpoint for the DSH Rest API
-  ///
-  /// # Example
-  /// ```
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.endpoint_rest_api(),
-  ///   "https://api.dsh-dev.dsh.np.aws.kpn.com/resources/v0".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn endpoint_rest_api(&self) -> String {
-    format!("https://{}/resources/v0", self.domain_rest_api())
   }
 
   /// # Returns whether the platform is production
@@ -327,6 +279,40 @@ impl DshPlatform {
   /// ```
   pub fn is_production(&self) -> bool {
     self.is_production
+  }
+
+  /// # Returns the key cloak url for the platform
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.key_cloak_url(),
+  ///   "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth"
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn key_cloak_url(&self) -> &str {
+    &self.key_cloak_url
+  }
+
+  /// Returns the endpoint for fetching an MQTT token
+  ///
+  /// # Example
+  /// ```
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.mqtt_token_endpoint(),
+  ///   "https://api.dsh-dev.dsh.np.aws.kpn.com/datastreams/v0/mqtt/token".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn mqtt_token_endpoint(&self) -> String {
+    format!("https://{}/datastreams/v0/mqtt/token", self.rest_api_domain())
   }
 
   /// # Returns the full platform name
@@ -362,29 +348,6 @@ impl DshPlatform {
     self.private_domain.as_deref()
   }
 
-  /// # Returns the private domain for a vhost
-  ///
-  /// The private domain for a vhost can only be constructed if the optional private domain
-  /// for the platform is defined. If it is not, an `Err` will be returned.
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.private_domain_vhost("my-tenant", "my-vhost")?,
-  ///   "my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn private_domain_vhost<T: AsRef<str>, V: AsRef<str>>(&self, tenant: T, vhost: V) -> Result<String, String> {
-    match self.private_domain() {
-      Some(private_domain) => Ok(format!("{}.{}.{}", vhost.as_ref(), tenant.as_ref(), private_domain)),
-      None => Err(format!("private domain is not set for platform {}", self.name())),
-    }
-  }
-
   /// # Returns the domain used for public vhosts
   ///
   /// # Examples
@@ -402,40 +365,6 @@ impl DshPlatform {
     &self.public_domain
   }
 
-  /// # Returns the public domain for an app
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.public_domain_app("my-tenant", "my-app-vhost"),
-  ///   "my-app-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn public_domain_app<T: AsRef<str>, A: AsRef<str>>(&self, tenant: T, app: A) -> String {
-    format!("{}.{}", app.as_ref(), self.public_domain_apps(tenant))
-  }
-
-  /// # Returns the public domain for apps
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.public_domain_apps("my-tenant"),
-  ///   "my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn public_domain_apps<T: AsRef<str>>(&self, tenant: T) -> String {
-    format!("{}.{}", tenant.as_ref(), self.public_domain())
-  }
-
   /// # Returns the public domain for a vhost
   ///
   /// # Examples
@@ -443,13 +372,13 @@ impl DshPlatform {
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.public_domain_vhost("my-vhost"),
+  ///   DshPlatform::try_from("nplz")?.public_vhost_domain("my-vhost"),
   ///   "my-vhost.dsh-dev.dsh.np.aws.kpn.com".to_string()
   /// );
   /// # Ok(())
   /// # }
   /// ```
-  pub fn public_domain_vhost<V: AsRef<str>>(&self, vhost: V) -> String {
+  pub fn public_vhost_domain<V: AsRef<str>>(&self, vhost: V) -> String {
     format!("{}.{}", vhost.as_ref(), self.public_domain())
   }
 
@@ -465,6 +394,279 @@ impl DshPlatform {
   /// ```
   pub fn realm(&self) -> &str {
     &self.realm
+  }
+
+  /// # Returns the domain for the DSH Rest API
+  ///
+  /// # Example
+  /// ```
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.rest_api_domain(),
+  ///   "api.dsh-dev.dsh.np.aws.kpn.com".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn rest_api_domain(&self) -> String {
+    format!("api.{}", self.public_domain())
+  }
+
+  /// # Returns the endpoint for the DSH Rest API
+  ///
+  /// # Example
+  /// ```
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.rest_api_endpoint(),
+  ///   "https://api.dsh-dev.dsh.np.aws.kpn.com/resources/v0".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn rest_api_endpoint(&self) -> String {
+    format!("https://{}/resources/v0", self.rest_api_domain())
+  }
+
+  /// # Returns the url of the platform swagger page
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.swagger_url(),
+  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/tenant-api/spec?url=/tenant-api/assets/openapi.json".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn swagger_url(&self) -> String {
+    format!("https://{}/tenant-api/spec?url=/tenant-api/assets/openapi.json", self.console_domain())
+  }
+
+  /// # Returns the url of the app in the app catalog for a tenant
+  ///
+  /// Note that this method also requires the `vendor` to be specified.
+  /// This will most likely be `kpn`.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_app_catalog_app_url("my-tenant", "kpn", "my-app"),
+  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/#/profiles/my-tenant/app-catalog/app/kpn%2Fmy-app"
+  ///     .to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_app_catalog_app_url<T: AsRef<str>, V: AsRef<str>, A: AsRef<str>>(&self, tenant: T, vendor: V, app: A) -> String {
+    format!(
+      "https://{}/#/profiles/{}/app-catalog/app/{}%2F{}",
+      self.console_domain(),
+      tenant.as_ref(),
+      vendor.as_ref(),
+      app.as_ref()
+    )
+  }
+
+  /// # Returns the url of the app catalog for a tenant
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_app_catalog_url("my-tenant"),
+  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/#/profiles/my-tenant/app-catalog".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_app_catalog_url<T: AsRef<str>>(&self, tenant: T) -> String {
+    format!("https://{}/#/profiles/{}/app-catalog", self.console_domain(), tenant.as_ref())
+  }
+
+  /// # Returns the url of the platform console for a tenant app
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_app_console_url("my-tenant", "my-app"),
+  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/#/profiles/my-tenant/services/my-app/app"
+  ///     .to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_app_console_url<T: AsRef<str>, A: AsRef<str>>(&self, tenant: T, app: A) -> String {
+    format!("{}/services/{}/app", self.tenant_console_url(tenant.as_ref()), app.as_ref())
+  }
+
+  /// # Returns properly formatted client_id for tenant
+  ///
+  /// # Example
+  /// ```
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_client_id("my-tenant"),
+  ///   "robot$dev-lz-dsh$my-tenant".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_client_id<T: AsRef<str>>(&self, tenant: T) -> String {
+    format!("{}${}", self.client_id(), tenant.as_ref())
+  }
+
+  /// # Returns the url of the platform console for a tenant
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_console_url("my-tenant"),
+  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/#/profiles/my-tenant".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_console_url<T: AsRef<str>>(&self, tenant: T) -> String {
+    format!("{}/#/profiles/{}", self.console_url(), tenant.as_ref())
+  }
+
+  /// # Returns the url of the data catalog for a tenant
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_app_catalog_url("my-tenant"),
+  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/#/profiles/my-tenant/app-catalog".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_data_catalog_url<T: AsRef<str>>(&self, tenant: T) -> String {
+    format!("https://{}/#/profiles/{}/data-catalog", self.console_domain(), tenant.as_ref())
+  }
+
+  /// # Returns the url of the platform monitoring page for a tenant
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_monitoring_url("my-tenant"),
+  ///   "https://monitoring-my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_monitoring_url<T: AsRef<str>>(&self, tenant: T) -> String {
+    format!("https://monitoring-{}.{}", tenant.as_ref(), self.public_domain())
+  }
+
+  /// # Returns the private domain for a vhost
+  ///
+  /// The private domain for a vhost can only be constructed if the optional private domain
+  /// for the platform is defined. If it is not, an `Err` will be returned.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_private_vhost_domain("my-tenant", "my-vhost")?,
+  ///   "my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_private_vhost_domain<T: AsRef<str>, V: AsRef<str>>(&self, tenant: T, vhost: V) -> Result<String, String> {
+    match self.private_domain() {
+      Some(private_domain) => Ok(format!("{}.{}.{}", vhost.as_ref(), tenant.as_ref(), private_domain)),
+      None => Err(format!("private domain is not set for platform {}", self.name())),
+    }
+  }
+
+  /// # Returns the public domain for an app
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_public_app_domain("my-tenant", "my-app-vhost"),
+  ///   "my-app-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_public_app_domain<T: AsRef<str>, A: AsRef<str>>(&self, tenant: T, app: A) -> String {
+    format!("{}.{}", app.as_ref(), self.tenant_public_apps_domain(tenant))
+  }
+
+  /// # Returns the public domain for apps
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_public_apps_domain("my-tenant"),
+  ///   "my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_public_apps_domain<T: AsRef<str>>(&self, tenant: T) -> String {
+    format!("{}.{}", tenant.as_ref(), self.public_domain())
+  }
+
+  /// # Returns the url of the platform console for a tenant and service
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_service_console_url("my-tenant", "cmd"),
+  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/#/profiles/my-tenant/services/cmd/service"
+  ///     .to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_service_console_url<T: AsRef<str>, S: AsRef<str>>(&self, tenant: T, service: S) -> String {
+    format!("{}/services/{}/service", self.tenant_console_url(tenant.as_ref()), service.as_ref())
+  }
+
+  /// # Returns the url of the tracing application
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tracing_url(),
+  ///   "https://tracing.dsh-dev.dsh.np.aws.kpn.com".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tracing_url(&self) -> String {
+    format!("https://tracing.{}", self.public_domain())
   }
 
   /// # Returns the default platform
@@ -501,204 +703,6 @@ impl DshPlatform {
       },
       Err(_) => Err(format!("environment variable {} not set", ENV_VAR_PLATFORM)),
     }
-  }
-
-  /// # Returns the url of the app catalog for a tenant
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.url_app_catalog_tenant("my-tenant"),
-  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/#/profiles/my-tenant/app-catalog".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn url_app_catalog_tenant<T: AsRef<str>>(&self, tenant: T) -> String {
-    format!("https://{}/#/profiles/{}/app-catalog", self.domain_console(), tenant.as_ref())
-  }
-
-  /// # Returns the url of the app in the app catalog for a tenant
-  ///
-  /// Note that this method also requires the `vendor` to be specified.
-  /// This will most likely be `kpn`.
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.url_app_catalog_tenant_app("my-tenant", "kpn", "my-app"),
-  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/#/profiles/my-tenant/app-catalog/app/kpn%2Fmy-app"
-  ///     .to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn url_app_catalog_tenant_app<T: AsRef<str>, V: AsRef<str>, A: AsRef<str>>(&self, tenant: T, vendor: V, app: A) -> String {
-    format!(
-      "https://{}/#/profiles/{}/app-catalog/app/{}%2F{}",
-      self.domain_console(),
-      tenant.as_ref(),
-      vendor.as_ref(),
-      app.as_ref()
-    )
-  }
-
-  /// # Returns the url of the platform console
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.url_console(),
-  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn url_console(&self) -> String {
-    format!("https://{}", self.domain_console())
-  }
-
-  /// # Returns the url of the platform console for a tenant
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.url_console_tenant("my-tenant"),
-  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/#/profiles/my-tenant".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn url_console_tenant<T: AsRef<str>>(&self, tenant: T) -> String {
-    format!("{}/#/profiles/{}", self.url_console(), tenant.as_ref())
-  }
-
-  /// # Returns the url of the platform console for a tenant and app
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.url_console_tenant_app("my-tenant", "cmd"),
-  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/#/profiles/my-tenant/services/cmd/app".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn url_console_tenant_app<T: AsRef<str>, S: AsRef<str>>(&self, tenant: T, service: S) -> String {
-    format!("{}/services/{}/app", self.url_console_tenant(tenant.as_ref()), service.as_ref())
-  }
-
-  /// # Returns the url of the platform console for a tenant and service
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.url_console_tenant_service("my-tenant", "cmd"),
-  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/#/profiles/my-tenant/services/cmd/service"
-  ///     .to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn url_console_tenant_service<T: AsRef<str>, S: AsRef<str>>(&self, tenant: T, service: S) -> String {
-    format!("{}/services/{}/service", self.url_console_tenant(tenant.as_ref()), service.as_ref())
-  }
-
-  /// # Returns the url of the data catalog for a tenant
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.url_app_catalog_tenant("my-tenant"),
-  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/#/profiles/my-tenant/app-catalog".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn url_data_catalog_tenant<T: AsRef<str>>(&self, tenant: T) -> String {
-    format!("https://{}/#/profiles/{}/data-catalog", self.domain_console(), tenant.as_ref())
-  }
-
-  /// # Returns the key cloak url for the platform
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.url_key_cloak(),
-  ///   "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth"
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn url_key_cloak(&self) -> &str {
-    &self.key_cloak_url
-  }
-
-  /// # Returns the url of the platform monitoring page for a tenant
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.url_monitoring_tenant("my-tenant"),
-  ///   "https://monitoring-my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn url_monitoring_tenant<T: AsRef<str>>(&self, tenant: T) -> String {
-    format!("https://monitoring-{}.{}", tenant.as_ref(), self.public_domain())
-  }
-
-  /// # Returns the url of the platform swagger page
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.url_swagger(),
-  ///   "https://console.dsh-dev.dsh.np.aws.kpn.com/tenant-api/spec?url=/tenant-api/assets/openapi.json".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn url_swagger(&self) -> String {
-    format!("https://{}/tenant-api/spec?url=/tenant-api/assets/openapi.json", self.domain_console())
-  }
-
-  /// # Returns the url of the tracing application
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.url_tracing(),
-  ///   "https://tracing.dsh-dev.dsh.np.aws.kpn.com".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn url_tracing(&self) -> String {
-    format!("https://tracing.{}", self.public_domain())
   }
 }
 

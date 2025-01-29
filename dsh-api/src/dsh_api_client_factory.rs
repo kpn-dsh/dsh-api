@@ -111,7 +111,7 @@ impl DshApiClientFactory {
   /// # }
   /// ```
   pub fn create(tenant: DshApiTenant, password: String) -> Result<Self, DshApiError> {
-    Ok(DshApiClientFactory { generated_client: GeneratedClient::new(tenant.platform().endpoint_rest_api().as_str()), tenant, password })
+    Ok(DshApiClientFactory { generated_client: GeneratedClient::new(tenant.platform().rest_api_endpoint().as_str()), tenant, password })
   }
 
   /// # Create default factory for DSH API client
