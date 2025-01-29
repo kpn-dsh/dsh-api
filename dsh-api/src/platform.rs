@@ -66,13 +66,14 @@ lazy_static! {
     match env::var(ENV_VAR_PLATFORMS_FILE_NAME) {
       Ok(platform_file_name_from_env_var) => match fs::read_to_string(&platform_file_name_from_env_var) {
         Ok(platform_list_from_file) => match serde_json::from_str(platform_list_from_file.as_str()) {
-          Ok(dsh_platforms) => {
-            if let Err(validation_error) = check_for_duplicate_names_or_aliases(&dsh_platforms) {
+          Ok(mut dsh_platforms_from_file) => {
+            if let Err(validation_error) = check_for_duplicate_names_or_aliases(&dsh_platforms_from_file) {
               error!("{}", validation_error);
               panic!("{}", validation_error)
             }
+            dsh_platforms_from_file.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
             info!("dsh platform list read from '{}'", platform_file_name_from_env_var);
-            dsh_platforms
+            dsh_platforms_from_file
           },
           Err(parse_error) => {
             let message = format!("invalid platforms file '{}' ({})", platform_file_name_from_env_var, parse_error);
@@ -86,8 +87,9 @@ lazy_static! {
           panic!("{}", message)
         }
       },
-      Err(_) => match serde_json::from_str(DEFAULT_PLATFORMS ) {
-        Ok(default_dsh_platforms) => {
+      Err(_) => match serde_json::from_str::<Vec<DshPlatform>>(DEFAULT_PLATFORMS ) {
+        Ok(mut default_dsh_platforms) => {
+          default_dsh_platforms.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
           debug!("default dsh platform list used");
           default_dsh_platforms
         },
