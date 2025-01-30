@@ -283,7 +283,7 @@ lazy_static! {
 }
 
 fn get_password(tenant: &DshApiTenant) -> Result<String, DshApiError> {
-  let password_file_env_var = password_file_environment_variable(tenant.platform().name(), tenant.name());
+  let password_file_env_var = password_file_environment_variable(tenant.platform(), tenant.name());
   match env::var(&password_file_env_var) {
     Ok(password_file_from_env_var) => match std::fs::read_to_string(&password_file_from_env_var) {
       Ok(password_from_file) => {
@@ -300,7 +300,7 @@ fn get_password(tenant: &DshApiTenant) -> Result<String, DshApiError> {
       ))),
     },
     Err(_) => {
-      let password_env_var = password_environment_variable(tenant.platform().name(), tenant.name());
+      let password_env_var = password_environment_variable(tenant.platform(), tenant.name());
       match env::var(&password_env_var) {
         Ok(password_from_env_var) => Ok(password_from_env_var),
         Err(_) => Err(DshApiError::Configuration(format!("environment variable {} not set", password_env_var))),

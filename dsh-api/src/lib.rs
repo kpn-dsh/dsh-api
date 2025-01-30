@@ -65,6 +65,15 @@
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! ## Features
+//!
+//! The following features are defined:
+//!
+//! * `actual` - When this feature is enabled the library will include all the "actual"
+//!   method versions of the REST API. By default, these methods will not be included.
+//! * `generic` - When this feature is enabled the library will also include the generic methods.
+//!   This feature is disabled by default.
 
 /// # Types generated from openapi file
 pub use crate::generated::types;
@@ -73,12 +82,15 @@ pub(crate) mod generated {
   include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 }
 
+/// Openapi specification version 1.9.0
 pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/openapi.json"));
 
+/// Specification of default platforms
 pub static DEFAULT_PLATFORMS: &str = include_str!("../default-platforms.json");
 
 use dsh_sdk::error::DshRestTokenError;
 
+use crate::platform::DshPlatform;
 use log::{debug, error};
 use reqwest::Error as ReqwestError;
 use serde::{Deserialize, Serialize};
@@ -167,6 +179,7 @@ pub enum UsedBy {
   Application(String, u64, Vec<Injection>),
 }
 
+/// Enumeration of the recognized api errors
 #[derive(Debug)]
 pub enum DshApiError {
   Configuration(String),
@@ -176,6 +189,7 @@ pub enum DshApiError {
   Unexpected(String, Option<Box<dyn StdError + Send + Sync>>),
 }
 
+/// Generic result type
 pub type DshApiResult<T> = Result<T, DshApiError>;
 
 impl Display for Injection {
@@ -296,10 +310,10 @@ impl From<DshApiError> for String {
 /// Environment variable used to specify the name of a file with an alternative list of platforms
 pub const ENV_VAR_PLATFORMS_FILE_NAME: &str = "DSH_API_PLATFORMS_FILE";
 
-/// Environment variable used to define the target platform.
+/// Environment variable used to define the target platform
 pub const ENV_VAR_PLATFORM: &str = "DSH_API_PLATFORM";
 
-/// Environment variable used to define the client tenant.
+/// Environment variable used to define the client tenant
 pub const ENV_VAR_TENANT: &str = "DSH_API_TENANT";
 
 pub(crate) const ENV_VAR_PREFIX_PASSWORD: &str = "DSH_API_PASSWORD";
@@ -315,7 +329,7 @@ pub(crate) const ENV_VAR_PREFIX_GUID: &str = "DSH_API_GUID";
 /// `-` will be replaced by `_`.
 ///
 /// # Parameters
-/// * `platform_name` - target's platform name
+/// * `platform` - target platform
 /// * `tenant_name` - client tenant name
 ///
 /// # Returns
@@ -323,16 +337,21 @@ pub(crate) const ENV_VAR_PREFIX_GUID: &str = "DSH_API_GUID";
 ///
 /// # Example
 /// ```
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use dsh_api::password_environment_variable;
+/// use dsh_api::platform::DshPlatform;
 ///
-/// let env_var = password_environment_variable("np-aws-lz-dsh", "my-tenant");
+/// let env_var =
+///   password_environment_variable(&DshPlatform::try_from("np-aws-lz-dsh")?, "my-tenant");
 /// assert_eq!(env_var, "DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT".to_string());
+/// # Ok(())
+/// # }
 /// ```
-pub fn password_environment_variable(platform_name: &str, tenant_name: &str) -> String {
+pub fn password_environment_variable(platform: &DshPlatform, tenant_name: &str) -> String {
   format!(
     "{}_{}_{}",
     ENV_VAR_PREFIX_PASSWORD,
-    platform_name.to_ascii_uppercase().replace('-', "_"),
+    platform.name().to_ascii_uppercase().replace('-', "_"),
     tenant_name.to_ascii_uppercase().replace('-', "_")
   )
 }
@@ -346,7 +365,7 @@ pub fn password_environment_variable(platform_name: &str, tenant_name: &str) -> 
 /// `-` will be replaced by `_`.
 ///
 /// # Parameters
-/// * `platform_name` - target's platform name
+/// * `platform` - target platform
 /// * `tenant_name` - client tenant name
 ///
 /// # Returns
@@ -354,16 +373,21 @@ pub fn password_environment_variable(platform_name: &str, tenant_name: &str) -> 
 ///
 /// # Example
 /// ```
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use dsh_api::password_file_environment_variable;
+/// use dsh_api::platform::DshPlatform;
 ///
-/// let env_var = password_file_environment_variable("np-aws-lz-dsh", "my-tenant");
+/// let env_var =
+///   password_file_environment_variable(&DshPlatform::try_from("np-aws-lz-dsh")?, "my-tenant");
 /// assert_eq!(env_var, "DSH_API_PASSWORD_FILE_NP_AWS_LZ_DSH_MY_TENANT".to_string());
+/// # Ok(())
+/// # }
 /// ```
-pub fn password_file_environment_variable(platform_name: &str, tenant_name: &str) -> String {
+pub fn password_file_environment_variable(platform: &DshPlatform, tenant_name: &str) -> String {
   format!(
     "{}_{}_{}",
     ENV_VAR_PREFIX_PASSWORD_FILE,
-    platform_name.to_ascii_uppercase().replace('-', "_"),
+    platform.name().to_ascii_uppercase().replace('-', "_"),
     tenant_name.to_ascii_uppercase().replace('-', "_")
   )
 }
