@@ -4,6 +4,7 @@ publish = false
 name = "dsh_api_build"
 readme = "README.md"
 edition.workspace = true
+version.workspace = true
 
 [dependencies]
 indoc = "2.0"
