@@ -48,26 +48,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 The following features are defined:
 
-<table>
-    <tr valign="top">
-        <th align="left">feature</th>
-        <th align="left">description</th>
-    </tr>
-    <tr valign="top">
-        <td><code>actual</code></td>
-        <td>
-            When this feature is enabled the library will include all the "actual" 
-            method versions of the REST API. By default, these methods will not be included.
-        </td>
-    </tr>
-    <tr valign="top">
-        <td><code>generic</code></td>
-        <td>
-            When this feature is enabled the library will also include the generic methods.
-            This feature is disabled by default.
-        </td>
-    </tr>
-</table>
+* `actual` - When this feature is enabled the library will include all the "actual"
+  method versions of the REST API. By default, these methods will not be included.
+* `generic` - When this feature is enabled the library will also include the generic methods.
+  This feature is disabled by default.
 
 ---
 
