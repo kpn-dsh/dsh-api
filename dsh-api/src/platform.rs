@@ -87,7 +87,7 @@ lazy_static! {
           panic!("{}", message)
         }
       },
-      Err(_) => match serde_json::from_str::<Vec<DshPlatform>>(DEFAULT_PLATFORMS ) {
+      Err(_) => match serde_json::from_str::<Vec<DshPlatform>>(DEFAULT_PLATFORMS) {
         Ok(mut default_dsh_platforms) => {
           default_dsh_platforms.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
           debug!("default dsh platform list used");
