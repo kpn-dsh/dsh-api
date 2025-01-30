@@ -141,15 +141,18 @@ async fn main() -> DshApiResult<()> {
 
 ## Environment variables
 
-All library functions need at least the following parameters to run:
+Most library functions need at least the following parameters to run:
 
 * platform - the platform that the resources reside on,
-* tenant - this is the tenant that is making the function calls, needed for A&A,
+* tenant - this is the tenant that is making the function calls,
+  needed for authentication and authorization,
 * group and user id - needed for some special occasions,
 * the rest api password for the tenant on the platform.
 
 These parameters can be provided explicitly when creating an `DshApiClientFactory` object
 (see "More elaborate example"), or they can be provided via environment variables.
+In the latter case, the library functions use their default implementations and the library
+gets the default value from the environment variables decribed below.
 
 <table>
     <tr valign="top">
@@ -245,7 +248,7 @@ These parameters can be provided explicitly when creating an `DshApiClientFactor
             of the alternative platforms file. It can either be an absolute file name, 
             or a relative file name from the working directory of your application. 
             When this environment variable is set, the normal list of default platforms 
-            will <em>not</em> be included. If you need these to, make sure that you also 
+            will <em>not</em> be included. If you need these too, make sure that you also 
             include the default platforms in your platforms file.
             The default platforms file can be found 
             <a href="dsh-api/default-platforms.json">here</a>.
@@ -264,8 +267,12 @@ These parameters can be provided explicitly when creating an `DshApiClientFactor
   },
   ...
 ]
-</pre>
-</td>
+            </pre>
+            All these values are mandatory for each defined platform, 
+            except <code>private-domain</code>. 
+            When a private domain is not specified for a platform, 
+            do not include the attribute in the json object.
+        </td>
 </tr>
 </table>
 
@@ -282,26 +289,10 @@ E.g., for tenant `my-tenant` (gid/uid `1234`) at platform `np-aws-lz-dsh`, use:
 
 The following features are defined:
 
-<table>
-    <tr valign="top">
-        <th align="left">feature</th>
-        <th align="left">description</th>
-    </tr>
-    <tr valign="top">
-        <td><code>actual</code></td>
-        <td>
-            When this feature is enabled the library will include all the "actual" 
-            method versions of the REST API. By default, these methods will not be included.
-        </td>
-    </tr>
-    <tr valign="top">
-        <td><code>generic</code></td>
-        <td>
-            When this feature is enabled the library will also include the generic methods 
-            as described in "Generic api example".
-        </td>
-    </tr>
-</table>
+* `actual` - When this feature is enabled the library will include all the "actual"
+  method versions of the REST API. By default, these methods will not be included.
+* `generic` - When this feature is enabled the library will also include the generic methods.
+  This feature is disabled by default.
 
 ## Coding guidelines
 
