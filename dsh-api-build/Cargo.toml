@@ -1,6 +1,5 @@
 # dsh-api-build
 [package]
-publish = false
 name = "dsh_api_build_helpers"
 readme = "README_CRATES_IO.md"
 edition.workspace = true
