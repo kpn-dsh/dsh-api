@@ -70,7 +70,7 @@ impl DshApiClientFactory {
   /// # async fn hide() {
   /// let client_factory = DshApiClientFactory::new();
   /// if let Ok(client) = client_factory.client().await {
-  ///   println!("rest api version is {}", client.api_version());
+  ///   println!("tenant is {}", client.tenant());
   /// }
   /// # }
   /// ```
@@ -106,7 +106,7 @@ impl DshApiClientFactory {
   /// let tenant = DshApiTenant::from_tenant("my-tenant".to_string())?;
   /// let client_factory = DshApiClientFactory::create(tenant, password)?;
   /// let client = client_factory.client().await?;
-  /// println!("rest api version is {}", client.api_version());
+  /// println!("tenant is {}", client.tenant());
   /// # Ok(())
   /// # }
   /// ```
@@ -130,7 +130,7 @@ impl DshApiClientFactory {
   /// # async fn hide() -> Result<(), DshApiError> {
   /// let client_factory = DshApiClientFactory::try_default()?;
   /// let client = client_factory.client().await?;
-  /// println!("rest api version is {}", client.api_version());
+  /// println!("tenant is {}", client.tenant());
   /// # Ok(())
   /// # }
   /// ```
@@ -186,7 +186,7 @@ impl DshApiClientFactory {
   /// # async fn hide() -> Result<(), DshApiError> {
   /// let client_factory = DshApiClientFactory::new();
   /// match client_factory.client().await {
-  ///   Ok(client) => println!("rest api version is {}", client.api_version()),
+  ///   Ok(client) => println!("tenant is {}", client.tenant()),
   ///   Err(error) => println!("could not create client ({})", error),
   /// }
   /// # Ok(())
@@ -241,7 +241,7 @@ lazy_static! {
   /// # async fn hide() -> Result<(), DshApiError> {
   /// let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
   /// let client = client_factory.client().await?;
-  /// println!("rest api version is {}", client.api_version());
+  /// println!("tenant is {}", client.tenant());
   /// # Ok(())
   /// # }
   /// ```
@@ -272,7 +272,7 @@ lazy_static! {
   /// match try_factory {
   ///   Ok(factory) => {
   ///     let client = factory.client().await?;
-  ///     println!("rest api version is {}", client.api_version());
+  ///     println!("tenant is {}", client.tenant());
   ///   },
   ///   Err(error) => println!("could not create client factory: {}", error)
   /// }
