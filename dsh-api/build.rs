@@ -1,6 +1,6 @@
-use dsh_api_build::generate_client::generate_client;
-use dsh_api_build::generate_generic::generate_generic;
-use dsh_api_build::update_openapi::update_openapi;
+use dsh_api_build_helpers::generate_client::generate_client;
+use dsh_api_build_helpers::generate_generic::generate_generic;
+use dsh_api_build_helpers::update_openapi::update_openapi;
 use openapiv3::OpenAPI;
 use std::error::Error;
 use std::fs;

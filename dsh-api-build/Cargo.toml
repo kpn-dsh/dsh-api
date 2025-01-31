@@ -1,10 +1,17 @@
 # dsh-api-build
 [package]
 publish = false
-name = "dsh_api_build"
-readme = "README.md"
+name = "dsh_api_build_helpers"
+readme = "README_CRATES_IO.md"
 edition.workspace = true
 version.workspace = true
+authors.workspace = true
+description.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 indoc = "2.0"
