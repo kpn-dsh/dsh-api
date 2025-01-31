@@ -6,6 +6,8 @@ mod common;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+  env_logger::init();
+
   let _secret_id = "boss-account-ids";
 
   let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;

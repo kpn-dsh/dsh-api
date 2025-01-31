@@ -1,6 +1,7 @@
 # dsh-api
 [package]
 name = "dsh_api"
+readme = "README_CRATES_IO.md"
 authors.workspace = true
 description.workspace = true
 edition.workspace = true
@@ -11,13 +12,18 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
 actual = []
+generic = ["dep:erased-serde"]
 
 [dependencies]
 bytes = "1"
 chrono = { version = "0.4", features = ["serde"] }
 dsh_sdk = { version = "0.4", features = ["rest-token-fetcher"], default-features = false }
+erased-serde = { version = "0.4", optional = true }
 futures = "0.3"
 itertools = "0.13"
 lazy_static = "1"
@@ -30,11 +36,13 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [dev-dependencies]
+env_logger = "0.11"
+serde_yaml = "0.9.33"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
+toml = { version = "0.8", features = ["display"] }
 
 [build-dependencies]
-prettyplease = "0.1"
-progenitor = "0.7"
+dsh_api_build_helpers = "0.4.0"
+openapiv3 = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-syn = "1"

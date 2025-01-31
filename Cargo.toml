@@ -1,7 +1,8 @@
 # root
 [workspace]
 members = [
-    "dsh-api"
+    "dsh-api",
+    "dsh-api-build"
 ]
 resolver = "2"
 
@@ -15,4 +16,4 @@ keywords = ["kpn", "dsh", "rest", "api", "client"]
 license = "Apache-2.0"
 repository = "https://github.com/kpn-dsh/dsh-api"
 rust-version = "1.77.2"
-version = "0.3.1"
+version = "0.4.0"

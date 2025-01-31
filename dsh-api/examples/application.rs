@@ -8,37 +8,17 @@ use std::collections::HashMap;
 #[path = "common.rs"]
 mod common;
 
-// create_application
-// delete_application
-// find_application_ids_with_derived_tasks *
-// get_application *
-// get_application_actual_configuration *
-// get_application_allocation_status *
-// get_application_task *
-// get_application_task_allocation_status *
-// get_application_task_state *
-// get_applications *
-// list_application_derived_task_ids *
-
-// find_applications
-// find_applications_that_use_secret
-// list_application_allocation_statuses
-// list_application_ids
-// list_applications
-// list_applications_with_secret_injections
-
-const APPLICATION_ID: &str = "keyring-dev";
+const APPLICATION_ID: &str = "my-application";
 const TASK_ID: &str = "974cf8b68-smlmg-00000000";
-const SECRET: &str = "greenbox_backend_password";
+const SECRET: &str = "backend_password";
 
 #[tokio::main]
+
 async fn main() -> Result<(), String> {
+  env_logger::init();
+
   let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
   let client = client_factory.client().await?;
-
-  // create_application
-
-  // delete_application
 
   print_header("find_application_ids_with_derived_tasks");
   let mut applications_with_tasks: Vec<String> = client.list_application_ids_with_derived_tasks().await?;
@@ -156,7 +136,7 @@ async fn main() -> Result<(), String> {
   }
 
   print_header("list_applications_that_match_a_query");
-  let query_processor = RegexQueryProcessor::create("greenbox-dev").unwrap();
+  let query_processor = RegexQueryProcessor::create("level").unwrap();
   let applications: Vec<(String, Application, Vec<(String, Vec<Part>)>)> = client.find_applications_that_use_env_value(&query_processor).await?;
   for (application_id, application, matches) in applications {
     println!("{} -> {}", application_id, application.cpus);

@@ -6,15 +6,16 @@ use crate::platform::DshPlatform;
 use crate::types::error::ConversionError;
 use crate::{DshApiError, OPENAPI_SPEC};
 use bytes::Bytes;
+use dsh_sdk::RestTokenFetcher;
 use futures::TryStreamExt;
 use progenitor_client::{ByteStream, Error as ProgenitorError, ResponseValue as ProgenitorResponseValue};
 use reqwest::StatusCode as ReqwestStatusCode;
 use serde::Serialize;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
 pub struct DshApiClient<'a> {
-  token: String,
+  token_fetcher: RestTokenFetcher,
   pub(crate) generated_client: &'a GeneratedClient,
   tenant: &'a DshApiTenant,
 }
@@ -30,11 +31,12 @@ pub(crate) enum DshApiResponseStatus {
 pub(crate) type DshApiProcessResult<T> = Result<(DshApiResponseStatus, T), DshApiError>;
 
 impl<'a> DshApiClient<'a> {
-  pub fn new(token: String, generated_client: &'a GeneratedClient, tenant: &'a DshApiTenant) -> Self {
-    Self { token, generated_client, tenant }
+  pub fn new(token_fetcher: RestTokenFetcher, generated_client: &'a GeneratedClient, tenant: &'a DshApiTenant) -> Self {
+    Self { token_fetcher, generated_client, tenant }
   }
 
   /// # Returns the version of the openapi spec
+  #[deprecated(since = "0.4.0", note = "please use `dsh_api::api_version()` method instead")]
   pub fn api_version(&self) -> &'static str {
     self.generated_client.api_version()
   }
@@ -61,18 +63,37 @@ impl<'a> DshApiClient<'a> {
 
   pub(crate) fn process<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
   where
-    T: Serialize,
+    T: Debug + Serialize,
   {
     match progenitor_response {
-      Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => Ok((DshApiResponseStatus::from(response.status()), response.into_inner())),
-      Err(progenitor_error) => Err(DshApiError::from(progenitor_error)),
+      Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => {
+        let status = DshApiResponseStatus::from(response.status());
+        let response = response.into_inner();
+        log::debug!("response / {} / {:?}", status, response);
+        Ok((status, response))
+      }
+      Err(progenitor_error) => {
+        log::debug!("progenitor error: {}", progenitor_error);
+        Err(DshApiError::from(progenitor_error))
+      }
     }
   }
 
-  pub(crate) fn process_raw<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T> {
+  pub(crate) fn process_raw<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
+  where
+    T: Debug,
+  {
     match progenitor_response {
-      Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => Ok((DshApiResponseStatus::from(response.status()), response.into_inner())),
-      Err(progenitor_error) => Err(DshApiError::from(progenitor_error)),
+      Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => {
+        let status = DshApiResponseStatus::from(response.status());
+        let response = response.into_inner();
+        log::debug!("raw response / {} / {:?}", status, response);
+        Ok((status, response))
+      }
+      Err(progenitor_error) => {
+        log::debug!("progenitor error: {}", progenitor_error);
+        Err(DshApiError::from(progenitor_error))
+      }
     }
   }
 
@@ -82,12 +103,16 @@ impl<'a> DshApiClient<'a> {
         let status = DshApiResponseStatus::from(response.status());
         let mut inner = response.into_inner();
         let mut string = String::new();
+        log::debug!("string response / {} / {}", status, string);
         while let Some::<Bytes>(ref bytes) = inner.try_next().await? {
           string.push_str(std::str::from_utf8(bytes)?)
         }
         Ok((status, string))
       }
-      Err(progenitor_error) => Err(DshApiError::from(progenitor_error)),
+      Err(progenitor_error) => {
+        log::debug!("progenitor error: {}", progenitor_error);
+        Err(DshApiError::from(progenitor_error))
+      }
     }
   }
 
@@ -107,8 +132,8 @@ impl<'a> DshApiClient<'a> {
     self.tenant.guid()
   }
 
-  pub fn token(&self) -> &str {
-    &self.token
+  pub async fn token(&self) -> Result<String, DshApiError> {
+    self.token_fetcher.get_token().await.map_err(DshApiError::from)
   }
 }
 

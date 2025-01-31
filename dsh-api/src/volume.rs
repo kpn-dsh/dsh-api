@@ -80,7 +80,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .put_volume_configuration_by_tenant_by_id(self.tenant_name(), volume_id, self.token(), configuration)
+          .put_volume_configuration_by_tenant_by_id(self.tenant_name(), volume_id, self.token().await?.as_str(), configuration)
           .await,
       )
       .map(|(_, result)| result)
@@ -102,7 +102,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .delete_volume_configuration_by_tenant_by_id(self.tenant_name(), volume_id, self.token())
+          .delete_volume_configuration_by_tenant_by_id(self.tenant_name(), volume_id, self.token().await?.as_str())
           .await,
       )
       .map(|(_, result)| result)
@@ -120,7 +120,12 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_volume(&self, volume_id: &str) -> DshApiResult<VolumeStatus> {
     self
-      .process(self.generated_client.get_volume_by_tenant_by_id(self.tenant_name(), volume_id, self.token()).await)
+      .process(
+        self
+          .generated_client
+          .get_volume_by_tenant_by_id(self.tenant_name(), volume_id, self.token().await?.as_str())
+          .await,
+      )
       .map(|(_, result)| result)
   }
 
@@ -139,7 +144,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .get_volume_status_by_tenant_by_id(self.tenant_name(), volume_id, self.token())
+          .get_volume_status_by_tenant_by_id(self.tenant_name(), volume_id, self.token().await?.as_str())
           .await,
       )
       .map(|(_, result)| result)
@@ -160,7 +165,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .get_volume_configuration_by_tenant_by_id(self.tenant_name(), volume_id, self.token())
+          .get_volume_configuration_by_tenant_by_id(self.tenant_name(), volume_id, self.token().await?.as_str())
           .await,
       )
       .map(|(_, result)| result)
@@ -182,7 +187,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .get_volume_actual_by_tenant_by_id(self.tenant_name(), volume_id, self.token())
+          .get_volume_actual_by_tenant_by_id(self.tenant_name(), volume_id, self.token().await?.as_str())
           .await,
       )
       .map(|(_, result)| result)
@@ -197,7 +202,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_volume_ids(&self) -> DshApiResult<Vec<String>> {
     let mut volume_ids: Vec<String> = self
-      .process(self.generated_client.get_volume_by_tenant(self.tenant_name(), self.token()).await)
+      .process(self.generated_client.get_volume_by_tenant(self.tenant_name(), self.token().await?.as_str()).await)
       .map(|(_, result)| result)
       .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
     volume_ids.sort();

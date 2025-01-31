@@ -6,6 +6,8 @@ const TASK_ID: &str = "8f4b5747-lnmj4-00000000";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+  env_logger::init();
+
   let application_id = SERVICE_ID;
   let task_id = TASK_ID;
 

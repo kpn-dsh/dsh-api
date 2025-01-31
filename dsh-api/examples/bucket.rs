@@ -6,24 +6,14 @@ use std::collections::HashMap;
 #[path = "common.rs"]
 mod common;
 
-// delete_bucket(bucket_id)
-// get_bucket(bucket_id)
-// get_bucket_actual_configuration(bucket_id)
-// get_bucket_allocation_status(bucket_id)
-// get_bucket_configuration(bucket_id)
-// get_buckets()
-// list_bucket_ids()
-// list_buckets()
-// update_bucket(bucket_id, bucket)
-
 #[tokio::main]
 async fn main() -> Result<(), String> {
+  env_logger::init();
+
   let bucket_id = "schema-registry";
 
   let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
   let client = client_factory.client().await?;
-
-  // delete_bucket(bucket_id)
 
   print_header("get_bucket");
   let bucket: BucketStatus = client.get_bucket(bucket_id).await?;
@@ -61,8 +51,6 @@ async fn main() -> Result<(), String> {
   for (bucket_id, bucket) in buckets {
     println!("{} -> {}", bucket_id, bucket);
   }
-
-  // update_bucket(bucket_id)
 
   Ok(())
 }

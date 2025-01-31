@@ -86,7 +86,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .put_certificate_configuration_by_tenant_by_id(self.tenant_name(), certificate_id, self.token(), &certificate)
+          .put_certificate_configuration_by_tenant_by_id(self.tenant_name(), certificate_id, self.token().await?.as_str(), &certificate)
           .await,
       )
       .map(|(_, result)| result)
@@ -108,7 +108,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .delete_certificate_configuration_by_tenant_by_id(self.tenant_name(), certificate_id, self.token())
+          .delete_certificate_configuration_by_tenant_by_id(self.tenant_name(), certificate_id, self.token().await?.as_str())
           .await,
       )
       .map(|(_, result)| result)
@@ -129,7 +129,7 @@ impl DshApiClient<'_> {
       .process_raw(
         self
           .generated_client
-          .get_certificate_by_tenant_by_id(self.tenant_name(), certificate_id, self.token())
+          .get_certificate_by_tenant_by_id(self.tenant_name(), certificate_id, self.token().await?.as_str())
           .await,
       )
       .map(|(_, result)| result)
@@ -151,7 +151,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .get_certificate_actual_by_tenant_by_id(self.tenant_name(), certificate_id, self.token())
+          .get_certificate_actual_by_tenant_by_id(self.tenant_name(), certificate_id, self.token().await?.as_str())
           .await,
       )
       .map(|(_, result)| result)
@@ -172,7 +172,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .get_certificate_status_by_tenant_by_id(self.tenant_name(), certificate_id, self.token())
+          .get_certificate_status_by_tenant_by_id(self.tenant_name(), certificate_id, self.token().await?.as_str())
           .await,
       )
       .map(|(_, result)| result)
@@ -193,7 +193,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .get_certificate_configuration_by_tenant_by_id(self.tenant_name(), certificate_id, self.token())
+          .get_certificate_configuration_by_tenant_by_id(self.tenant_name(), certificate_id, self.token().await?.as_str())
           .await,
       )
       .map(|(_, result)| result)
@@ -277,7 +277,12 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_certificate_ids(&self) -> DshApiResult<Vec<String>> {
     let mut certificate_ids: Vec<String> = self
-      .process(self.generated_client.get_certificate_by_tenant(self.tenant_name(), self.token()).await)
+      .process(
+        self
+          .generated_client
+          .get_certificate_by_tenant(self.tenant_name(), self.token().await?.as_str())
+          .await,
+      )
       .map(|(_, result)| result)
       .map(|certificate_ids| certificate_ids.iter().map(|certificate_id| certificate_id.to_string()).collect())?;
     certificate_ids.sort();

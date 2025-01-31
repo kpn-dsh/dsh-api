@@ -50,7 +50,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .delete_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token())
+          .delete_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token().await?.as_str())
           .await,
       )
       .map(|(_, result)| result)
@@ -71,7 +71,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .get_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token())
+          .get_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token().await?.as_str())
           .await,
       )
       .map(|(_, result)| result)
@@ -86,7 +86,12 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn get_proxy_ids(&self) -> DshApiResult<Vec<String>> {
     let mut proxy_ids: Vec<String> = self
-      .process(self.generated_client.get_kafkaproxy_by_tenant(self.tenant_name(), self.token()).await)
+      .process(
+        self
+          .generated_client
+          .get_kafkaproxy_by_tenant(self.tenant_name(), self.token().await?.as_str())
+          .await,
+      )
       .map(|(_, result)| result)
       .map(|proxy_ids| proxy_ids.iter().map(|proxy_id| proxy_id.to_string()).collect())?;
     proxy_ids.sort();
@@ -110,7 +115,7 @@ impl DshApiClient<'_> {
       .process(
         self
           .generated_client
-          .put_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token(), &proxy)
+          .put_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token().await?.as_str(), &proxy)
           .await,
       )
       .map(|(_, result)| result)
