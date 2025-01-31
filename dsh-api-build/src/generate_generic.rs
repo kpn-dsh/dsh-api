@@ -1,3 +1,5 @@
+//! Generate the generic client code
+
 use crate::PathElement;
 use indoc::formatdoc;
 use itertools::Itertools;
@@ -533,15 +535,15 @@ impl GenericOperation {
       .collect::<Vec<_>>();
     if let Some(ref request_body_type) = self.request_body {
       match request_body_type {
-        RequestBodyType::String => parameters.push(
-          "serde_json::from_str::<String>(body.unwrap().into().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid String\".to_string()))?.to_string()"
-            .to_string(),
-        ),
-        RequestBodyType::SerializableType(serializable_type) => parameters.push(format!(
-          "&serde_json::from_str::<{}>(body.unwrap().into().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid {}\".to_string()))?",
-          serializable_type, serializable_type
-        )),
-      }
+                RequestBodyType::String => parameters.push(
+                    "serde_json::from_str::<String>(body.unwrap().into().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid String\".to_string()))?.to_string()"
+                        .to_string(),
+                ),
+                RequestBodyType::SerializableType(serializable_type) => parameters.push(format!(
+                    "&serde_json::from_str::<{}>(body.unwrap().into().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid {}\".to_string()))?",
+                    serializable_type, serializable_type
+                )),
+            }
     }
     let number_of_expected_parameters = if self.request_body.is_none() { parameters.len() as i64 - 1 } else { parameters.len() as i64 - 2 };
     let (parameter_length_check, wrong_parameter_length_error) = match number_of_expected_parameters {

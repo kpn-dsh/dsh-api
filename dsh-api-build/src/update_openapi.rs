@@ -1,3 +1,10 @@
+//! Update the openapi specification
+//!
+//! This method will make the following (in place) updates to an `OpenApi` object:
+//! * Add authorization header to each operation
+//! * Add operation id to each operation
+//! * Add a description
+
 use crate::{OpenApiOperation, PathElement};
 use openapiv3::{OpenAPI, Operation, Parameter, ParameterData, ParameterSchemaOrContent, ReferenceOr};
 

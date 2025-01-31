@@ -1,3 +1,5 @@
+//! Generate Progenitor client from an openapi specification
+
 use progenitor::GenerationSettings;
 use std::io::Write;
 
