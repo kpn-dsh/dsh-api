@@ -87,6 +87,7 @@ impl DshApiClient<'_> {
           .delete_bucket_configuration_by_tenant_by_id(self.tenant_name(), bucket_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -108,6 +109,7 @@ impl DshApiClient<'_> {
           .get_bucket_by_tenant_by_id(self.tenant_name(), bucket_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -130,6 +132,7 @@ impl DshApiClient<'_> {
           .get_bucket_actual_by_tenant_by_id(self.tenant_name(), bucket_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -151,6 +154,7 @@ impl DshApiClient<'_> {
           .get_bucket_status_by_tenant_by_id(self.tenant_name(), bucket_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -172,6 +176,7 @@ impl DshApiClient<'_> {
           .get_bucket_configuration_by_tenant_by_id(self.tenant_name(), bucket_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -185,6 +190,7 @@ impl DshApiClient<'_> {
   pub async fn list_bucket_ids(&self) -> DshApiResult<Vec<String>> {
     let mut bucket_ids: Vec<String> = self
       .process(self.generated_client.get_bucket_by_tenant(self.tenant_name(), self.token().await?.as_str()).await)
+      .await
       .map(|(_, result)| result)
       .map(|bucket_ids| bucket_ids.iter().map(|bucket_id| bucket_id.to_string()).collect())?;
     bucket_ids.sort();
@@ -234,6 +240,7 @@ impl DshApiClient<'_> {
           .put_bucket_configuration_by_tenant_by_id(self.tenant_name(), bucket_id, self.token().await?.as_str(), &bucket)
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 }

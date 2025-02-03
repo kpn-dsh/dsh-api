@@ -44,6 +44,7 @@ impl DshApiClient<'_> {
           .put_appcatalog_appcatalogapp_configuration_by_tenant_by_appcatalogappid(self.tenant_name(), app_catalog_id, self.token().await?.as_str(), body)
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -66,6 +67,7 @@ impl DshApiClient<'_> {
           .delete_appcatalog_appcatalogapp_configuration_by_tenant_by_appcatalogappid(self.tenant_name(), app_catalog_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -87,6 +89,7 @@ impl DshApiClient<'_> {
           .get_appcatalog_appcatalogapp_status_by_tenant_by_appcatalogappid(self.tenant_name(), app_catalog_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -108,6 +111,7 @@ impl DshApiClient<'_> {
           .get_appcatalog_appcatalogapp_configuration_by_tenant_by_appcatalogappid(self.tenant_name(), app_catalog_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 }

@@ -83,6 +83,7 @@ impl DshApiClient<'_> {
           .put_volume_configuration_by_tenant_by_id(self.tenant_name(), volume_id, self.token().await?.as_str(), configuration)
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -105,6 +106,7 @@ impl DshApiClient<'_> {
           .delete_volume_configuration_by_tenant_by_id(self.tenant_name(), volume_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -126,6 +128,7 @@ impl DshApiClient<'_> {
           .get_volume_by_tenant_by_id(self.tenant_name(), volume_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -147,6 +150,7 @@ impl DshApiClient<'_> {
           .get_volume_status_by_tenant_by_id(self.tenant_name(), volume_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -168,6 +172,7 @@ impl DshApiClient<'_> {
           .get_volume_configuration_by_tenant_by_id(self.tenant_name(), volume_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -190,6 +195,7 @@ impl DshApiClient<'_> {
           .get_volume_actual_by_tenant_by_id(self.tenant_name(), volume_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -203,6 +209,7 @@ impl DshApiClient<'_> {
   pub async fn list_volume_ids(&self) -> DshApiResult<Vec<String>> {
     let mut volume_ids: Vec<String> = self
       .process(self.generated_client.get_volume_by_tenant(self.tenant_name(), self.token().await?.as_str()).await)
+      .await
       .map(|(_, result)| result)
       .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
     volume_ids.sort();

@@ -91,6 +91,7 @@ impl DshApiClient<'_> {
           .post_secret_by_tenant(self.tenant_name(), self.token().await?.as_str(), secret)
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -113,6 +114,7 @@ impl DshApiClient<'_> {
           .delete_secret_configuration_by_tenant_by_id(self.tenant_name(), secret_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -157,6 +159,7 @@ impl DshApiClient<'_> {
           .get_secret_actual_by_tenant_by_id(self.tenant_name(), secret_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -178,6 +181,7 @@ impl DshApiClient<'_> {
           .get_secret_status_by_tenant_by_id(self.tenant_name(), secret_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -200,6 +204,7 @@ impl DshApiClient<'_> {
           // .secret_get_by_tenant_secret_by_id_configuration(self.tenant_name(), secret_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -235,6 +240,7 @@ impl DshApiClient<'_> {
   pub async fn list_secret_ids(&self) -> DshApiResult<Vec<String>> {
     let mut secret_ids: Vec<String> = self
       .process(self.generated_client.get_secret_by_tenant(self.tenant_name(), self.token().await?.as_str()).await)
+      .await
       .map(|(_, result)| result)
       .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
     secret_ids.sort();
@@ -287,6 +293,7 @@ impl DshApiClient<'_> {
           .put_secret_by_tenant_by_id(self.tenant_name(), secret_id, self.token().await?.as_str(), secret)
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 }

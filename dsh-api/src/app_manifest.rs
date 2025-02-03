@@ -59,6 +59,7 @@ impl DshApiClient<'_> {
           .get_appcatalog_manifest_by_tenant(self.tenant_name(), self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 

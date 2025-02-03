@@ -51,17 +51,7 @@ impl<'a> DshApiClient<'a> {
     OPENAPI_SPEC
   }
 
-  pub(crate) fn _response_wrapper<T>(progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
-  where
-    T: Serialize,
-  {
-    match progenitor_response {
-      Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => Ok((DshApiResponseStatus::from(response.status()), response.into_inner())),
-      Err(progenitor_error) => Err(DshApiError::from(progenitor_error)),
-    }
-  }
-
-  pub(crate) fn process<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
+  pub(crate) async fn process<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
   where
     T: Debug + Serialize,
   {
@@ -74,12 +64,12 @@ impl<'a> DshApiClient<'a> {
       }
       Err(progenitor_error) => {
         log::debug!("progenitor error: {}", progenitor_error);
-        Err(DshApiError::from(progenitor_error))
+        Err(from_progenitor_error(progenitor_error).await)
       }
     }
   }
 
-  pub(crate) fn process_raw<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
+  pub(crate) async fn process_raw<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
   where
     T: Debug,
   {
@@ -92,7 +82,7 @@ impl<'a> DshApiClient<'a> {
       }
       Err(progenitor_error) => {
         log::debug!("progenitor error: {}", progenitor_error);
-        Err(DshApiError::from(progenitor_error))
+        Err(from_progenitor_error(progenitor_error).await)
       }
     }
   }
@@ -111,7 +101,7 @@ impl<'a> DshApiClient<'a> {
       }
       Err(progenitor_error) => {
         log::debug!("progenitor error: {}", progenitor_error);
-        Err(DshApiError::from(progenitor_error))
+        Err(from_progenitor_error(progenitor_error).await)
       }
     }
   }
@@ -167,34 +157,38 @@ impl From<ConversionError> for DshApiError {
   }
 }
 
-impl From<ProgenitorError> for DshApiError {
-  fn from(progenitor_error: ProgenitorError) -> Self {
-    match &progenitor_error {
-      ProgenitorError::InvalidRequest(string) => DshApiError::Unexpected(format!("invalid request ({})", string), Some(Box::new(progenitor_error))),
-      ProgenitorError::CommunicationError(reqwest_error) => {
-        DshApiError::Unexpected(format!("communication error (reqwest error: {})", reqwest_error), Some(Box::new(progenitor_error)))
-      }
-      ProgenitorError::InvalidUpgrade(reqwest_error) => DshApiError::Unexpected(format!("invalid upgrade (reqwest error: {})", reqwest_error), Some(Box::new(progenitor_error))),
-      ProgenitorError::ErrorResponse(progenitor_response_value) => DshApiError::Unexpected(
-        format!("error response (progenitor response value: {:?})", progenitor_response_value),
-        Some(Box::new(progenitor_error)),
-      ),
-      ProgenitorError::ResponseBodyError(reqwest_error) => {
-        DshApiError::Unexpected(format!("response body error (reqwest error: {})", reqwest_error), Some(Box::new(progenitor_error)))
-      }
-      ProgenitorError::InvalidResponsePayload(_bytes, json_error) => {
-        DshApiError::Unexpected(format!("invalid response payload (json error: {})", json_error), Some(Box::new(progenitor_error)))
-      }
-      ProgenitorError::UnexpectedResponse(reqwest_response) => match reqwest_response.status() {
-        ReqwestStatusCode::NOT_FOUND => DshApiError::NotFound,
-        ReqwestStatusCode::UNAUTHORIZED | ReqwestStatusCode::FORBIDDEN | ReqwestStatusCode::METHOD_NOT_ALLOWED => DshApiError::NotAuthorized,
-        other_status_code => DshApiError::Unexpected(
-          format!("unexpected response (status: {}, reqwest response: {:?})", other_status_code, reqwest_response),
-          Some(Box::new(progenitor_error)),
-        ),
-      },
-      ProgenitorError::PreHookError(string) => DshApiError::Unexpected(format!("pre-hook error ({})", string), Some(Box::new(progenitor_error))),
+// async version of impl From<ProgenitorError> for DshApiError
+async fn from_progenitor_error(progenitor_error: ProgenitorError) -> DshApiError {
+  match progenitor_error {
+    ProgenitorError::InvalidRequest(ref string) => DshApiError::Unexpected(format!("invalid request ({})", string), Some(progenitor_error.to_string())),
+    ProgenitorError::CommunicationError(ref reqwest_error) => DshApiError::Unexpected(
+      format!("communication error (reqwest error: {})", reqwest_error),
+      Some(progenitor_error.to_string()),
+    ),
+    ProgenitorError::InvalidUpgrade(ref reqwest_error) => {
+      DshApiError::Unexpected(format!("invalid upgrade (reqwest error: {})", reqwest_error), Some(progenitor_error.to_string()))
     }
+    ProgenitorError::ErrorResponse(ref progenitor_response_value) => DshApiError::Unexpected(
+      format!("error response (progenitor response value: {:?})", progenitor_response_value),
+      Some(progenitor_error.to_string()),
+    ),
+    ProgenitorError::ResponseBodyError(ref reqwest_error) => DshApiError::Unexpected(
+      format!("response body error (reqwest error: {})", reqwest_error),
+      Some(progenitor_error.to_string()),
+    ),
+    ProgenitorError::InvalidResponsePayload(ref _bytes, ref json_error) => {
+      DshApiError::Unexpected(format!("invalid response payload (json error: {})", json_error), Some(progenitor_error.to_string()))
+    }
+    ProgenitorError::UnexpectedResponse(reqwest_response) => match &reqwest_response.status().clone() {
+      &ReqwestStatusCode::BAD_REQUEST => match reqwest_response.text().await {
+        Ok(error_text) => DshApiError::BadRequest(error_text),
+        Err(response_error) => DshApiError::BadRequest(response_error.to_string()),
+      },
+      &ReqwestStatusCode::NOT_FOUND => DshApiError::NotFound,
+      &ReqwestStatusCode::UNAUTHORIZED | &ReqwestStatusCode::FORBIDDEN | &ReqwestStatusCode::METHOD_NOT_ALLOWED => DshApiError::NotAuthorized,
+      other_status_code => DshApiError::Unexpected(format!("unexpected response (status: {}, reqwest response: )", other_status_code), None),
+    },
+    ProgenitorError::PreHookError(string) => DshApiError::Unexpected(format!("pre-hook error ({})", string), None),
   }
 }
 

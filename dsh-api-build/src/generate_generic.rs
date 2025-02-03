@@ -441,14 +441,14 @@ impl ResponseBodyType {
   fn response_mapping(&self, method: &Method) -> &str {
     match method {
       Method::Get => match self {
-        Self::Ids => ".map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
-        Self::Ok(_) => ".map(|(_, result)| result)",
-        Self::SerializableMap(_) => ".map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
-        Self::SerializableScalar(_) => ".map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
-        Self::SerializableVector(_) => ".map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
+        Self::Ids => ".await.map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
+        Self::Ok(_) => ".await.map(|(_, result)| result)",
+        Self::SerializableMap(_) => ".await.map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
+        Self::SerializableScalar(_) => ".await.map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
+        Self::SerializableVector(_) => ".await.map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
         Self::String => ".await.map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
       },
-      _ => ".map(|(_, _)| ())",
+      _ => ".await.map(|(_, _)| ())",
     }
   }
 

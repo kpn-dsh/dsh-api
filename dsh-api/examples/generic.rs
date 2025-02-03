@@ -18,27 +18,27 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
   let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
 
-  print_header("get application_configuration_by_tenant_by_appid");
-  let application = client.get("application-configuration", &[APPLICATION_ID]).await?;
-  print_header("json");
-  println!("{}", serde_json::to_string_pretty(&application)?);
+  // print_header("get application_configuration_by_tenant_by_appid");
+  // let application = client.get("application-configuration", &[APPLICATION_ID]).await?;
+  // print_header("json");
+  // println!("{}", serde_json::to_string_pretty(&application)?);
 
-  print_header("yaml");
-  println!("{}", serde_yaml::to_string(&application)?);
-  print_header("toml");
-  println!("{}", toml::to_string_pretty(&application)?);
+  // print_header("yaml");
+  // println!("{}", serde_yaml::to_string(&application)?);
+  // print_header("toml");
+  // println!("{}", toml::to_string_pretty(&application)?);
 
-  print_header("get secret");
-  let application = client.get("secret", &["aaaa"]).await?;
-  println!("{}", serde_json::to_string_pretty(&application)?);
+  // print_header("get secret");
+  // let application = client.get("secret", &["aaaa"]).await?;
+  // println!("{}", serde_json::to_string_pretty(&application)?);
 
   print_header("post secret");
   let secret = r#"{"name": "secret-name","value": "secret-value"}"#.to_string();
   println!("{:#?}", client.post("secret", &[], Some(secret)).await?);
 
-  print_header("put secret");
-  let secret = serde_json::to_string("ABCDEF")?;
-  client.put("secret", &["abcdef"], Some(secret)).await?;
+  // print_header("put secret");
+  // let secret = serde_json::to_string("ABCDEF")?;
+  // client.put("secret", &["abcdef"], Some(secret)).await?;
 
   Ok(())
 }

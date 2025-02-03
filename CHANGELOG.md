@@ -4,6 +4,12 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.4.1]
+
+### Changed
+
+* Improved error handling for bad requests.
+
 ## [0.4.0]
 
 ### Breaking change

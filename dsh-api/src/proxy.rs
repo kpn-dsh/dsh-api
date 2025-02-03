@@ -53,6 +53,7 @@ impl DshApiClient<'_> {
           .delete_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -74,6 +75,7 @@ impl DshApiClient<'_> {
           .get_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -92,6 +94,7 @@ impl DshApiClient<'_> {
           .get_kafkaproxy_by_tenant(self.tenant_name(), self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
       .map(|proxy_ids| proxy_ids.iter().map(|proxy_id| proxy_id.to_string()).collect())?;
     proxy_ids.sort();
@@ -118,6 +121,7 @@ impl DshApiClient<'_> {
           .put_kafkaproxy_configuration_by_tenant_by_id(self.tenant_name(), proxy_id, self.token().await?.as_str(), &proxy)
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 }

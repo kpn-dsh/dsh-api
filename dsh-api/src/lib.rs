@@ -182,11 +182,12 @@ pub enum UsedBy {
 /// Enumeration of the recognized api errors
 #[derive(Debug)]
 pub enum DshApiError {
+  BadRequest(String),
   Configuration(String),
   NotAuthorized,
   NotFound,
   Parameter(String),
-  Unexpected(String, Option<Box<dyn StdError + Send + Sync>>),
+  Unexpected(String, Option<String>),
 }
 
 /// Generic result type
@@ -223,27 +224,18 @@ impl Display for UsedBy {
   }
 }
 
-impl StdError for DshApiError {
-  fn source(&self) -> Option<&(dyn StdError + 'static)> {
-    match self {
-      Self::Configuration(_) => None,
-      Self::NotAuthorized => None,
-      Self::NotFound => None,
-      Self::Parameter(_) => None,
-      Self::Unexpected(_, source) => source.as_deref()?.source(),
-    }
-  }
-}
+impl StdError for DshApiError {}
 
 impl Display for DshApiError {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
+      DshApiError::BadRequest(message) => write!(f, "{}", message),
       DshApiError::Configuration(message) => write!(f, "{}", message),
       DshApiError::NotAuthorized => write!(f, "not authorized"),
       DshApiError::NotFound => write!(f, "not found"),
       DshApiError::Parameter(message) => write!(f, "{}", message),
       DshApiError::Unexpected(message, cause) => match cause {
-        Some(cause) => write!(f, "unexpected error ({})", cause),
+        Some(cause) => write!(f, "unexpected error ({}, {})", message, cause),
         None => write!(f, "unexpected error ({})", message),
       },
     }
@@ -252,16 +244,16 @@ impl Display for DshApiError {
 
 impl From<SerdeJsonError> for DshApiError {
   fn from(error: SerdeJsonError) -> Self {
-    DshApiError::Unexpected(error.to_string(), Some(Box::new(error)))
+    DshApiError::Unexpected("json error".to_string(), Some(error.to_string()))
   }
 }
 
 impl From<DshRestTokenError> for DshApiError {
   fn from(error: DshRestTokenError) -> Self {
     match error {
-      DshRestTokenError::UnknownClientId => DshApiError::Unexpected("unknown client id".to_string(), Some(Box::new(error))),
-      DshRestTokenError::UnknownClientSecret => DshApiError::Unexpected("unknown client secret".to_string(), Some(Box::new(error))),
-      DshRestTokenError::FailureTokenFetch(_) => DshApiError::Unexpected("could not fetch token".to_string(), Some(Box::new(error))),
+      DshRestTokenError::UnknownClientId => DshApiError::Unexpected("unknown client id".to_string(), Some(error.to_string())),
+      DshRestTokenError::UnknownClientSecret => DshApiError::Unexpected("unknown client secret".to_string(), Some(error.to_string())),
+      DshRestTokenError::FailureTokenFetch(_) => DshApiError::Unexpected("could not fetch token".to_string(), Some(error.to_string())),
       DshRestTokenError::StatusCode { status_code, ref error_body } => {
         if status_code == 401 {
           DshApiError::NotAuthorized
@@ -269,23 +261,23 @@ impl From<DshRestTokenError> for DshApiError {
           let message = format!("unexpected error fetching token (status code {})", status_code);
           error!("{}", message);
           debug!("{:?}", error_body);
-          DshApiError::Unexpected(message, Some(Box::new(error)))
+          DshApiError::Unexpected(message, Some(error.to_string()))
         }
       }
-      _ => DshApiError::Unexpected(format!("unrecognized error ({})", error), Some(Box::new(error))),
+      _ => DshApiError::Unexpected(format!("unrecognized error ({})", error), None),
     }
   }
 }
 
 impl From<ReqwestError> for DshApiError {
   fn from(error: ReqwestError) -> Self {
-    DshApiError::Unexpected(error.to_string(), Some(Box::new(error)))
+    DshApiError::Unexpected(error.to_string(), None)
   }
 }
 
 impl From<Utf8Error> for DshApiError {
   fn from(error: Utf8Error) -> Self {
-    DshApiError::Unexpected(error.to_string(), Some(Box::new(error)))
+    DshApiError::Unexpected(error.to_string(), None)
   }
 }
 
@@ -419,7 +411,7 @@ pub fn guid_environment_variable(tenant_name: &str) -> String {
 
 #[test]
 fn test_dsh_api_error_is_send() {
-  fn assert_send<T: StdError + Send>() {}
+  fn assert_send<T: Send>() {}
   assert_send::<DshApiError>();
 }
 

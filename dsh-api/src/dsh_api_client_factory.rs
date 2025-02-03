@@ -201,7 +201,7 @@ impl DshApiClientFactory {
       Ok(token_fetcher) => Ok(DshApiClient::new(token_fetcher, &self.generated_client, &self.tenant)),
       Err(rest_token_error) => Err(DshApiError::Unexpected(
         format!("could not create token fetcher ({})", rest_token_error),
-        Some(Box::new(rest_token_error)),
+        Some(rest_token_error.to_string()),
       )),
     }
   }

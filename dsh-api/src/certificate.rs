@@ -89,6 +89,7 @@ impl DshApiClient<'_> {
           .put_certificate_configuration_by_tenant_by_id(self.tenant_name(), certificate_id, self.token().await?.as_str(), &certificate)
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -111,6 +112,7 @@ impl DshApiClient<'_> {
           .delete_certificate_configuration_by_tenant_by_id(self.tenant_name(), certificate_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -132,6 +134,7 @@ impl DshApiClient<'_> {
           .get_certificate_by_tenant_by_id(self.tenant_name(), certificate_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -154,6 +157,7 @@ impl DshApiClient<'_> {
           .get_certificate_actual_by_tenant_by_id(self.tenant_name(), certificate_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -175,6 +179,7 @@ impl DshApiClient<'_> {
           .get_certificate_status_by_tenant_by_id(self.tenant_name(), certificate_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -196,6 +201,7 @@ impl DshApiClient<'_> {
           .get_certificate_configuration_by_tenant_by_id(self.tenant_name(), certificate_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -283,6 +289,7 @@ impl DshApiClient<'_> {
           .get_certificate_by_tenant(self.tenant_name(), self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
       .map(|certificate_ids| certificate_ids.iter().map(|certificate_id| certificate_id.to_string()).collect())?;
     certificate_ids.sort();

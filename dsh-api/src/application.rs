@@ -111,6 +111,7 @@ impl DshApiClient<'_> {
           .put_application_configuration_by_tenant_by_appid(self.tenant_name(), application_id, self.token().await?.as_str(), &configuration)
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -134,6 +135,7 @@ impl DshApiClient<'_> {
           .delete_application_configuration_by_tenant_by_appid(self.tenant_name(), application_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -156,6 +158,7 @@ impl DshApiClient<'_> {
           .get_application_actual_by_tenant_by_appid(self.tenant_name(), application_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -175,6 +178,7 @@ impl DshApiClient<'_> {
           .get_application_actual_by_tenant(self.tenant_name(), self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -196,6 +200,7 @@ impl DshApiClient<'_> {
           .get_application_status_by_tenant_by_appid(self.tenant_name(), application_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -217,6 +222,7 @@ impl DshApiClient<'_> {
           .get_application_configuration_by_tenant_by_appid(self.tenant_name(), application_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -235,6 +241,7 @@ impl DshApiClient<'_> {
           .get_application_configuration_by_tenant(self.tenant_name(), self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -256,6 +263,7 @@ impl DshApiClient<'_> {
           .get_task_by_tenant_by_appid(self.tenant_name(), application_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
       .map(|task_ids| task_ids.iter().map(|task_id| task_id.to_string()).collect())?;
     task_ids.sort();
@@ -272,6 +280,7 @@ impl DshApiClient<'_> {
   pub async fn list_application_ids_with_derived_tasks(&self) -> DshApiResult<Vec<String>> {
     let mut application_ids: Vec<String> = self
       .process(self.generated_client.get_task_by_tenant(self.tenant_name(), self.token().await?.as_str()).await)
+      .await
       .map(|(_, result)| result)
       .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
     application_ids.sort();
@@ -297,6 +306,7 @@ impl DshApiClient<'_> {
           .get_task_by_tenant_by_appid_by_id(self.tenant_name(), application_id, task_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -319,6 +329,7 @@ impl DshApiClient<'_> {
           .get_task_status_by_tenant_by_appid_by_id(self.tenant_name(), application_id, task_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
@@ -342,6 +353,7 @@ impl DshApiClient<'_> {
           .get_task_actual_by_tenant_by_appid_by_id(self.tenant_name(), application_id, task_id, self.token().await?.as_str())
           .await,
       )
+      .await
       .map(|(_, result)| result)
   }
 
