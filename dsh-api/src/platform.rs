@@ -61,7 +61,7 @@ pub enum CloudProvider {
 }
 
 lazy_static! {
-  // Static list of all recognized dsh platforms lazily initialized
+  // Static list of all recognized DSH platforms lazily initialized
   static ref DSH_PLATFORMS: Vec<DshPlatform> = {
     match env::var(ENV_VAR_PLATFORMS_FILE_NAME) {
       Ok(platform_file_name_from_env_var) => match fs::read_to_string(&platform_file_name_from_env_var) {

@@ -14,12 +14,12 @@ pub struct DshApiTenant {
 }
 
 impl DshApiTenant {
-  /// # Create new dsh api tenant
+  /// # Create new DSH API tenant
   ///
   /// # Parameters
   /// * `name` - client tenant's name
   /// * `guid` - client tenant's group and user id (must be the same on DSH)
-  /// * `platform` - target platform for the api
+  /// * `platform` - target platform for the API
   ///
   /// # Examples
   ///
@@ -42,7 +42,7 @@ impl DshApiTenant {
     Self { name, guid, platform }
   }
 
-  /// # Create new dsh api tenant from tenant's name
+  /// # Create new DSH API tenant from tenant's name
   ///
   /// This factory function will attempt to create a `DshapiTenant` instance from the provided
   /// tenant's name.
@@ -79,7 +79,7 @@ impl DshApiTenant {
     Ok(DshApiTenant::new(tenant_name, guid, platform))
   }
 
-  /// # Create new dsh api tenant from tenant's name and platform
+  /// # Create new DSH API tenant from tenant's name and platform
   ///
   /// This factory function will attempt to create a `DshapiTenant` instance from the provided
   /// tenant's name. The group and user ids will be read from the
@@ -88,7 +88,7 @@ impl DshApiTenant {
   ///
   /// # Parameters
   /// * `tenant_name` - tenant's name
-  /// * `platform` - target platform for the api
+  /// * `platform` - target platform for the API
   ///
   /// # Returns
   /// * `Ok(tenant)` - tenant object
@@ -113,7 +113,7 @@ impl DshApiTenant {
     Ok(DshApiTenant::new(tenant_name, guid, platform))
   }
 
-  /// # Create new dsh api tenant from platform
+  /// # Create new DSH API tenant from platform
   ///
   /// This factory function will attempt to create a `DshapiTenant` instance from the provided
   /// `platform`. The tenant's name and group and user ids will be read from the
@@ -122,7 +122,7 @@ impl DshApiTenant {
   /// The function will return an `Error<String>` if the environment variables are not set.
   ///
   /// # Parameters
-  /// * `platform` - target platform for the api
+  /// * `platform` - target platform for the API
   ///
   /// # Returns
   /// * `Ok(tenant)` - tenant object
@@ -169,14 +169,17 @@ impl DshApiTenant {
     Ok(DshApiTenant::new(tenant_name, guid, platform))
   }
 
+  /// Returns the client's platform
   pub fn platform(&self) -> &DshPlatform {
     &self.platform
   }
 
+  /// Returns the client's tenant name
   pub fn name(&self) -> &String {
     &self.name
   }
 
+  /// Returns the client's guid
   pub fn guid(&self) -> u16 {
     self.guid
   }
@@ -212,25 +215,7 @@ lazy_static! {
   pub static ref DEFAULT_DSH_API_TENANT: DshApiTenant = DshApiTenant::default();
 }
 
-/// # Parse and validate guid string
-///
-/// # Parameters
-/// * `guid` - Guid string
-///
-/// # Returns
-/// `OK(guid)` - when the guid is valid
-/// `Err(message)` - when the guid is invalid
-///
-/// # Examples
-/// ```rust
-/// use dsh_api::DshApiError;
-/// # fn main() -> Result<(), DshApiError> {
-/// # use dsh_api::dsh_api_tenant::parse_and_validate_guid;
-/// let guid = parse_and_validate_guid("1234".to_string())?;
-/// assert_eq!(1234, guid);
-/// # Ok(())
-/// # }
-pub fn parse_and_validate_guid(guid: String) -> Result<u16, DshApiError> {
+fn parse_and_validate_guid(guid: String) -> Result<u16, DshApiError> {
   match guid.parse::<u16>() {
     Ok(guid) => {
       if guid > 0 && guid < 60000 {

@@ -1,16 +1,56 @@
-//! Client for accessing the DSH api
+//! # DSH API client
+//!
+//! The struct [`DshApiClient`] is the base of this library and has many associated methods
+//! that you can use to call the operations of the DSH resource management API.
+//!
+//! In order to use these methods, you first need to acquire an instance of this struct.
+//! This is a two-step process.
+//! * First you need to get a
+//!   [`DshApiClientFactory`](crate::dsh_api_client_factory::DshApiClientFactory):
+//!   * Either use the
+//!     [`DEFAULT_DSH_API_CLIENT_FACTORY`](crate::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY),
+//!     which is configured from
+//!     [environment variables](dsh_api_client_factory/index.html#environment-variables),
+//!   * or you can create a factory explicitly by providing the `platform`,
+//!     `tenant` and API `password` yourself and feeding them to the
+//!     [`DshApiClientFactory::create()`](crate::dsh_api_client_factory::DshApiClientFactory::create)
+//!     function.
+//! * Once you have the
+//!   [`DshApiClientFactory`](crate::dsh_api_client_factory::DshApiClientFactory),
+//!   you can call its
+//!   [`client()`](crate::dsh_api_client_factory::DshApiClientFactory::client) method.
+//!
+//! You can now call the client's methods to interact with the DSH resource management API.
+//!
+//! # Example
+//!
+//! This example will print a list of all the applications that are deployed
+//! in a tenant environment. This example requires that the tenant's name, group id, user id,
+//! platform and API password are configured via
+//! [environment variables](crate::dsh_api_client_factory).
+//!
+//! ```ignore
+//! use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+//!
+//! # use dsh_api::DshApiError;
+//! # async fn hide() -> Result<(), DshApiError> {
+//! let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+//! for (application_id, application) in client.list_applications()? {
+//!   println!("{} -> {}", application_id, application);
+//! }
+//! # Ok(())
+//! # }
+//! ```
 
 use crate::dsh_api_tenant::DshApiTenant;
 use crate::generated::Client as GeneratedClient;
 use crate::platform::DshPlatform;
-use crate::types::error::ConversionError;
 use crate::{DshApiError, OPENAPI_SPEC};
 use bytes::Bytes;
 use dsh_sdk::RestTokenFetcher;
 use futures::TryStreamExt;
 use progenitor_client::{ByteStream, Error as ProgenitorError, ResponseValue as ProgenitorResponseValue};
 use reqwest::StatusCode as ReqwestStatusCode;
-use serde::Serialize;
 use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
@@ -31,7 +71,7 @@ pub(crate) enum DshApiResponseStatus {
 pub(crate) type DshApiProcessResult<T> = Result<(DshApiResponseStatus, T), DshApiError>;
 
 impl<'a> DshApiClient<'a> {
-  pub fn new(token_fetcher: RestTokenFetcher, generated_client: &'a GeneratedClient, tenant: &'a DshApiTenant) -> Self {
+  pub(crate) fn new(token_fetcher: RestTokenFetcher, generated_client: &'a GeneratedClient, tenant: &'a DshApiTenant) -> Self {
     Self { token_fetcher, generated_client, tenant }
   }
 
@@ -44,16 +84,19 @@ impl<'a> DshApiClient<'a> {
   /// # Returns the openapi spec used to generate the client code
   ///
   /// Note that this is not the original openapi specification exposed by the
-  /// DSH resource management API. The version exposed by this function has two additions:
+  /// DSH resource management web service.
+  /// The version exposed by this function differs from the original specification as follows:
   /// * Added authorization header specification to each operation.
   /// * Added operationId parameter to each operation.
+  /// * Depending on whether the `appcatalog`, `manage` and/or `robot` features are
+  ///   enabled or not, not all operations might be present.
   pub fn openapi_spec() -> &'static str {
     OPENAPI_SPEC
   }
 
   pub(crate) async fn process<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
   where
-    T: Debug + Serialize,
+    T: Debug,
   {
     match progenitor_response {
       Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => {
@@ -64,25 +107,7 @@ impl<'a> DshApiClient<'a> {
       }
       Err(progenitor_error) => {
         log::debug!("progenitor error: {}", progenitor_error);
-        Err(from_progenitor_error(progenitor_error).await)
-      }
-    }
-  }
-
-  pub(crate) async fn process_raw<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
-  where
-    T: Debug,
-  {
-    match progenitor_response {
-      Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => {
-        let status = DshApiResponseStatus::from(response.status());
-        let response = response.into_inner();
-        log::debug!("raw response / {} / {:?}", status, response);
-        Ok((status, response))
-      }
-      Err(progenitor_error) => {
-        log::debug!("progenitor error: {}", progenitor_error);
-        Err(from_progenitor_error(progenitor_error).await)
+        Err(DshApiError::async_from_progenitor_error(progenitor_error).await)
       }
     }
   }
@@ -101,27 +126,33 @@ impl<'a> DshApiClient<'a> {
       }
       Err(progenitor_error) => {
         log::debug!("progenitor error: {}", progenitor_error);
-        Err(from_progenitor_error(progenitor_error).await)
+        Err(DshApiError::async_from_progenitor_error(progenitor_error).await)
       }
     }
   }
 
+  /// Returns the tenant
   pub fn tenant(&self) -> &DshApiTenant {
     self.tenant
   }
 
+  /// Returns the name of the tenant
   pub fn tenant_name(&self) -> &str {
     self.tenant.name()
   }
 
+  /// Returns the platform
   pub fn platform(&self) -> &DshPlatform {
     self.tenant.platform()
   }
 
-  pub fn guid(&self) -> u16 {
-    self.tenant.guid()
-  }
-
+  /// Returns a token for the rest API
+  ///
+  /// This method returns a token that can be used to authenticate and authorize a call
+  /// to the DSH resource management web service.
+  /// Since this token has a relatively short lifespan,
+  /// it is advised to request a new token from this method before each API call.
+  /// An internal caching mechanism will make sure that no unnecessary calls will be made.
   pub async fn token(&self) -> Result<String, DshApiError> {
     self.token_fetcher.get_token().await.map_err(DshApiError::from)
   }
@@ -151,45 +182,16 @@ impl From<ReqwestStatusCode> for DshApiResponseStatus {
   }
 }
 
-impl From<ConversionError> for DshApiError {
-  fn from(value: ConversionError) -> Self {
-    DshApiError::Unexpected(value.to_string(), None)
-  }
+#[test]
+fn test_dsh_api_client_is_send() {
+  fn assert_send<T: Send>() {}
+  assert_send::<DshApiClient>();
 }
 
-// async version of impl From<ProgenitorError> for DshApiError
-async fn from_progenitor_error(progenitor_error: ProgenitorError) -> DshApiError {
-  match progenitor_error {
-    ProgenitorError::InvalidRequest(ref string) => DshApiError::Unexpected(format!("invalid request ({})", string), Some(progenitor_error.to_string())),
-    ProgenitorError::CommunicationError(ref reqwest_error) => DshApiError::Unexpected(
-      format!("communication error (reqwest error: {})", reqwest_error),
-      Some(progenitor_error.to_string()),
-    ),
-    ProgenitorError::InvalidUpgrade(ref reqwest_error) => {
-      DshApiError::Unexpected(format!("invalid upgrade (reqwest error: {})", reqwest_error), Some(progenitor_error.to_string()))
-    }
-    ProgenitorError::ErrorResponse(ref progenitor_response_value) => DshApiError::Unexpected(
-      format!("error response (progenitor response value: {:?})", progenitor_response_value),
-      Some(progenitor_error.to_string()),
-    ),
-    ProgenitorError::ResponseBodyError(ref reqwest_error) => DshApiError::Unexpected(
-      format!("response body error (reqwest error: {})", reqwest_error),
-      Some(progenitor_error.to_string()),
-    ),
-    ProgenitorError::InvalidResponsePayload(ref _bytes, ref json_error) => {
-      DshApiError::Unexpected(format!("invalid response payload (json error: {})", json_error), Some(progenitor_error.to_string()))
-    }
-    ProgenitorError::UnexpectedResponse(reqwest_response) => match &reqwest_response.status().clone() {
-      &ReqwestStatusCode::BAD_REQUEST => match reqwest_response.text().await {
-        Ok(error_text) => DshApiError::BadRequest(error_text),
-        Err(response_error) => DshApiError::BadRequest(response_error.to_string()),
-      },
-      &ReqwestStatusCode::NOT_FOUND => DshApiError::NotFound,
-      &ReqwestStatusCode::UNAUTHORIZED | &ReqwestStatusCode::FORBIDDEN | &ReqwestStatusCode::METHOD_NOT_ALLOWED => DshApiError::NotAuthorized,
-      other_status_code => DshApiError::Unexpected(format!("unexpected response (status: {}, reqwest response: )", other_status_code), None),
-    },
-    ProgenitorError::PreHookError(string) => DshApiError::Unexpected(format!("pre-hook error ({})", string), None),
-  }
+#[test]
+fn test_dsh_api_client_is_sync() {
+  fn assert_sync<T: Sync>() {}
+  assert_sync::<DshApiClient>();
 }
 
 // 200 - OK

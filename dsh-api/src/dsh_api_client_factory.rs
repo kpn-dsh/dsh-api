@@ -1,9 +1,43 @@
-//! # Factory for DSH API client
+//! # DSH API client factory
 //!
 //! This module provides factories for creating [`DshApiClient`] instances,
 //! based on the platform and the tenant's name, group id and user id.
-//! These parameters can either be provided as function arguments,
-//! or via a set of environment variables.
+//! These parameters can either be provided via environment variables
+//! or via explicit function arguments.
+//!
+//! There are two ways to acquire a `DshApiClientFactory`:
+//! * Use the statically initialized [`DEFAULT_DSH_API_CLIENT_FACTORY`],
+//!   which is configured from the environment variables listed below.
+//! * Create a factory explicitly by providing the `platform`,
+//!   `tenant` and API `password` parameters yourself and feeding them to the
+//!   [`create()`](DshApiClientFactory::create) function.
+//!
+//! Once you have the `DshApiClientFactory` you can call its
+//! [`client()`](DshApiClientFactory::client)
+//! method to get a [`DshApiClient`].
+//!
+//! ## Example
+//!
+//! In this example explicit tenant parameters used to create a `DshApiClientFactory`.
+//!
+//! ```ignore
+//! # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+//! # use dsh_api::dsh_api_tenant::DshApiTenant;
+//! # use dsh_api::platform::DshPlatform;
+//! # use dsh_api::DshApiError;
+//! # async fn hide() -> Result<(), DshApiError> {
+//! let tenant = DshApiTenant::new(
+//!   "my-tenant".to_string(),
+//!   1234,
+//!   DshPlatform::try_from("np-aws-lz-dsh")?
+//! );
+//! let password = "...".to_string();
+//! let client_factory = DshApiClientFactory::create(tenant, password)?;
+//! let client = client_factory.client().await?;
+//! ...
+//! # Ok(())
+//! # }
+//! ```
 //!
 //! # Environment variables
 //!
@@ -17,12 +51,12 @@
 //! * `prod-azure-dsh / prodaz` - Production platform for non KPN tenants.
 //!
 //! ## `DSH_API_TENANT`
-//! Tenant id for the client tenant that is making the api requests.
+//! Tenant id for the client tenant that is making the API requests.
 //! In some cases this is not the same tenant as the tenant whose resources
-//! will be managed via the api. The latter will be called the target client.
+//! will be managed via the API. The latter will be called the target client.
 //!
 //! ## `DSH_API_PASSWORD_[platform]_[tenant]`
-//! Secret api token for the client tenant.
+//! Secret API token for the client tenant.
 //! The placeholders `[platform]` and `[tenant]`
 //! need to be substituted with the platform name and the tenant name in all capitals,
 //! with hyphens (`-`) replaced by underscores (`_`).

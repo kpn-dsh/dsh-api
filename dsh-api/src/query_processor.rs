@@ -1,4 +1,4 @@
-//! # Enums, traits and structs used by the various find methods.
+//! # Enums, traits and structs used by the various find methods
 use std::fmt::{Display, Formatter};
 
 use crate::query_processor::Part::{Matching, NonMatching};
