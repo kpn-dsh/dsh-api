@@ -1,9 +1,8 @@
-//! # View the App Catalog manifests
+//! # Additional methods to manage the app catalog manifests
 //!
-//! Module that contains a function to query the App Catalog for all manifest files.
+//! _These methods are only available when the `appcatalog` feature is enabled._
 //!
-//! # API methods
-//! * [`list_app_catalog_manifests() -> [manifest]`](DshApiClient::list_app_catalog_manifests)
+//! Module that contains methods to query the App Catalog for all manifest files.
 //!
 //! # Derived methods
 //! * [`list_app_catalog_manifest_ids() -> [id]`](DshApiClient::list_app_catalog_manifest_ids)
@@ -32,37 +31,15 @@ pub const RESOURCES: &str = "resources";
 pub const VENDOR: &str = "vendor";
 pub const VERSION: &str = "version";
 
-/// # View the App Catalog manifests
+/// # Additional methods to manage the app catalog manifests
 ///
-/// Module that contains a function to query the App Catalog for all manifest files.
-///
-/// # API methods
-/// * [`list_app_catalog_manifests() -> [manifest]`](DshApiClient::list_app_catalog_manifests)
+/// Module that contains methods and functions to query the App Catalog for all manifest files.
 ///
 /// # Derived methods
 /// * [`list_app_catalog_manifest_ids() -> [id]`](DshApiClient::list_app_catalog_manifest_ids)
 /// * [`list_app_catalog_manifest_ids_with_versions() -> [id, [version]]`](DshApiClient::list_app_catalog_manifest_ids_with_versions)
 /// * [`list_app_catalog_manifests_with_versions() -> [id, [(version, manifest)]]`](DshApiClient::list_app_catalog_manifests_with_versions)
 impl DshApiClient<'_> {
-  /// # Return a list of all App Catalog manifests
-  ///
-  /// API function: `GET /appcatalog/{tenant}/manifest`
-  ///
-  /// # Returns
-  /// * `Ok<Vec`[`AppCatalogManifest`]`>` - vector containing all app manifests
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn list_app_catalog_manifests(&self) -> DshApiResult<Vec<AppCatalogManifest>> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_appcatalog_manifest_by_tenant(self.tenant_name(), self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
   /// # Return sorted list of all App Catalog manifest ids
   ///
   /// # Returns
@@ -70,7 +47,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_app_catalog_manifest_ids(&self) -> DshApiResult<Vec<String>> {
     let mut unique_ids: HashSet<String> = HashSet::new();
-    for manifest in self.list_app_catalog_manifests().await? {
+    for manifest in self.get_appcatalog_manifests().await? {
       match from_str::<Value>(manifest.payload.as_str())?.as_object() {
         Some(payload_object) => {
           if let Some(id) = payload_object.get(ID).and_then(|id| id.as_str().map(|id| id.to_string())) {
@@ -92,7 +69,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_app_catalog_manifest_ids_with_versions(&self) -> DshApiResult<Vec<(String, Vec<String>)>> {
     let mut id_versions: HashMap<String, Vec<String>> = HashMap::new();
-    for manifest in self.list_app_catalog_manifests().await? {
+    for manifest in self.get_appcatalog_manifests().await? {
       match from_str::<Value>(manifest.payload.as_str())?.as_object() {
         Some(payload_object) => {
           if let Some(id) = payload_object.get(ID).and_then(|id| id.as_str().map(|id| id.to_string())) {
@@ -119,7 +96,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_app_catalog_manifests_with_versions(&self) -> DshApiResult<Vec<(String, Vec<(String, Manifest)>)>> {
     let manifests: Vec<(String, Manifest)> = self
-      .list_app_catalog_manifests()
+      .get_appcatalog_manifests()
       .await?
       .iter()
       .map(|app_catalog_manifest| Manifest::try_from(app_catalog_manifest).map(|manifest| (manifest.manifest_id.clone(), manifest)))

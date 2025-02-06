@@ -19,15 +19,12 @@ async fn main() -> Result<(), String> {
   let bucket: BucketStatus = client.get_bucket(bucket_id).await?;
   println!("{} -> {}", bucket_id, bucket);
 
-  #[cfg(feature = "actual")]
-  {
-    print_header("get_bucket_actual_configuration");
-    let bucket_actual: Bucket = client.get_bucket_actual_configuration(bucket_id).await?;
-    println!("{} -> {}", bucket_id, bucket_actual);
-  }
+  print_header("get_bucket_actual_configuration");
+  let bucket_actual: Bucket = client.get_bucket_actual(bucket_id).await?;
+  println!("{} -> {}", bucket_id, bucket_actual);
 
   print_header("get_bucket_allocation_status");
-  let bucket_status: AllocationStatus = client.get_bucket_allocation_status(bucket_id).await?;
+  let bucket_status: AllocationStatus = client.get_bucket_status(bucket_id).await?;
   println!("{} -> {}", bucket_id, bucket_status);
 
   print_header("get_bucket_configuration");

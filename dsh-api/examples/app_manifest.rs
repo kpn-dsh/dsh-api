@@ -1,12 +1,22 @@
-use dsh_api::app_manifest::{Manifest, API_VERSION, ID, KIND, NAME, VENDOR, VERSION};
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-use dsh_api::types::AppCatalogManifest;
-use serde_json::de::from_str;
-use serde_json::Value;
-
+#[cfg(not(feature = "appcatalog"))]
+use std::error::Error;
+#[cfg(not(feature = "appcatalog"))]
+fn main() -> Result<(), Box<dyn Error>> {
+  Ok(())
+}
+#[cfg(feature = "appcatalog")]
 #[tokio::main]
 async fn main() -> Result<(), String> {
+  use dsh_api::app_manifest::{Manifest, API_VERSION, ID, KIND, NAME, VENDOR, VERSION};
+  use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+  use dsh_api::types::AppCatalogAppConfiguration;
+  use dsh_api::types::AppCatalogManifest;
+  use serde_json::de::from_str;
+  use serde_json::Value;
+
   env_logger::init();
+
+  let app_catalog_id = "keyring-050";
 
   let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
   let client = client_factory.client().await?;
@@ -14,7 +24,7 @@ async fn main() -> Result<(), String> {
   println!("-------------------------------------------");
   println!("list_app_catalog_manifests");
   println!("-------------------------------------------");
-  let manifests: Vec<AppCatalogManifest> = client.list_app_catalog_manifests().await?;
+  let manifests: Vec<AppCatalogManifest> = client.get_appcatalog_manifests().await?;
   for manifest in manifests {
     let payload = &manifest.payload;
     let des = from_str::<Value>(payload.as_str()).unwrap();
@@ -54,6 +64,9 @@ async fn main() -> Result<(), String> {
       println!("  {} -> {}", version, manifest);
     }
   }
+
+  let deployed_app: AppCatalogAppConfiguration = client.get_appcatalog_appcatalogapp_appcatalogappid_configuration(app_catalog_id).await?;
+  println!("{}", serde_json::to_string_pretty(&deployed_app).unwrap());
 
   Ok(())
 }

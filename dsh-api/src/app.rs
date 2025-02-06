@@ -1,20 +1,9 @@
-//! # Manage apps in the App Catalog
+//! # Additional methods and functions to manage apps in the app catalog
 //!
-//! Module that contains functions to manage pre-packaged,
-//! easily configured apps that you can select from the App Catalog.
-//! * API methods - DshApiClient methods that directly call the API.
+//! Module that contains methods and functions to manage apps from the app catalog.
 //! * Derived methods - DshApiClient methods that add extra capabilities
 //!   but depend on the API methods.
 //! * Functions - Functions that add extra capabilities but do not depend directly on the API.
-//!
-//! # API methods
-//!
-//! [`DshApiClient`] methods that directly call the DSH resource management API.
-//!
-//! * [`get_app_configuration(app_id) -> app`](DshApiClient::get_app_configuration)
-//! * [`get_app_configurations() -> map<app_id, app>`](DshApiClient::get_app_configurations)
-//! * [`list_app_configurations() -> [(app_id, app)]`](DshApiClient::list_app_configurations)
-//! * [`list_app_ids() -> [app_id]`](DshApiClient::list_app_ids)
 //!
 //! # Derived methods
 //!
@@ -23,10 +12,6 @@
 //!
 //! * [`list_app_configurations() -> [(app_id, app)]`](DshApiClient::list_app_configurations)
 //! * [`list_app_ids() -> [app_id]`](DshApiClient::list_app_ids)
-#![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = "# Actual configuration methods")]
-#![cfg_attr(feature = "actual", doc = "* [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)")]
-#![cfg_attr(feature = "actual", doc = "* [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)")]
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application, Bucket, Certificate, Secret, Topic, Vhost, Volume};
 #[allow(unused_imports)]
@@ -34,23 +19,12 @@ use crate::DshApiError;
 use crate::{DshApiResult, Injection};
 use std::collections::HashMap;
 
-/// # Manage apps in the App Catalog
+/// # Additional methods and functions to manage apps in the app catalog
 ///
-/// Module that contains functions to manage pre-packaged,
-/// easily configured apps that you can select from the App Catalog.
-/// * API methods - DshApiClient methods that directly call the API.
+/// Module that contains methods and functions to manage apps from the app catalog.
 /// * Derived methods - DshApiClient methods that add extra capabilities
 ///   but depend on the API methods.
 /// * Functions - Functions that add extra capabilities but do not depend directly on the API.
-///
-/// # API methods
-///
-/// [`DshApiClient`] methods that directly call the DSH resource management API.
-///
-/// * [`get_app_configuration(app_id) -> app`](DshApiClient::get_app_configuration)
-/// * [`get_app_configurations() -> map<app_id, app>`](DshApiClient::get_app_configurations)
-/// * [`list_app_configurations() -> [(app_id, app)]`](DshApiClient::list_app_configurations)
-/// * [`list_app_ids() -> [app_id]`](DshApiClient::list_app_ids)
 ///
 /// # Derived methods
 ///
@@ -59,95 +33,7 @@ use std::collections::HashMap;
 ///
 /// * [`list_app_configurations() -> [(app_id, app)]`](DshApiClient::list_app_configurations)
 /// * [`list_app_ids() -> [app_id]`](DshApiClient::list_app_ids)
-#[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = "# Actual configuration methods")]
-#[cfg_attr(feature = "actual", doc = "* [`get_app_actual_configuration(app_id) -> AppCatalogApp`](DshApiClient::get_app_actual_configuration)")]
-#[cfg_attr(feature = "actual", doc = "* [`get_app_actual_configurations() -> HashMap<String, AppCatalogApp>`](DshApiClient::get_app_actual_configurations)")]
 impl DshApiClient<'_> {
-  /// # Return actual configuration of deployed App
-  ///
-  /// API function: `GET /allocation/{tenant}/appcatalogapp/{appcatalogappid}/actual`
-  ///
-  /// # Parameters
-  /// * `app_id` - app id of the requested configuration
-  ///
-  /// # Returns
-  /// * `Ok<`[`AppCatalogApp`]`>` - app configuration
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  #[cfg(feature = "actual")]
-  pub async fn get_app_actual_configuration(&self, app_id: &str) -> DshApiResult<AppCatalogApp> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_appcatalogapp_actual_by_tenant_by_appcatalogappid(self.tenant_name(), app_id, self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
-  /// # Get all actual configurations of deployed Apps
-  ///
-  /// API function: `GET /allocation/{tenant}/appcatalogapp/actual`
-  ///
-  /// # Returns
-  /// * `Ok<HashMap<String, `[`AppCatalogApp`]`>>` - hashmap containing the app configurations
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  #[cfg(feature = "actual")]
-  pub async fn get_app_actual_configurations(&self) -> DshApiResult<HashMap<String, AppCatalogApp>> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_appcatalogapp_actual_by_tenant(self.tenant_name(), self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
-  /// # Return App configuration
-  ///
-  /// API function: `GET /allocation/{tenant}/appcatalogapp/{appcatalogappid}/configuration`
-  ///
-  /// # Parameters
-  /// * `app_id` - app id of the requested configuration
-  ///
-  /// # Returns
-  /// * `Ok<`[`AppCatalogApp`]`>` - app configuration
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_app_configuration(&self, app_id: &str) -> DshApiResult<AppCatalogApp> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_appcatalogapp_configuration_by_tenant_by_appcatalogappid(self.tenant_name(), app_id, self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
-  /// # Get all App configurations
-  ///
-  /// API function: `GET /allocation/{tenant}/appcatalogapp/configuration`
-  ///
-  /// # Returns
-  /// * `Ok<HashMap<String, `[`AppCatalogApp`]`>>` - hashmap containing the app configurations
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_app_configurations(&self) -> DshApiResult<HashMap<String, AppCatalogApp>> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_appcatalogapp_configuration_by_tenant(self.tenant_name(), self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
   /// # List all App configurations
   ///
   /// # Returns
@@ -155,7 +41,7 @@ impl DshApiClient<'_> {
   ///   sorted by app id
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_app_configurations(&self) -> DshApiResult<Vec<(String, AppCatalogApp)>> {
-    self.get_app_configurations().await.map(|mut app_configurations_map| {
+    self.get_appcatalogapp_configuration_map().await.map(|mut app_configurations_map| {
       let mut app_ids: Vec<String> = app_configurations_map.keys().map(|app_id| app_id.to_string()).collect();
       app_ids.sort();
       app_ids
@@ -174,7 +60,7 @@ impl DshApiClient<'_> {
   /// * `Ok<Vec<String>>` - vector containing the sorted app ids
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_app_ids(&self) -> DshApiResult<Vec<String>> {
-    let mut app_ids: Vec<String> = self.get_app_configurations().await?.keys().map(|app_id| app_id.to_string()).collect();
+    let mut app_ids: Vec<String> = self.get_appcatalogapp_configuration_map().await?.keys().map(|app_id| app_id.to_string()).collect();
     app_ids.sort();
     Ok(app_ids)
   }

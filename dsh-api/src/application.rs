@@ -1,24 +1,9 @@
-//! # Manage applications
+//! # Additional methods and functions to manage applications
 //!
 //! Module that contains methods and functions to manage applications.
-//! * API methods - DshApiClient methods that directly call the API.
 //! * Derived methods - DshApiClient methods that add extra capabilities
 //!   but depend on the API methods.
 //! * Functions - Functions that add extra capabilities but do not depend directly on the API.
-//!
-//! # API methods
-//!
-//! [`DshApiClient`] methods that directly call the DSH resource management API.
-//!
-//! * [`create_application(id, application)`](DshApiClient::create_application)
-//! * [`delete_application(id)`](DshApiClient::delete_application)
-//! * [`get_application(id) -> application`](DshApiClient::get_application)
-//! * [`get_application_allocation_status(id) -> allocation_status`](DshApiClient::get_application_allocation_status)
-//! * [`get_application_task(id, task_id) -> task_status`](DshApiClient::get_application_task)
-//! * [`get_application_task_allocation_status(id, task_id) -> allocation_status`](DshApiClient::get_application_task_allocation_status)
-//! * [`get_applications() -> map<id, application>`](DshApiClient::get_applications)
-//! * [`list_application_derived_task_ids(id) -> [task_id]`](DshApiClient::list_application_derived_task_ids)
-//! * [`list_application_ids_with_derived_tasks() -> [id]`](DshApiClient::list_application_ids_with_derived_tasks)
 //!
 //! # Derived methods
 //!
@@ -32,16 +17,9 @@
 //! * [`list_application_ids() -> [id]`](DshApiClient::list_application_ids)
 //! * [`list_applications() -> [(id, application)]`](DshApiClient::list_applications)
 //! * [`list_applications_with_secret_injections() -> [(id, application, injections)]`](DshApiClient::list_applications_with_secret_injections)
-#![cfg_attr(feature = "actual", doc = "")]
-#![cfg_attr(feature = "actual", doc = "# Actual configuration methods")]
-#![cfg_attr(feature = "actual", doc = "* [`get_application_actual(application_id) -> Application`](DshApiClient::get_application_actual)")]
-#![cfg_attr(feature = "actual", doc = "* [`get_applications_actual() -> HashMap<String, Application>`](DshApiClient::get_applications_actual)")]
-#![cfg_attr(feature = "actual", doc = "* [`get_application_task_state(id, task_id) -> Task`](DshApiClient::get_application_task_state)")]
 use crate::dsh_api_client::DshApiClient;
 use crate::query_processor::{Part, QueryProcessor};
-#[cfg(feature = "actual")]
-use crate::types::Task;
-use crate::types::{AllocationStatus, Application, ApplicationSecret, ApplicationVolumes, HealthCheck, Metrics, PortMapping, TaskStatus};
+use crate::types::{AllocationStatus, Application, ApplicationSecret, ApplicationVolumes, HealthCheck, Metrics, PortMapping};
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::{DshApiResult, Injection};
@@ -50,27 +28,12 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
 
-/// # Manage applications
+/// # Additional methods and functions to manage applications
 ///
 /// Module that contains methods and functions to manage applications.
-/// * API methods - DshApiClient methods that directly call the API.
 /// * Derived methods - DshApiClient methods that add extra capabilities
 ///   but depend on the API methods.
 /// * Functions - Functions that add extra capabilities but do not depend directly on the API.
-///
-/// # API methods
-///
-/// [`DshApiClient`] methods that directly call the DSH resource management API.
-///
-/// * [`create_application(id, application)`](DshApiClient::create_application)
-/// * [`delete_application(id)`](DshApiClient::delete_application)
-/// * [`get_application(id) -> application`](DshApiClient::get_application)
-/// * [`get_application_allocation_status(id) -> allocation_status`](DshApiClient::get_application_allocation_status)
-/// * [`get_application_task(id, task_id) -> task_status`](DshApiClient::get_application_task)
-/// * [`get_application_task_allocation_status(id, task_id) -> allocation_status`](DshApiClient::get_application_task_allocation_status)
-/// * [`get_applications() -> map<id, application>`](DshApiClient::get_applications)
-/// * [`list_application_derived_task_ids(id) -> [task_id]`](DshApiClient::list_application_derived_task_ids)
-/// * [`list_application_ids_with_derived_tasks() -> [id]`](DshApiClient::list_application_ids_with_derived_tasks)
 ///
 /// # Derived methods
 ///
@@ -84,279 +47,7 @@ use std::collections::HashMap;
 /// * [`list_application_ids() -> [id]`](DshApiClient::list_application_ids)
 /// * [`list_applications() -> [(id, application)]`](DshApiClient::list_applications)
 /// * [`list_applications_with_secret_injections() -> [(id, application, injections)]`](DshApiClient::list_applications_with_secret_injections)
-#[cfg_attr(feature = "actual", doc = "")]
-#[cfg_attr(feature = "actual", doc = "# Actual configuration methods")]
-#[cfg_attr(feature = "actual", doc = "* [`get_application_actual(application_id) -> Application`](DshApiClient::get_application_actual)")]
-#[cfg_attr(feature = "actual", doc = "* [`get_applications_actual() -> HashMap<String, Application>`](DshApiClient::get_applications_actual)")]
-#[cfg_attr(feature = "actual", doc = "* [`get_application_task_state(id, task_id) -> Task`](DshApiClient::get_application_task_state)")]
 impl DshApiClient<'_> {
-  /// # Create application
-  ///
-  /// API function: `PUT /allocation/{tenant}/application/{appid}/configuration`
-  ///
-  /// # Parameters
-  /// * `application_id` - application name used when deploying the application
-  /// * `configuration` - configuration used when deploying the application
-  ///
-  /// # Returns
-  /// * `Ok(())` - when DSH has properly received the request
-  ///              (note that this does not mean that the application has been successfully
-  ///              deployed)
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn create_application(&self, application_id: &str, configuration: Application) -> DshApiResult<()> {
-    self
-      .process(
-        self
-          .generated_client
-          .put_application_configuration_by_tenant_by_appid(self.tenant_name(), application_id, self.token().await?.as_str(), &configuration)
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
-  /// # Delete application
-  ///
-  /// API function: `DELETE /allocation/{tenant}/application/{appid}/configuration`
-  ///
-  /// # Parameters
-  /// * `application_id` - application name of the application to undeploy
-  ///
-  /// # Returns
-  /// * `Ok(())` - when DSH has properly received the request
-  ///              (note that this does not mean that the application has been successfully
-  ///              undeployed)
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn delete_application(&self, application_id: &str) -> DshApiResult<()> {
-    self
-      .process(
-        self
-          .generated_client
-          .delete_application_configuration_by_tenant_by_appid(self.tenant_name(), application_id, self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
-  /// # Return configuration of deployed application
-  ///
-  /// API function: `GET /allocation/{tenant}/application/{appid}/actual`
-  ///
-  /// # Parameters
-  /// * `application_id` - application id of the requested application
-  ///
-  /// # Returns
-  /// * `Ok<`[`Application`]`>` - application configuration
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  #[cfg(feature = "actual")]
-  pub async fn get_application_actual(&self, application_id: &str) -> DshApiResult<Application> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_application_actual_by_tenant_by_appid(self.tenant_name(), application_id, self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
-  /// # Return all deployed applications with their configurations
-  ///
-  /// API function: `GET /allocation/{tenant}/application/actual`
-  ///
-  /// # Returns
-  /// * `Ok<HashMap<String, `[`Application`]`>>` - hashmap containing the application configurations
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  #[cfg(feature = "actual")]
-  pub async fn get_applications_actual(&self) -> DshApiResult<HashMap<String, Application>> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_application_actual_by_tenant(self.tenant_name(), self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
-  /// # Return allocation status of application
-  ///
-  /// API function: `GET /allocation/{tenant}/application/{appid}/status`
-  ///
-  /// # Parameters
-  /// * `application_id` - application id of the requested application
-  ///
-  /// # Returns
-  /// * `Ok<`[`AllocationStatus`]`>` - application allocation status
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_application_allocation_status(&self, application_id: &str) -> DshApiResult<AllocationStatus> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_application_status_by_tenant_by_appid(self.tenant_name(), application_id, self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
-  /// # Return application configuration
-  ///
-  /// API function: `GET /allocation/{tenant}/application/{appid}/configuration`
-  ///
-  /// # Parameters
-  /// * `application_id` - application id of the requested application
-  ///
-  /// # Returns
-  /// * `Ok<`[`Application`]`>` - application configuration
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_application(&self, application_id: &str) -> DshApiResult<Application> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_application_configuration_by_tenant_by_appid(self.tenant_name(), application_id, self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
-  /// # Return all applications with their configuration
-  ///
-  /// API function: `GET /allocation/{tenant}/application/configuration`
-  ///
-  /// # Returns
-  /// * `Ok<HashMap<String, `[`Application`]`>>` - hashmap containing the application configurations
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_applications(&self) -> DshApiResult<HashMap<String, Application>> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_application_configuration_by_tenant(self.tenant_name(), self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
-  /// # Return all derived task ids for an application
-  ///
-  /// API function: `GET /allocation/{tenant}/task{appid}`
-  ///
-  /// # Parameters
-  /// * `application_id` - application name for which the tasks will be returned
-  ///
-  /// # Returns
-  /// * `Ok<Vec<String>>` - vector containing names of all derived tasks for the application
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn list_application_derived_task_ids(&self, application_id: &str) -> DshApiResult<Vec<String>> {
-    let mut task_ids: Vec<String> = self
-      .process(
-        self
-          .generated_client
-          .get_task_by_tenant_by_appid(self.tenant_name(), application_id, self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-      .map(|task_ids| task_ids.iter().map(|task_id| task_id.to_string()).collect())?;
-    task_ids.sort();
-    Ok(task_ids)
-  }
-
-  /// # Return ids of all applications that have derived tasks
-  ///
-  /// API function: `GET /allocation/{tenant}/task`
-  ///
-  /// # Returns
-  /// * `Ok<Vec<String>>` - vector containing names of all application that have derived tasks
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn list_application_ids_with_derived_tasks(&self) -> DshApiResult<Vec<String>> {
-    let mut application_ids: Vec<String> = self
-      .process(self.generated_client.get_task_by_tenant(self.tenant_name(), self.token().await?.as_str()).await)
-      .await
-      .map(|(_, result)| result)
-      .map(|secret_ids| secret_ids.iter().map(|secret_id| secret_id.to_string()).collect())?;
-    application_ids.sort();
-    Ok(application_ids)
-  }
-
-  /// # Return status of derived task
-  ///
-  /// API function: `GET /allocation/{tenant}/task{appid}/{id}`
-  ///
-  /// # Parameters
-  /// * `application_id` - application name of the requested application
-  /// * `task_id` - id of the requested task
-  ///
-  /// # Returns
-  /// * `Ok<`[`TaskStatus`]`>` - application task status
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_application_task(&self, application_id: &str, task_id: &str) -> DshApiResult<TaskStatus> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_task_by_tenant_by_appid_by_id(self.tenant_name(), application_id, task_id, self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
-  /// # Return task allocation status
-  ///
-  /// API function: `GET /allocation/{tenant}/task{appid}/{id}/status`
-  ///
-  /// # Parameters
-  /// * `application_id` - application name of the requested application
-  /// * `task_id` - id of the requested task
-  ///
-  /// # Returns
-  /// * `Ok<`[`AllocationStatus`]`>` - application task allocation status
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_application_task_allocation_status(&self, application_id: &str, task_id: &str) -> DshApiResult<AllocationStatus> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_task_status_by_tenant_by_appid_by_id(self.tenant_name(), application_id, task_id, self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
-  /// # Return task actual state
-  ///
-  /// API function: `GET /allocation/{tenant}/task{appid}/{id}/actual`
-  ///
-  /// # Parameters
-  /// * `application_id` - application name of the requested application
-  /// * `task_id` - id of the requested task
-  ///
-  /// # Returns
-  /// * `Ok<`[`Task`]`>` - actual application task status
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  #[cfg(feature = "actual")]
-  pub async fn get_application_task_state(&self, application_id: &str, task_id: &str) -> DshApiResult<Task> {
-    self
-      .process(
-        self
-          .generated_client
-          .get_task_actual_by_tenant_by_appid_by_id(self.tenant_name(), application_id, task_id, self.token().await?.as_str())
-          .await,
-      )
-      .await
-      .map(|(_, result)| result)
-  }
-
   /// # List application ids with the corresponding allocation status
   ///
   /// # Returns
@@ -364,12 +55,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_application_allocation_statuses(&self) -> DshApiResult<Vec<(String, AllocationStatus)>> {
     let application_ids: Vec<String> = self.list_application_ids().await?;
-    let allocation_statuses = try_join_all(
-      application_ids
-        .iter()
-        .map(|application_id| self.get_application_allocation_status(application_id.as_str())),
-    )
-    .await?;
+    let allocation_statuses = try_join_all(application_ids.iter().map(|application_id| self.get_application_status(application_id.as_str()))).await?;
     Ok(application_ids.into_iter().zip(allocation_statuses).collect::<Vec<_>>())
   }
 
@@ -393,7 +79,7 @@ impl DshApiClient<'_> {
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn find_applications(&self, predicate: &dyn Fn(&Application) -> bool) -> DshApiResult<Vec<(String, Application)>> {
     let mut matching_applications: Vec<(String, Application)> = self
-      .get_applications()
+      .get_application_configuration_map()
       .await?
       .into_iter()
       .filter(|(_, application)| predicate(application))
@@ -411,7 +97,12 @@ impl DshApiClient<'_> {
   /// * `Ok<Vec<String>>` - vector containing the sorted application ids
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_application_ids(&self) -> DshApiResult<Vec<String>> {
-    let mut application_ids: Vec<String> = self.get_applications().await?.keys().map(|application_id| application_id.to_string()).collect();
+    let mut application_ids: Vec<String> = self
+      .get_application_configuration_map()
+      .await?
+      .keys()
+      .map(|application_id| application_id.to_string())
+      .collect();
     application_ids.sort();
     Ok(application_ids)
   }

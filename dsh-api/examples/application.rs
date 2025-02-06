@@ -21,7 +21,7 @@ async fn main() -> Result<(), String> {
   let client = client_factory.client().await?;
 
   print_header("find_application_ids_with_derived_tasks");
-  let mut applications_with_tasks: Vec<String> = client.list_application_ids_with_derived_tasks().await?;
+  let mut applications_with_tasks: Vec<String> = client.get_task_ids().await?;
   applications_with_tasks.sort();
   println!("{}", applications_with_tasks.len());
   for application_id in applications_with_tasks {
@@ -29,55 +29,46 @@ async fn main() -> Result<(), String> {
   }
 
   print_header("get_application");
-  let application: Application = client.get_application(APPLICATION_ID).await?;
+  let application: Application = client.get_application_configuration(APPLICATION_ID).await?;
   println!("{} -> {}", APPLICATION_ID, application);
 
-  #[cfg(feature = "actual")]
-  {
-    print_header("get_application_actual_configuration");
-    let application: Application = client.get_application_actual(APPLICATION_ID).await?;
-    println!("{} -> {}", APPLICATION_ID, application);
-  }
+  print_header("get_application_actual_configuration");
+  let application: Application = client.get_application_actual(APPLICATION_ID).await?;
+  println!("{} -> {}", APPLICATION_ID, application);
 
-  #[cfg(feature = "actual")]
-  {
-    print_header("get_applications_actual");
-    let applications_actual: HashMap<String, Application> = client.get_applications_actual().await?;
-    println!("{}", applications_actual.len());
-    for (application_id, application) in applications_actual {
-      println!("{} -> {}", application_id, application);
-    }
+  print_header("get_applications_actual");
+  let applications_actual: HashMap<String, Application> = client.get_application_actual_map().await?;
+  println!("{}", applications_actual.len());
+  for (application_id, application) in applications_actual {
+    println!("{} -> {}", application_id, application);
   }
 
   print_header("get_application_allocation_status");
-  let allocation_status: AllocationStatus = client.get_application_allocation_status(APPLICATION_ID).await?;
+  let allocation_status: AllocationStatus = client.get_application_status(APPLICATION_ID).await?;
   println!("{} -> {}", APPLICATION_ID, allocation_status);
 
   print_header("get_application_task");
-  let task_status: TaskStatus = client.get_application_task(APPLICATION_ID, TASK_ID).await?;
+  let task_status: TaskStatus = client.get_task(APPLICATION_ID, TASK_ID).await?;
   println!("({}, {}) -> {}", APPLICATION_ID, TASK_ID, task_status);
 
   print_header("get_application_task_allocation_status");
-  let allocation_status: AllocationStatus = client.get_application_task_allocation_status(APPLICATION_ID, TASK_ID).await?;
+  let allocation_status: AllocationStatus = client.get_task_status(APPLICATION_ID, TASK_ID).await?;
   println!("({}, {}) -> {}", APPLICATION_ID, TASK_ID, allocation_status);
 
-  #[cfg(feature = "actual")]
-  {
-    use dsh_api::types::Task;
-    print_header("get_application_task_state");
-    let task: Task = client.get_application_task_state(APPLICATION_ID, TASK_ID).await?;
-    println!("({}, {}) -> {}", APPLICATION_ID, TASK_ID, task);
-  }
+  use dsh_api::types::Task;
+  print_header("get_application_task_state");
+  let task: Task = client.get_task_actual(APPLICATION_ID, TASK_ID).await?;
+  println!("({}, {}) -> {}", APPLICATION_ID, TASK_ID, task);
 
   print_header("get_applications");
-  let applications: HashMap<String, Application> = client.get_applications().await?;
+  let applications: HashMap<String, Application> = client.get_application_configuration_map().await?;
   println!("{}", applications.len());
   for (application_id, application) in applications {
     println!("{} -> {}", application_id, application);
   }
 
   print_header("list_application_derived_task_ids");
-  let mut application_task_ids: Vec<String> = client.list_application_derived_task_ids(APPLICATION_ID).await?;
+  let mut application_task_ids: Vec<String> = client.get_task_appid_ids(APPLICATION_ID).await?;
   application_task_ids.sort();
   println!("{} -> {}", APPLICATION_ID, application_task_ids.len());
   for application_task_id in application_task_ids {

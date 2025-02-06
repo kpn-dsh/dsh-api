@@ -20,7 +20,7 @@ async fn main() -> Result<(), String> {
   println!("{:#?}", certificate);
 
   print_header("get_certificate_allocation_status");
-  let allocation_status: AllocationStatus = client.get_certificate_allocation_status(CERTIFICATE_ID).await.unwrap();
+  let allocation_status: AllocationStatus = client.get_certificate_status(CERTIFICATE_ID).await.unwrap();
   println!("{:#?}", allocation_status);
 
   print_header("get_certificate_configuration");
@@ -28,7 +28,7 @@ async fn main() -> Result<(), String> {
   println!("{:#?}", certificate);
 
   print_header("get_certificate_ids");
-  let certificate_ids: Vec<String> = client.list_certificate_ids().await.unwrap();
+  let certificate_ids: Vec<String> = client.get_certificate_ids().await.unwrap();
   println!("{:#?}", certificate_ids);
 
   print_header("get_certificate_with_usage");
