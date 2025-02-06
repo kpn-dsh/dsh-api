@@ -5,16 +5,42 @@
 //! * Add operation id to each operation
 //! * Add a description
 
-use crate::{OpenApiOperation, PathElement};
+use crate::openapi_utils::OpenApiOperationKind;
+use crate::PathElement;
 use openapiv3::{OpenAPI, Operation, Parameter, ParameterData, ParameterSchemaOrContent, ReferenceOr};
 
-pub fn update_openapi(original_openapi_spec: &mut OpenAPI) -> Result<(), String> {
+pub fn update_openapi(original_openapi_spec: &mut OpenAPI, prune_appcatalog: bool, prune_manage: bool, prune_robot: bool) -> Result<(), String> {
+  // If feature appcatalog is not enabled, prune all /appcatalog/... paths
+  if prune_appcatalog {
+    prune_paths(original_openapi_spec, |path| path.starts_with("/appcatalog/"))?;
+  }
+  if prune_manage {
+    prune_paths(original_openapi_spec, |path| path.starts_with("/manage/"))?;
+  }
+  // If feature manage is not enabled, prune all /manage/... paths
+  if prune_manage {
+    prune_paths(original_openapi_spec, |path| path.starts_with("/manage/"))?;
+  }
+  // If feature robot is not enabled, prune all /robot/... paths
+  if prune_robot {
+    prune_paths(original_openapi_spec, |path| path.starts_with("/robot/"))?;
+  }
   // Add authorization headers to original openapi spec
   add_authorization_parameters(original_openapi_spec)?;
   // Add operation ids to original openapi spec
   add_operation_ids(original_openapi_spec)?;
   // Add description to original openapi spec
   add_description(original_openapi_spec);
+  Ok(())
+}
+
+fn prune_paths(openapi: &mut OpenAPI, predicate: fn(&str) -> bool) -> Result<(), String> {
+  let paths = openapi.paths.paths.keys().map(|path| path.to_string()).collect::<Vec<_>>();
+  for path in paths {
+    if predicate(path.as_str()) {
+      openapi.paths.paths.shift_remove(path.as_str());
+    }
+  }
   Ok(())
 }
 
@@ -50,11 +76,10 @@ fn add_authorization_parameters(openapi: &mut OpenAPI) -> Result<(), String> {
   Ok(())
 }
 
-const STRING_SCHEMA_JSON: &str = "{ \"schema\": { \"type\": \"string\" } }";
-
 fn add_authorization_parameter(operation: &mut Operation) {
-  let schema_content: ParameterSchemaOrContent = serde_json::from_str::<ParameterSchemaOrContent>(STRING_SCHEMA_JSON).unwrap();
+  const STRING_SCHEMA_JSON: &str = "{ \"schema\": { \"type\": \"string\" } }";
 
+  let schema_content: ParameterSchemaOrContent = serde_json::from_str::<ParameterSchemaOrContent>(STRING_SCHEMA_JSON).unwrap();
   operation.parameters.push(ReferenceOr::Item(Parameter::Header {
     parameter_data: ParameterData {
       name: "Authorization".to_string(),
@@ -114,5 +139,45 @@ fn add_description(openapi: &mut OpenAPI) {
     openapi.info.description = Some(format!("{}\n{}", description, DESC));
   } else {
     openapi.info.description = Some(DESC.to_string());
+  }
+}
+
+#[derive(Debug)]
+struct OpenApiOperation {
+  method: String,
+  kind: OpenApiOperationKind,
+  subjects: Vec<String>,
+  by_parameters: Vec<String>,
+}
+
+impl OpenApiOperation {
+  fn new(method: &str, path_elements: &[PathElement]) -> Self {
+    let kind: OpenApiOperationKind = OpenApiOperationKind::from(path_elements.first().unwrap().to_string().as_str());
+    let subjects = path_elements
+      .iter()
+      .skip(1)
+      .filter_map(|element| match element {
+        PathElement::Literal(subject) => Some(subject.to_lowercase().replace('-', "_").to_string()),
+        PathElement::Variable(_) => None,
+      })
+      .collect::<Vec<_>>();
+    let by_parameters = path_elements
+      .iter()
+      .filter_map(|element| match element {
+        PathElement::Literal(_) => None,
+        PathElement::Variable(variable) => Some(variable.to_lowercase().replace('-', "_").to_string()),
+      })
+      .collect::<Vec<_>>();
+    OpenApiOperation { method: method.to_string(), kind, subjects, by_parameters }
+  }
+
+  fn operation_id(&self) -> String {
+    let kind = match self.kind {
+      OpenApiOperationKind::AppCatalog => "_appcatalog",
+      _ => "",
+    };
+    let parameters =
+      if self.by_parameters.is_empty() { format!("_{}", self.subjects.join("_")) } else { format!("_{}_by_{}", self.subjects.join("_"), self.by_parameters.join("_by_")) };
+    format!("{}{}{}", self.method, kind, parameters)
   }
 }
