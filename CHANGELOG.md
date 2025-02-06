@@ -4,11 +4,25 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
-## [0.4.1]
+## [0.5.0] - yyy-mm-dd
 
-### Changed
+### Breaking changes
+
+* All API methods are now generated from the openapi specification.
+  Hence, many methods now have a different name.
+* Renamed `api_version()` function to `openapi_version()`.
+
+### Added
 
 * Improved error handling for bad requests.
+* Features:
+    * `appcatalog` - Controls availability of app catalog operations.
+    * `manage` - Controls availability of manage operations.
+    * `robot` - Controls availability of robot operation.
+
+### Removed
+
+* Feature `actual` is removed. Its capabilities are now all enabled.
 
 ## [0.4.0]
 
@@ -20,13 +34,13 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ### Added
 
-* Support DSH open api specification version 1.9.0.
-* Generic api function.
+* Support DSH open API specification version 1.9.0.
+* Generic API function.
 * Platform swagger url method.
 
 ### Changed
 
-* Implementation of methods that provide the api and the openapi versions.
+* Implementation of methods that provide the API and the openapi versions.
 * Embedded logo and favicon in generated docs.
 * Changed platform enum to struct.
 * Dedicated readme file for creates.io.
@@ -67,7 +81,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 * Changed type of guid to u16.
 * Improved error handling in client factory.
 * Better handling of usage relations.
-* Embedded generated code in api crate.
+* Embedded generated code in API crate.
 
 ### Removed
 
@@ -90,7 +104,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ### Fixes
 
-* Support DSH open api specification version 1.8.0.
+* Support DSH openapi specification version 1.8.0.
 
 ### Removed
 
@@ -105,6 +119,6 @@ All code and dependencies for the Trifonius engine are moved to their own projec
 
 ### Fixes
 
-* Consistent naming convention on the dsh api.
-* Moved generation of api code to this crate, for better control and one less dependency.
-* Better separation of concerns between Trifonius engine and dsh api.
+* Consistent naming convention on the DSH API.
+* Moved generation of API code to this crate, for better control and one less dependency.
+* Better separation of concerns between Trifonius engine and DSH API.
