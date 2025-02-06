@@ -1,4 +1,4 @@
-//! # Display implementations for selected types
+//! # `Display` implementations for selected types
 //!
 //! This module provides implementations of the [`Display`] trait for selected types.
 //!
@@ -133,12 +133,6 @@ impl Display for Application {
   }
 }
 
-impl Display for ApplicationVolumes {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.name)
-  }
-}
-
 impl Display for ApplicationSecret {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     write!(
@@ -152,6 +146,12 @@ impl Display for ApplicationSecret {
         .collect::<Vec<_>>()
         .join("")
     )
+  }
+}
+
+impl Display for ApplicationVolumes {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.name)
   }
 }
 
