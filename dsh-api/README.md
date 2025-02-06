@@ -15,7 +15,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.4.0" 
+dsh_api = "0.5.0" 
 ```
 
 The example will print a list of all the applications that are deployed
@@ -46,12 +46,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 ## Features
 
+By enabling/disabling below features you have control over what's included
+in your library and what's not.
+All features are disabled by default.
 The following features are defined:
 
-* `actual` - When this feature is enabled the library will include all the "actual"
-  method versions of the REST API. By default, these methods will not be included.
-* `generic` - When this feature is enabled the library will also include the generic methods.
-  This feature is disabled by default.
+* `appcatalog` - Enables the app catalog methods.
+* `generic` - Enables the generic methods.
+* `manage` - Enables the manage methods.
+* `robot` - Enables the robot operation.
 
 ---
 
