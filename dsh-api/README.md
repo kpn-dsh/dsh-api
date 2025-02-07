@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 ## Features
 
-By enabling/disabling below features you have control over what's included
+By enabling/disabling the features described below you have control over what's included
 in your library and what's not.
 All features are disabled by default.
 The following features are defined:
