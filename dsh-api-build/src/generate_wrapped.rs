@@ -88,7 +88,7 @@ fn wrapped_method(dsh_api_operation: &DshApiOperation) -> String {
     .filter_map(
       |(parameter_name, parameter_type, _)| {
         if parameter_name != "Authorization" {
-          Some(wrapper_signature_parameter(&parameter_type, parameter_name.to_lowercase().as_str()))
+          Some(wrapper_signature_parameter(parameter_type, parameter_name.to_lowercase().as_str()))
         } else {
           None
         }
