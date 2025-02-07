@@ -36,6 +36,29 @@
 //! (provided by the [`DSH SDK`](https://crates.io/crates/dsh_sdk)),
 //! which will make sure that you always use a valid token when calling the API functions.
 //!
+//! # [`types`]
+//!
+//! For their parameters and return values the methods and functions in the crate
+//! make use of rust `struct`s that where generated from the DSH resource management API
+//! Openapi specification (version 1.9.0).
+//!
+//! The generated types are defined as follows:
+//!
+//! ```rust
+//! # use serde::{Deserialize, Serialize};
+//! #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+//! pub struct Secret {
+//!   pub name: String,
+//!   pub value: String,
+//! }
+//! ```
+//!
+//! * All types are `pub`.
+//! * All fields are `pub`.
+//! * All types have derived implementations of the [`Clone`], [`Debug`], [`Deserialize`],
+//!   [`PartialEq`] and [`Serialize`] traits.
+//! * Some [selected types](crate::display) also have an implementation of the [`Display`] trait.
+//!
 //! # Examples
 //!
 //! ## Minimal example
@@ -92,7 +115,7 @@
 //!
 //! # Features
 //!
-//! By enabling/disabling below features you have control over what's included
+//! By enabling/disabling the features described below you have control over what's included
 //! in your library and what's not.
 //! All features are disabled by default.
 //!
@@ -106,6 +129,7 @@
 /// # Types generated from openapi file
 pub use crate::generated::types;
 
+#[allow(dead_code)]
 pub(crate) mod generated {
   include!(concat!(env!("OUT_DIR"), "/progenitor_client.rs"));
 }
@@ -458,47 +482,3 @@ fn test_dsh_api_error_is_sync() {
   fn assert_sync<T: Sync>() {}
   assert_sync::<DshApiError>();
 }
-
-// Function naming conventions
-//
-//                       parameter   returns
-//
-// find_Ys               predicate   zero or more Xs from one Y, that match a predicate
-// find_Ys_that_use_X    x_id        find all Ys that use X
-// find_Ys_that_use_Xs   x_ids       find all Ys that use one of Xs
-// get_X_from_Y          x_id        optional X from Y, that matches x_id
-// get_X_from_Ys         x_id        optional X from Ys, that matches x_id
-// get_Xs_from_Y         x_ids       zero or more Xs from one Y, that match one of the x_ids
-// get_Xs_from_Ys        x_ids       zero or more Xs from multiple Ys, that match one of the x_ids
-// X_from_Y                          (optional) X from Y
-// X_from_Ys                         (optional) X from Ys
-// Xs_from_Y                         zero or more Xs from one Y
-// Xs_from_Ys                        zero or more Xs from multiple Ys
-//
-// _with_Z                           result contains tuples (X, Z)
-// _with_Zs                          result contains tuples (X, Zs)
-
-// API naming convention
-//
-// Configuration is what was configured
-// Actual is what is actual deployed
-// Naming conventions
-// create_SUBJECT                        SUBJECT_id?, CONFIG    create SUBJECT
-// delete_SUBJECT                        SUBJECT_id             delete SUBJECT
-// deploy_SUBJECT                        SUBJECT_id?, CONFIG    deploy SUBJECT
-// get_SUBJECT                           SUBJECT_id             get all actual/current SUBJECT data, by SUBJECT_id
-// get_SUBJECT_[SUB]_allocation_status   SUBJECT_id, SUB_id     get SUB allocation status, by SUBJECT_id and SUB_id
-// get_SUBJECT_actual_configuration      SUBJECT_id             get actual/current configuration, by SUBJECT_id
-// get_SUBJECT_actual_configurations                            get actual/current configurations, for all SUBJECTs
-// get_SUBJECT_allocation_status         SUBJECT_id             get SUBJECT allocation status, by SUBJECT_id
-// get_SUBJECT_configuration             SUBJECT_id             get configuration provided at creation, by SUBJECT_id
-// get_SUBJECT_configurations                                   get configurations provided at creation, for all SUBJECTs
-// get_SUBJECT_derived_task_ids          SUBJECT_id             get all taskIids for all derived tasks, by SUBJECT_id
-// get_SUBJECT_ids                                              get all ids, for all SUBJECTs
-// get_SUBJECT_ids_with_derived_tasks                           get ids for all SUBJECTs that have derived tasks
-// get_SUBJECT_SPECIFIC                  SUBJECT_id             get SUBJECT specific data, by SUBJECT_id
-// get_SUBJECT_SPECIFICs                 SUBJECT_id             get SUBJECT specific data, for all SUBJECTs
-// get_SUBJECT_SUB_allocation_status     SUBJECT_id, SUB_id     get SUB allocation status, by SUBJECT_id and SUB_id
-// get_SUBJECTs                                                 get all actual/current SUBJECT data, for all SUBJECTs
-// undeploy_SUBJECT                      SUBJECT_id             undeploy SUBJECT, by SUBJECT_id
-// update_SUBJECT                        SUBJECT_id, CONFIG     deploy SUBJECT, by SUBJECT_id
