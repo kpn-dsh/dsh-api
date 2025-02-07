@@ -64,7 +64,7 @@
 //! ## Minimal example
 //!
 //! The first minimal example will print a list of all the applications that are deployed
-//! in a tenant environment. This example requires that the tenant's name, group id, user id,
+//! in a tenant environment. This example requires that the tenant's name,
 //! platform and API password are configured via [environment variables](dsh_api_client_factory).
 //!
 //! ```ignore
@@ -98,7 +98,6 @@
 //! # async fn hide() -> Result<(), DshApiError> {
 //! let tenant = DshApiTenant::new(
 //!   "my-tenant".to_string(),
-//!   1234,
 //!   DshPlatform::try_from("np-aws-lz-dsh")?
 //! );
 //! let password = "...".to_string();
@@ -406,7 +405,6 @@ pub(crate) const ENV_VAR_TENANT: &str = "DSH_API_TENANT";
 
 pub(crate) const ENV_VAR_PREFIX_PASSWORD: &str = "DSH_API_PASSWORD";
 pub(crate) const ENV_VAR_PREFIX_PASSWORD_FILE: &str = "DSH_API_PASSWORD_FILE";
-pub(crate) const ENV_VAR_PREFIX_GUID: &str = "DSH_API_GUID";
 
 // # Create client password environment variable
 //
@@ -452,23 +450,6 @@ pub(crate) fn password_file_environment_variable(platform: &DshPlatform, tenant_
     platform.name().to_ascii_uppercase().replace('-', "_"),
     tenant_name.to_ascii_uppercase().replace('-', "_")
   )
-}
-
-// # Create client tenant guid environment variable
-//
-// This function creates the environment variable used to define the client tenant's guid
-// from the tenant's name. The format of the environment variable is
-// `DSH_API_GUID_[tenant_name]`,
-// where the `tenant_name` will be converted to uppercase and
-// `-` will be replaced by `_`.
-//
-// # Parameters
-// * `tenant_name` - client tenant name
-//
-// # Returns
-// Client tenants guid environment variable.
-pub(crate) fn guid_environment_variable(tenant_name: &str) -> String {
-  format!("{}_{}", ENV_VAR_PREFIX_GUID, tenant_name.to_ascii_uppercase().replace('-', "_"))
 }
 
 #[test]

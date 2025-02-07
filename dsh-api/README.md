@@ -19,13 +19,12 @@ dsh_api = "0.5.0"
 ```
 
 The example will print a list of all the applications that are deployed
-in a tenant environment. This example requires that the tenant's name, group and user id,
+in a tenant environment. This example requires that the tenant's name,
 platform and API secret are configured via environment variables as follows:.
 
 ```bash
 > export DSH_API_PLATFORM=np-aws-lz-dsh
 > export DSH_API_TENANT=my-tenant
-> export DSH_API_GUID_MY_TENANT=1234
 > export DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT=...
 ````
 

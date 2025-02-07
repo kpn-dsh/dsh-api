@@ -16,13 +16,12 @@ dsh_api = "0.5.0"
 ### Minimal example
 
 The first minimal example will print a list of all the applications that are deployed
-in a tenant environment. This example requires that the tenant's name, group and user id,
+in a tenant environment. This example requires that the tenant's name,
 platform and API secret are configured via environment variables as follows:.
 
 ```bash
 > export DSH_API_PLATFORM=np-aws-lz-dsh
 > export DSH_API_TENANT=my-tenant
-> export DSH_API_GUID_MY_TENANT=1234
 > export DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT=...
 ````
 
@@ -62,7 +61,6 @@ use dsh_api::DshApiError;
 async fn main() -> Result<(), DshApiError> {
     let tenant = DshApiTenant::new(
         "my-tenant".to_string(),
-        1234,
         DshPlatform::try_from("np-aws-lz-dsh")?
     );
     let secret = "...".to_string();
@@ -145,7 +143,6 @@ Most library functions need at least the following parameters to run:
 * platform - the platform that the resources reside on,
 * tenant - this is the tenant that is making the function calls,
   needed for authentication and authorization,
-* group and user id - needed for some special occasions,
 * the rest API password for the tenant on the platform.
 
 These parameters can be provided explicitly when creating an `DshApiClientFactory` object
@@ -229,17 +226,6 @@ gets the default value from the environment variables decribed below.
         </td>
     </tr>
     <tr valign="top">
-        <td><code>DSH_API_GUID_[tenant]</code></td>
-        <td>
-            Group id and user id for the client tenant.<br/>
-            The placeholder <code>[tenant]</code> needs to be substituted 
-            with the tenant name in all capitals, with hyphens (<code>-</code>) 
-            replaced by underscores (<code>_</code>).
-            E.g. if the tenant name is <code>my-tenant</code>, the environment variable must be
-            <code>DSH_API_GUID_MY_TENANT</code>.
-        </td>
-    </tr>
-    <tr valign="top">
         <td><code>DSH_API_PLATFORMS_FILE</code></td>
         <td>
             Set this environment variable to override the default list of available platforms.
@@ -275,12 +261,11 @@ gets the default value from the environment variables decribed below.
 </tr>
 </table>
 
-E.g., for tenant `my-tenant` (gid/uid `1234`) at platform `np-aws-lz-dsh`, use:
+E.g., for tenant `my-tenant` at platform `np-aws-lz-dsh`, use:
 
 ```bash
 > export DSH_API_PLATFORM=np-aws-lz-dsh
 > export DSH_API_TENANT=my-tenant
-> export DSH_API_GUID_MY_TENANT=1234
 > export DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT=..
 ```
 

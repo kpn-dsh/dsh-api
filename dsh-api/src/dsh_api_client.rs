@@ -25,7 +25,7 @@
 //! # Example
 //!
 //! This example will print a list of all the applications that are deployed
-//! in a tenant environment. This example requires that the tenant's name, group id, user id,
+//! in a tenant environment. This example requires that the tenant's name,
 //! platform and API password are configured via
 //! [environment variables](crate::dsh_api_client_factory).
 //!
@@ -193,24 +193,3 @@ fn test_dsh_api_client_is_sync() {
   fn assert_sync<T: Sync>() {}
   assert_sync::<DshApiClient>();
 }
-
-// 200 - OK
-// 201 - CREATED
-// 202 - ACCEPTED
-// 204 - NO_CONTENT
-// 400 - BAD_REQUEST
-// 401 - UNAUTHORIZED
-// 403 - FORBIDDEN
-// 404 - NOT_FOUND
-// 405 - NOT_ALLOWED
-// 500 - INTERNAL_SERVER_ERROR
-
-// DELETE  200,204  resource successfully deleted
-//         202      request accepted, result unknown
-// GET     200      resource successfully retrieved
-// POST    200      resource created successfully
-//         201      created new resource
-//         202      request accepted, result unknown
-// PUT     200,204  resource updated successfully
-//         201      created new resource
-//         202      request accepted, result unknown

@@ -1,7 +1,7 @@
 //! # DSH API client factory
 //!
 //! This module provides factories for creating [`DshApiClient`] instances,
-//! based on the platform and the tenant's name, group id and user id.
+//! based on the platform and the tenant's name.
 //! These parameters can either be provided via environment variables
 //! or via explicit function arguments.
 //!
@@ -28,7 +28,6 @@
 //! # async fn hide() -> Result<(), DshApiError> {
 //! let tenant = DshApiTenant::new(
 //!   "my-tenant".to_string(),
-//!   1234,
 //!   DshPlatform::try_from("np-aws-lz-dsh")?
 //! );
 //! let password = "...".to_string();
@@ -64,15 +63,6 @@
 //! E.g. if the platform is `np-aws-lz-dsh` and the tenant name is
 //! `my-tenant`, the environment variable must be
 //! `DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT`.
-//!
-//! ## `DSH_API_GUID_[tenant]`
-//! Group id and user id for the clienttenant.
-//! The placeholder `[tenant]` needs to be substituted
-//! with the tenant name in all capitals, with hyphens (`-`)
-//! replaced by underscores (`_`).
-//!
-//! E.g. if the tenant name is `my-tenant`, the environment variable must be
-//! `DSH_API_GUID_MY_TENANT`.
 use crate::dsh_api_client::DshApiClient;
 use crate::dsh_api_tenant::DshApiTenant;
 use crate::generated::Client as GeneratedClient;
@@ -121,8 +111,7 @@ impl DshApiClientFactory {
   /// This function will create a new `DshApiClientFactory` from the provided parameters.
   ///
   /// # Parameters
-  /// * `tenant` - Tenant struct, containing the platform, tenant name and the
-  ///   tenant's group and user id.
+  /// * `tenant` - Tenant struct, containing the platform and tenant name.
   /// * `password` - The secret password used to retrieve the DSH API tokens.
   ///
   /// # Returns
@@ -197,11 +186,6 @@ impl DshApiClientFactory {
   /// # Returns the name of the factories tenant
   pub fn tenant_name(&self) -> &str {
     self.tenant.name()
-  }
-
-  /// # Returns the group and user id of the factories tenant
-  pub fn guid(&self) -> u16 {
-    self.tenant.guid()
   }
 
   /// # Create an DSH API client
