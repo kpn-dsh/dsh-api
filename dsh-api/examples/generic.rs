@@ -1,4 +1,3 @@
-use dsh_api::types::{LimitValue, LimitValueCpu, LimitValueCpuName, LimitValueMem, LimitValueMemName};
 use std::error::Error;
 
 #[path = "common.rs"]
@@ -13,6 +12,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 async fn main() -> Result<(), Box<dyn Error>> {
   use crate::common::print_header;
   use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+  use dsh_api::types::{LimitValue, LimitValueCpu, LimitValueCpuName, LimitValueMem, LimitValueMemName};
   env_logger::init();
 
   const APPLICATION_ID: &str = "keyring-dev";
