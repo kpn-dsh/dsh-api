@@ -278,15 +278,15 @@ gets the default value from the environment variables decribed below.
 E.g., for tenant `my-tenant` (gid/uid `1234`) at platform `np-aws-lz-dsh`, use:
 
 ```bash
-> export DSH_API_PLATFORM=np-aws-lz-dsh && \
-  export DSH_API_TENANT=my-tenant && \
-  export DSH_API_GUID_MY_TENANT=1234 && \
-  export DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT=..
+> export DSH_API_PLATFORM=np-aws-lz-dsh
+> export DSH_API_TENANT=my-tenant
+> export DSH_API_GUID_MY_TENANT=1234
+> export DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT=..
 ```
 
 ## Features
 
-By enabling/disabling below features you have control over what's included
+By enabling/disabling the features described below you have control over what's included
 in your library and what's not.
 All features are disabled by default.
 The following features are defined:
