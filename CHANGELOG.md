@@ -10,6 +10,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 * All API methods are now generated from the openapi specification.
   Hence, many methods now have a different name.
+* Removed static default client factory.
 * Renamed `api_version()` function to `openapi_version()`.
 * Removed group and user id from tenant data.
 
