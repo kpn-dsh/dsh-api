@@ -13,6 +13,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 * Removed static default client factory.
 * Renamed `api_version()` function to `openapi_version()`.
 * Removed group and user id from tenant data.
+* Updated `dsh_sdk` dependency to 0.6.0.
 
 ### Added
 

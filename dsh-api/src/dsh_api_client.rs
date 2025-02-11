@@ -47,7 +47,7 @@ use crate::generated::Client as GeneratedClient;
 use crate::platform::DshPlatform;
 use crate::{DshApiError, OPENAPI_SPEC};
 use bytes::Bytes;
-use dsh_sdk::RestTokenFetcher;
+use dsh_sdk::ManagementApiTokenFetcher;
 use futures::TryStreamExt;
 use progenitor_client::{ByteStream, Error as ProgenitorError, ResponseValue as ProgenitorResponseValue};
 use reqwest::StatusCode as ReqwestStatusCode;
@@ -55,7 +55,7 @@ use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
 pub struct DshApiClient {
-  token_fetcher: RestTokenFetcher,
+  token_fetcher: ManagementApiTokenFetcher,
   pub(crate) generated_client: GeneratedClient,
   tenant: DshApiTenant,
 }
@@ -71,7 +71,7 @@ pub(crate) enum DshApiResponseStatus {
 pub(crate) type DshApiProcessResult<T> = Result<(DshApiResponseStatus, T), DshApiError>;
 
 impl DshApiClient {
-  pub(crate) fn new(token_fetcher: RestTokenFetcher, generated_client: GeneratedClient, tenant: DshApiTenant) -> Self {
+  pub(crate) fn new(token_fetcher: ManagementApiTokenFetcher, generated_client: GeneratedClient, tenant: DshApiTenant) -> Self {
     Self { token_fetcher, generated_client, tenant }
   }
 

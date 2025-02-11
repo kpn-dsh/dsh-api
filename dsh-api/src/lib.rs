@@ -32,7 +32,8 @@
 //!
 //! You can now call the client's methods to interact with the DSH resource management API.
 //!
-//! The client will contain an embedded [`RestTokenFetcher`](dsh_sdk::RestTokenFetcher)
+//! The client will contain an embedded
+//! [`ManagementApiTokenFetcher`](dsh_sdk::ManagementApiTokenFetcher)
 //! (provided by the [`DSH SDK`](https://crates.io/crates/dsh_sdk)),
 //! which will make sure that you always use a valid token when calling the API functions.
 //!
@@ -141,10 +142,9 @@ pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/openapi.
 /// Specification of default platforms
 pub static DEFAULT_PLATFORMS: &str = include_str!("../default-platforms.json");
 
-use dsh_sdk::error::DshRestTokenError;
-
 use crate::platform::DshPlatform;
 use crate::types::error::ConversionError;
+use dsh_sdk::management_api::ManagementApiTokenError;
 use log::{debug, error};
 use progenitor_client::Error as ProgenitorError;
 use reqwest::Error as ReqwestError;
@@ -302,13 +302,13 @@ impl From<SerdeJsonError> for DshApiError {
   }
 }
 
-impl From<DshRestTokenError> for DshApiError {
-  fn from(error: DshRestTokenError) -> Self {
+impl From<ManagementApiTokenError> for DshApiError {
+  fn from(error: ManagementApiTokenError) -> Self {
     match error {
-      DshRestTokenError::UnknownClientId => DshApiError::Unexpected("unknown client id".to_string(), Some(error.to_string())),
-      DshRestTokenError::UnknownClientSecret => DshApiError::Unexpected("unknown client secret".to_string(), Some(error.to_string())),
-      DshRestTokenError::FailureTokenFetch(_) => DshApiError::Unexpected("could not fetch token".to_string(), Some(error.to_string())),
-      DshRestTokenError::StatusCode { status_code, ref error_body } => {
+      ManagementApiTokenError::UnknownClientId => DshApiError::Unexpected("unknown client id".to_string(), Some(error.to_string())),
+      ManagementApiTokenError::UnknownClientSecret => DshApiError::Unexpected("unknown client secret".to_string(), Some(error.to_string())),
+      ManagementApiTokenError::FailureTokenFetch(_) => DshApiError::Unexpected("could not fetch token".to_string(), Some(error.to_string())),
+      ManagementApiTokenError::StatusCode { status_code, ref error_body } => {
         if status_code == 401 {
           DshApiError::NotAuthorized
         } else {
