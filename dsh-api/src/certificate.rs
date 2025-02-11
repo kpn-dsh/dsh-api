@@ -34,7 +34,7 @@ use std::collections::HashMap;
 ///
 /// * [`get_certificate_with_usage(certificate_id) -> (certificate_status, [used_by])`](DshApiClient::get_certificate_with_usage)
 /// * [`list_certificates_with_usage() -> (certificate_id, certificate_status, [used_by])`](DshApiClient::list_certificates_with_usage)
-impl DshApiClient<'_> {
+impl DshApiClient {
   /// # List all certificates with usage
   ///
   /// Returns a list of all certificate configurations,

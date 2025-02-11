@@ -33,7 +33,7 @@ use std::collections::HashMap;
 ///
 /// * [`list_app_configurations() -> [(app_id, app)]`](DshApiClient::list_app_configurations)
 /// * [`list_app_ids() -> [app_id]`](DshApiClient::list_app_ids)
-impl DshApiClient<'_> {
+impl DshApiClient {
   /// # List all App configurations
   ///
   /// # Returns

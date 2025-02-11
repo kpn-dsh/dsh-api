@@ -39,7 +39,7 @@ pub const VERSION: &str = "version";
 /// * [`list_app_catalog_manifest_ids() -> [id]`](DshApiClient::list_app_catalog_manifest_ids)
 /// * [`list_app_catalog_manifest_ids_with_versions() -> [id, [version]]`](DshApiClient::list_app_catalog_manifest_ids_with_versions)
 /// * [`list_app_catalog_manifests_with_versions() -> [id, [(version, manifest)]]`](DshApiClient::list_app_catalog_manifests_with_versions)
-impl DshApiClient<'_> {
+impl DshApiClient {
   /// # Return sorted list of all App Catalog manifest ids
   ///
   /// # Returns

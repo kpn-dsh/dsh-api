@@ -35,7 +35,7 @@ use futures::try_join;
 ///
 /// * [`get_secret_with_usage(secret_id) -> [used_by]`](DshApiClient::get_secret_with_usage)
 /// * [`list_secrets_with_usage() -> [(secret_id, used_by)]`](DshApiClient::list_secrets_with_usage)
-impl DshApiClient<'_> {
+impl DshApiClient {
   /// # Get secrets with usage
   ///
   /// Returns configuration and usage for a given secret.

@@ -25,7 +25,7 @@ use crate::{DshApiResult, Injection, UsedBy};
 use futures::try_join;
 use std::collections::HashMap;
 
-impl DshApiClient<'_> {
+impl DshApiClient {
   /// # Get all vhost injections from `Application`
   ///
   /// # Parameters

@@ -35,7 +35,7 @@ use std::collections::HashMap;
 /// * [`get_buckets() -> map<bucket_id, bucket>`](DshApiClient::get_buckets)
 /// * [`list_buckets() -> [(bucket_id, bucket)]`](DshApiClient::list_buckets)
 /// * [`list_bucket_ids() -> [id]`](DshApiClient::list_bucket_ids)
-impl DshApiClient<'_> {
+impl DshApiClient {
   /// # Return list of bucket ids
   ///
   /// API function: `GET /allocation/{tenant}/bucket`

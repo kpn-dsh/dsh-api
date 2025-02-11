@@ -25,7 +25,7 @@ pub fn generate_wrapped(writer: &mut dyn Write, openapi: &OpenAPI) -> Result<(),
   writeln!(writer, "///")?;
   writeln!(writer, "/// Module that contains all methods to call the API methods.")?;
   writeln!(writer, "/// These methods are wrappers around the methods generated from the `progenitor` library.")?;
-  writeln!(writer, "impl DshApiClient<'_> {{")?;
+  writeln!(writer, "impl DshApiClient {{")?;
   let mut first = true;
   for operation in &wrapped_operations {
     if !first {

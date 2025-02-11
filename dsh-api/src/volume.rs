@@ -32,7 +32,7 @@ use futures::try_join;
 ///
 /// * [`get_volume_with_usage(id) -> [volume_status, [usage]]`](DshApiClient::get_volume_with_usage)
 /// * [`list_volumes_with_usage() -> [id, [usage]]`](DshApiClient::list_volumes_with_usage)
-impl DshApiClient<'_> {
+impl DshApiClient {
   /// # Get volume with usage
   ///
   /// Returns configuration and usage for a given volume.

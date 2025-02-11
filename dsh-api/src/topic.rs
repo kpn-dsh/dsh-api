@@ -32,7 +32,7 @@ use futures::try_join;
 /// DSH resource management API. These derived methods depend on the API methods for this.
 ///
 /// * [`list_topics_with_usage() -> [id, [usage]]`](DshApiClient::list_topics_with_usage)
-impl DshApiClient<'_> {
+impl DshApiClient {
   /// # List all topics with usage
   ///
   /// Returns a list of all topics together with the apps and applications that use them.
