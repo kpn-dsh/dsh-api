@@ -20,8 +20,8 @@
 //! * First you need to get a
 //!   [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory):
 //!   * Either use the
-//!     [`DEFAULT_DSH_API_CLIENT_FACTORY`](dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY),
-//!     which is configured from
+//!     [`DshApiClientFactory::default()`](dsh_api_client_factory::DshApiClientFactory::default),
+//!     method, which is configured from
 //!     [environment variables](dsh_api_client_factory/index.html#environment-variables),
 //!   * or you can create a factory explicitly by providing the `platform`,
 //!     `tenant` and API `password` yourself and feeding them to the
@@ -68,11 +68,11 @@
 //! platform and API password are configured via [environment variables](dsh_api_client_factory).
 //!
 //! ```ignore
-//! use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+//! use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 //!
 //! # use dsh_api::DshApiError;
 //! # async fn hide() -> Result<(), DshApiError> {
-//! let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+//! let client = DshApiClientFactory::default().client().await?;
 //! for (application_id, application) in client.list_applications()? {
 //!   println!("{} -> {}", application_id, application);
 //! }

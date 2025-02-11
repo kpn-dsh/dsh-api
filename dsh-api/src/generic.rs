@@ -27,10 +27,10 @@
 //! Get the configuration of the application `my-application` and print it as json.
 //!
 //! ```ignore
-//! # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+//! # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+//! # let client = DshApiClientFactory::default().client().await?;
 //! let application = client.get("application_configuration", &["my-application"]).await?;
 //! println!("{}", serde_json::to_string_pretty(&application)?);
 //! # Ok(())
@@ -40,10 +40,10 @@
 //! Update the secret `abcdef` to the value `ABCDEF`.
 //!
 //! ```ignore
-//! # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+//! # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+//! # let client = DshApiClientFactory::default().client().await?;
 //!  let secret = serde_json::to_string("ABCDEF")?;
 //!  client.put("put_secret_by_tenant_by_id", &["abcdef"], &secret).await?;
 //! # Ok(())

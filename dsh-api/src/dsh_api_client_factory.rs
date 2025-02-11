@@ -6,7 +6,7 @@
 //! or via explicit function arguments.
 //!
 //! There are two ways to acquire a `DshApiClientFactory`:
-//! * Use the statically initialized [`DEFAULT_DSH_API_CLIENT_FACTORY`],
+//! * Use the method [`DshApiClientFactory::default()`],
 //!   which is configured from the environment variables listed below.
 //! * Create a factory explicitly by providing the `platform`,
 //!   `tenant` and API `password` parameters yourself and feeding them to the
@@ -70,7 +70,6 @@ use crate::platform::DshPlatform;
 use crate::{password_environment_variable, password_file_environment_variable, DshApiError};
 use dsh_sdk::Platform as SdkPlatform;
 use dsh_sdk::RestTokenFetcherBuilder;
-use lazy_static::lazy_static;
 use log::info;
 use std::env;
 
@@ -210,13 +209,13 @@ impl DshApiClientFactory {
   /// # Ok(())
   /// # }
   /// ```
-  pub async fn client(&self) -> Result<DshApiClient, DshApiError> {
+  pub async fn client(self) -> Result<DshApiClient, DshApiError> {
     match RestTokenFetcherBuilder::new(SdkPlatform::try_from(self.tenant.platform())?)
       .tenant_name(self.tenant.name().clone())
       .client_secret(self.password.clone())
       .build()
     {
-      Ok(token_fetcher) => Ok(DshApiClient::new(token_fetcher, &self.generated_client, &self.tenant)),
+      Ok(token_fetcher) => Ok(DshApiClient::new(token_fetcher, self.generated_client, self.tenant.clone())),
       Err(rest_token_error) => Err(DshApiError::Unexpected(
         format!("could not create token fetcher ({})", rest_token_error),
         Some(rest_token_error.to_string()),
@@ -244,60 +243,6 @@ impl Default for DshApiClientFactory {
       Err(error) => panic!("{}", error),
     }
   }
-}
-
-lazy_static! {
-  /// # Default factory for DSH API client
-  ///
-  /// Static `DshApiClientFactory`, created lazily from the default environment variables.
-  /// This value is targeted at testing and examples and should not be used in real applications.
-  ///
-  /// # Examples
-  /// ```no_run
-  /// use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-  /// # use dsh_api::DshApiError;
-  /// # async fn hide() -> Result<(), DshApiError> {
-  /// let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
-  /// let client = client_factory.client().await?;
-  /// println!("tenant is {}", client.tenant());
-  /// # Ok(())
-  /// # }
-  /// ```
-  ///
-  /// # Panics
-  /// Lazily creating the instance will panic if a new `DshApiClientFactory` cannot be created
-  /// from the default environment variables.
-  pub static ref DEFAULT_DSH_API_CLIENT_FACTORY: DshApiClientFactory = DshApiClientFactory::default();
-
-  /// # Fallible default factory for DSH API client
-  ///
-  /// Static `Result<DshApiClientFactory, DshApiError>`, created lazily from the default
-  /// environment variables. This value is targeted at testing and examples and should not be
-  /// used in real applications.
-  ///
-  /// # Examples
-  /// ```no_run
-  /// use dsh_api::dsh_api_client_factory::{
-  ///   DshApiClientFactory,
-  ///   TRY_DEFAULT_DSH_API_CLIENT_FACTORY
-  /// };
-  /// # use dsh_api::DshApiError;
-  /// # async fn hide() -> Result<(), DshApiError> {
-  ///
-  /// // Explicit type declaration is important since type inference will not work here
-  /// let try_factory: &Result<DshApiClientFactory, DshApiError> =
-  ///   &TRY_DEFAULT_DSH_API_CLIENT_FACTORY;
-  /// match try_factory {
-  ///   Ok(factory) => {
-  ///     let client = factory.client().await?;
-  ///     println!("tenant is {}", client.tenant());
-  ///   },
-  ///   Err(error) => println!("could not create client factory: {}", error)
-  /// }
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub static ref TRY_DEFAULT_DSH_API_CLIENT_FACTORY: Result<DshApiClientFactory, DshApiError> = DshApiClientFactory::try_default();
 }
 
 fn get_password(tenant: &DshApiTenant) -> Result<String, DshApiError> {

@@ -8,8 +8,8 @@
 //! * First you need to get a
 //!   [`DshApiClientFactory`](crate::dsh_api_client_factory::DshApiClientFactory):
 //!   * Either use the
-//!     [`DEFAULT_DSH_API_CLIENT_FACTORY`](crate::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY),
-//!     which is configured from
+//!     [`DshApiClientFactory::default()`](crate::dsh_api_client_factory::DshApiClientFactory::default),
+//!     method, which is configured from
 //!     [environment variables](dsh_api_client_factory/index.html#environment-variables),
 //!   * or you can create a factory explicitly by providing the `platform`,
 //!     `tenant` and API `password` yourself and feeding them to the
@@ -30,11 +30,11 @@
 //! [environment variables](crate::dsh_api_client_factory).
 //!
 //! ```ignore
-//! use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+//! use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 //!
 //! # use dsh_api::DshApiError;
 //! # async fn hide() -> Result<(), DshApiError> {
-//! let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+//! let client = DshApiClientFactory::default().client().await?;
 //! for (application_id, application) in client.list_applications()? {
 //!   println!("{} -> {}", application_id, application);
 //! }
@@ -54,10 +54,10 @@ use reqwest::StatusCode as ReqwestStatusCode;
 use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
-pub struct DshApiClient<'a> {
+pub struct DshApiClient {
   token_fetcher: RestTokenFetcher,
-  pub(crate) generated_client: &'a GeneratedClient,
-  tenant: &'a DshApiTenant,
+  pub(crate) generated_client: GeneratedClient,
+  tenant: DshApiTenant,
 }
 
 pub(crate) enum DshApiResponseStatus {
@@ -70,8 +70,8 @@ pub(crate) enum DshApiResponseStatus {
 
 pub(crate) type DshApiProcessResult<T> = Result<(DshApiResponseStatus, T), DshApiError>;
 
-impl<'a> DshApiClient<'a> {
-  pub(crate) fn new(token_fetcher: RestTokenFetcher, generated_client: &'a GeneratedClient, tenant: &'a DshApiTenant) -> Self {
+impl DshApiClient {
+  pub(crate) fn new(token_fetcher: RestTokenFetcher, generated_client: GeneratedClient, tenant: DshApiTenant) -> Self {
     Self { token_fetcher, generated_client, tenant }
   }
 
@@ -133,7 +133,7 @@ impl<'a> DshApiClient<'a> {
 
   /// Returns the tenant
   pub fn tenant(&self) -> &DshApiTenant {
-    self.tenant
+    &self.tenant
   }
 
   /// Returns the name of the tenant
