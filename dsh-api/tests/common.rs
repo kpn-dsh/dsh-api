@@ -1,5 +1,5 @@
 use dsh_api::dsh_api_client::DshApiClient;
-use dsh_api::dsh_api_client_factory::{DshApiClientFactory, TRY_DEFAULT_DSH_API_CLIENT_FACTORY};
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::DshApiError;
 
 #[allow(dead_code)]
@@ -12,9 +12,9 @@ pub fn print_header(header: &str) {
 }
 
 #[allow(unused)]
-pub(crate) async fn get_client<'a>() -> Result<DshApiClient<'a>, ()> {
+pub(crate) async fn get_client<'a>() -> Result<DshApiClient, ()> {
   // Explicit try_factory variable declaration is important since type inference will not work here
-  let try_factory: &Result<DshApiClientFactory, DshApiError> = &TRY_DEFAULT_DSH_API_CLIENT_FACTORY;
+  let try_factory: Result<DshApiClientFactory, DshApiError> = DshApiClientFactory::try_default();
   match try_factory {
     Ok(factory) => match factory.client().await {
       Ok(client) => Ok(client),

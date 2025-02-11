@@ -1,5 +1,5 @@
 use crate::common::print_header;
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::types::AllocationStatus;
 use dsh_api::types::{Certificate, CertificateStatus};
 use dsh_api::UsedBy;
@@ -13,7 +13,7 @@ static CERTIFICATE_ID: &str = "broker-kafka-proxy-certificate";
 async fn main() -> Result<(), String> {
   env_logger::init();
 
-  let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+  let client = DshApiClientFactory::default().client().await?;
 
   print_header("get_certificate");
   let certificate: CertificateStatus = client.get_certificate(CERTIFICATE_ID).await.unwrap();

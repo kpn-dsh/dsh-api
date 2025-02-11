@@ -1,5 +1,5 @@
 use crate::common::print_header;
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::query_processor::{parts_to_ansi_formatted_string, Part, RegexQueryProcessor};
 use dsh_api::types::{AllocationStatus, Application, TaskStatus};
 use dsh_api::Injection;
@@ -17,7 +17,7 @@ const SECRET: &str = "backend_password";
 async fn main() -> Result<(), String> {
   env_logger::init();
 
-  let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
+  let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;
 
   print_header("find_application_ids_with_derived_tasks");

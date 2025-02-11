@@ -18,7 +18,7 @@ pub fn generate_generic(writer: &mut dyn Write, openapi_spec: &OpenAPI) -> Resul
   writeln!(writer, "{}", USE)?;
   writeln!(writer)?;
   writeln!(writer, "{}", COMMENT_OUTER)?;
-  writeln!(writer, "impl DshApiClient<'_> {{")?;
+  writeln!(writer, "impl DshApiClient {{")?;
   let mut first = true;
   for (method, operations) in &generic_operations {
     if !first {
@@ -441,10 +441,10 @@ const COMMENT_OUTER: &str = r#"/// # Generic API function calls
 /// Get the configuration of the application `my-application` and print it as json.
 ///
 /// ```ignore
-/// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+/// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 /// # #[tokio::main]
 /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+/// # let client = DshApiClientFactory::default().client().await?;
 /// let application = client.get("application_configuration", &["my-application"]).await?;
 /// println!("{}", serde_json::to_string_pretty(&application)?);
 /// # Ok(())
@@ -454,10 +454,10 @@ const COMMENT_OUTER: &str = r#"/// # Generic API function calls
 /// Update the secret `abcdef` to the value `ABCDEF`.
 ///
 /// ```ignore
-/// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+/// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 /// # #[tokio::main]
 /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+/// # let client = DshApiClientFactory::default().client().await?;
 ///  let secret = serde_json::to_string("ABCDEF")?;
 ///  client.put("secret", &["abcdef"], &secret).await?;
 /// # Ok(())
@@ -490,10 +490,10 @@ const DELETE_COMMENT: &str = r#"  /// The `delete` function enables the generic 
   /// Delete the secret `my-secret`.
   ///
   /// ```ignore
-  /// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+  /// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   /// # #[tokio::main]
   /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+  /// # let client = DshApiClientFactory::default().client().await?;
   /// client.delete("secret-configuration", &["my-secret"]).await?;
   /// # Ok(())
   /// # }
@@ -519,10 +519,10 @@ const GET_COMMENT: &str = r#"  /// The `get` function enables the generic callin
   /// Get the configuration of the application `my-service` and print it as json.
   ///
   /// ```ignore
-  /// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+  /// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   /// # #[tokio::main]
   /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+  /// # let client = DshApiClientFactory::default().client().await?;
   /// let application = client.get("application-configuration", &["my-service"]).await?;
   /// println!("{}", serde_json::to_string_pretty(&application)?);
   /// # Ok(())
@@ -544,10 +544,10 @@ const HEAD_COMMENT: &str = r#"  /// The `head` function enables the generic call
   /// Check whether the tenant `my-tenant` has write access to the topic `my-topic`.
   ///
   /// ```ignore
-  /// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+  /// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   /// # #[tokio::main]
   /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+  /// # let client = DshApiClientFactory::default().client().await?;
   /// match client.head(
   ///   "manage-stream-internal-streamid-access-write",
   ///   &["my-topic", "my-tenant"]
@@ -577,10 +577,10 @@ const PATCH_COMMENT: &str = r#"  /// The `patch` function enables the generic ca
   /// For tenant `my-tenant`, set the cpu limit to `2.0` and the memory limit to `1000 MiB`.
   ///
   /// ```ignore
-  /// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+  /// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   /// # #[tokio::main]
   /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+  /// # let client = DshApiClientFactory::default().client().await?;
   /// let limit_values: Vec<LimitValue> =
   ///   vec![
   ///     LimitValue::Cpu(LimitValueCpu { name: LimitValueCpuName::Cpu, value: 2.0 }),
@@ -610,10 +610,10 @@ const POST_COMMENT: &str = r#"  /// The `post` function enables the generic call
   /// Create a new secret `abcdef` with the value `ABCDEF`.
   ///
   /// ```ignore
-  /// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+  /// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   /// # #[tokio::main]
   /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+  /// # let client = DshApiClientFactory::default().client().await?;
   /// let secret: Secret = Secret {
   ///   name: "abcdef".to_string(),
   ///   value: "ABCDEF".to_string()
@@ -642,10 +642,10 @@ const PUT_COMMENT: &str = r#"  /// The `put` function enables the generic callin
   /// Set the existing secret `abcdef` to the value `ABCDEF`.
   ///
   /// ```ignore
-  /// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+  /// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   /// # #[tokio::main]
   /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+  /// # let client = DshApiClientFactory::default().client().await?;
   /// let new_secret = "ABCDEF";
   /// let body = serde_json::to_string(new_secret)?;
   /// client.put("secret", &["abcdef"], Some(body)).await?;

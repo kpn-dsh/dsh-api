@@ -1,4 +1,4 @@
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::types::AppCatalogApp;
 use std::collections::HashMap;
 
@@ -8,7 +8,7 @@ async fn main() -> Result<(), String> {
 
   let app_catalog_id = "keyring-050";
 
-  let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
+  let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;
 
   let app_catalog_app: AppCatalogApp = client.get_appcatalogapp_appcatalogappid_configuration(app_catalog_id).await?;

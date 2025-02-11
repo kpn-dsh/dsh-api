@@ -1,5 +1,5 @@
 use crate::common::print_header;
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::types::{AllocationStatus, Bucket, BucketStatus};
 use std::collections::HashMap;
 
@@ -12,7 +12,7 @@ async fn main() -> Result<(), String> {
 
   let bucket_id = "schema-registry";
 
-  let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
+  let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;
 
   print_header("get_bucket");

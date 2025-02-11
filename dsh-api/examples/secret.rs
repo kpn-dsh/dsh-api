@@ -1,5 +1,5 @@
 use crate::common::print_header;
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::UsedBy;
 
 #[path = "common.rs"]
@@ -11,7 +11,7 @@ async fn main() -> Result<(), String> {
   let secret_id = "boss-account-ids";
   let test_secret_id = "test_create_delete_update_secret";
 
-  let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
+  let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;
 
   print_header("list_secret_ids");

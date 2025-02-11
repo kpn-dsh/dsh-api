@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 #[tokio::main]
 async fn main() -> Result<(), String> {
   use dsh_api::app_manifest::{Manifest, API_VERSION, ID, KIND, NAME, VENDOR, VERSION};
-  use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+  use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   use dsh_api::types::AppCatalogAppConfiguration;
   use dsh_api::types::AppCatalogManifest;
   use serde_json::de::from_str;
@@ -18,7 +18,7 @@ async fn main() -> Result<(), String> {
 
   let app_catalog_id = "keyring-050";
 
-  let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
+  let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;
 
   println!("-------------------------------------------");

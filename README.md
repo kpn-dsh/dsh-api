@@ -29,11 +29,11 @@ See the paragraph on environment variables for more details.
 Then the following program will list all applications for this tenant on the given platform.
 
 ```rust
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+    let client = DshApiClientFactory::default().client().await?;
     for (application_id, application) in client.list_applications().await? {
         println!("{} -> {}", application_id, application);
     }
@@ -125,12 +125,12 @@ Now the `post` method can be called with the following parameters:
 The example expects the same environment variables from the "Minimal example" to be set.
 
 ```rust
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::DshApiResult;
 
 #[tokio::main]
 async fn main() -> DshApiResult<()> {
-    let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+    let client = DshApiClientFactory::default().client().await?;
     let secret_json = r#"{"name": "secret-name","value": "secret-value"}"#.to_string();
     client.post("secret", &[], Some(secret_json)).await
 }

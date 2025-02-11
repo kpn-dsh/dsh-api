@@ -11,13 +11,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
   use crate::common::print_header;
-  use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+  use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   use dsh_api::types::{LimitValue, LimitValueCpu, LimitValueCpuName, LimitValueMem, LimitValueMemName};
   env_logger::init();
 
   const APPLICATION_ID: &str = "keyring-dev";
 
-  let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+  let client = DshApiClientFactory::default().client().await?;
 
   print_header("get application_configuration_by_tenant_by_appid");
   let application = client.get("application-configuration", &[APPLICATION_ID]).await?;
