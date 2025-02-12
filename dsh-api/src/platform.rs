@@ -179,12 +179,12 @@ impl DshPlatform {
   /// ```
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(DshPlatform::try_from("nplz")?.client_id(), "robot$dev-lz-dsh".to_string());
+  /// assert_eq!(DshPlatform::try_from("nplz")?.client_id(), "robot@dev-lz-dsh".to_string());
   /// # Ok(())
   /// # }
   /// ```
   pub fn client_id(&self) -> String {
-    format!("robot${}", self.realm())
+    format!("robot@{}", self.realm())
   }
 
   /// # Returns the cloud provider for the platform
@@ -519,13 +519,13 @@ impl DshPlatform {
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
   ///   DshPlatform::try_from("nplz")?.tenant_client_id("my-tenant"),
-  ///   "robot$dev-lz-dsh$my-tenant".to_string()
+  ///   "robot@dev-lz-dsh@my-tenant".to_string()
   /// );
   /// # Ok(())
   /// # }
   /// ```
   pub fn tenant_client_id<T: AsRef<str>>(&self, tenant: T) -> String {
-    format!("{}${}", self.client_id(), tenant.as_ref())
+    format!("{}@{}", self.client_id(), tenant.as_ref())
   }
 
   /// # Returns the url of the platform console for a tenant
