@@ -131,6 +131,11 @@ impl DshApiClient {
     }
   }
 
+  /// Returns the token fetcher
+  pub fn token_fetcher(&self) -> &ManagementApiTokenFetcher {
+    &self.token_fetcher
+  }
+
   /// Returns the tenant
   pub fn tenant(&self) -> &DshApiTenant {
     &self.tenant
