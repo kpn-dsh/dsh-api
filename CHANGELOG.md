@@ -4,7 +4,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
-## [0.5.0] - 2025-02-07
+## [0.5.0] - 2025-02-19
 
 ### Breaking changes
 
@@ -13,7 +13,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 * Removed static default client factory.
 * Renamed `api_version()` function to `openapi_version()`.
 * Removed group and user id from tenant data.
-* Updated `dsh_sdk` dependency to 0.6.0.
+* Updated `dsh_sdk` dependency to 0.6.1.
 
 ### Added
 
@@ -22,6 +22,10 @@ All notable changes to the DSH Api Client project will be documented in this fil
     * `appcatalog` - Controls availability of app catalog operations.
     * `manage` - Controls availability of manage operations.
     * `robot` - Controls availability of robot operation.
+
+### Fixed
+
+* Fixed bug with wrong realm for prod-aws-dsh platform.
 
 ### Removed
 

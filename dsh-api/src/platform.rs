@@ -40,8 +40,8 @@ pub struct DshPlatform {
   is_production: bool,
   #[serde(rename = "cloud-provider")]
   cloud_provider: CloudProvider,
-  #[serde(rename = "key-cloak-url")]
-  key_cloak_url: String,
+  #[serde(rename = "access-token-endpoint")]
+  access_token_endpoint: String,
   realm: String,
   #[serde(rename = "public-domain")]
   public_domain: String,
@@ -124,6 +124,8 @@ fn check_for_duplicate_names_or_aliases(platforms: &Vec<DshPlatform>) -> Result<
   }
 }
 
+const CLIENT_ID_SEPARATOR: &str = ":";
+
 impl DshPlatform {
   /// Returns the endpoint for the DSH Rest API access token
   ///
@@ -133,14 +135,14 @@ impl DshPlatform {
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
   ///   DshPlatform::try_from("nplz")?.access_token_endpoint(),
-  ///   "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/dev-lz-dsh/protocol/openid-connect/token"
+  ///   "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/dev-lz-dsh/protocol/openid-connect/token"
   ///     .to_string()
   /// );
   /// # Ok(())
   /// # }
   /// ```
-  pub fn access_token_endpoint(&self) -> String {
-    format!("{}/{}/protocol/openid-connect/token", self.key_cloak_url(), self.realm())
+  pub fn access_token_endpoint(&self) -> &str {
+    self.access_token_endpoint.as_str()
   }
 
   /// # Returns the optional short/alias platform name
@@ -179,12 +181,12 @@ impl DshPlatform {
   /// ```
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(DshPlatform::try_from("nplz")?.client_id(), "robot@dev-lz-dsh".to_string());
+  /// assert_eq!(DshPlatform::try_from("nplz")?.client_id(), "robot:dev-lz-dsh".to_string());
   /// # Ok(())
   /// # }
   /// ```
   pub fn client_id(&self) -> String {
-    format!("robot@{}", self.realm())
+    format!("robot{}{}", CLIENT_ID_SEPARATOR, self.realm())
   }
 
   /// # Returns the cloud provider for the platform
@@ -281,23 +283,6 @@ impl DshPlatform {
   /// ```
   pub fn is_production(&self) -> bool {
     self.is_production
-  }
-
-  /// # Returns the key cloak url for the platform
-  ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.key_cloak_url(),
-  ///   "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth"
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  pub fn key_cloak_url(&self) -> &str {
-    &self.key_cloak_url
   }
 
   /// Returns the endpoint for fetching an MQTT token
@@ -519,13 +504,13 @@ impl DshPlatform {
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
   ///   DshPlatform::try_from("nplz")?.tenant_client_id("my-tenant"),
-  ///   "robot@dev-lz-dsh@my-tenant".to_string()
+  ///   "robot:dev-lz-dsh:my-tenant".to_string()
   /// );
   /// # Ok(())
   /// # }
   /// ```
   pub fn tenant_client_id<T: AsRef<str>>(&self, tenant: T) -> String {
-    format!("{}@{}", self.client_id(), tenant.as_ref())
+    format!("{}{}{}", self.client_id(), CLIENT_ID_SEPARATOR, tenant.as_ref())
   }
 
   /// # Returns the url of the platform console for a tenant
@@ -691,7 +676,10 @@ impl DshPlatform {
   pub fn try_default() -> Result<Self, String> {
     match env::var(ENV_VAR_PLATFORM) {
       Ok(platform_name_from_env_var) => match &DshPlatform::try_from(platform_name_from_env_var.as_str()) {
-        Ok(platform) => Ok(platform.clone()),
+        Ok(platform) => {
+          debug!("default platform '{}' read from environment variable '{}'", platform, ENV_VAR_PLATFORM);
+          Ok(platform.clone())
+        }
         Err(_) => Err(format!(
           "environment variable {} contains invalid platform name '{}' (possible values: {})",
           ENV_VAR_PLATFORM,
@@ -703,7 +691,7 @@ impl DshPlatform {
             .join(", ")
         )),
       },
-      Err(_) => Err(format!("environment variable {} not set", ENV_VAR_PLATFORM)),
+      Err(_) => Err(format!("environment variable '{}' not set", ENV_VAR_PLATFORM)),
     }
   }
 }
