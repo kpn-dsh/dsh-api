@@ -24,7 +24,7 @@ robot = []
 [dependencies]
 bytes = "1"
 chrono = { version = "0.4", features = ["serde"] }
-dsh_sdk = { version = "0.6", features = ["bootstrap", "management-api-token-fetcher"], default-features = false }
+dsh_sdk = { version = "0.6.1", features = ["bootstrap", "management-api-token-fetcher"], default-features = false }
 erased-serde = { version = "0.4", optional = true }
 futures = "0.3"
 itertools = "0.13"
