@@ -3,8 +3,6 @@
 This crate contains functions and definitions that provide support for using the functions
 of the DSH resource management API.
 
-For more information, see the [github](https://github.com/kpn-dsh/dsh-api) repository.
-
 ## Example
 
 A small example will demonstrate the use of the library.
@@ -59,19 +57,19 @@ The following features are defined:
 
 ## Changelog
 
-See DSH_SDK [CHANGELOG.md](dsh_sdk/CHANGELOG.md) for all changes per version for SDK.
+See [CHANGELOG.md](../CHANGELOG.md) for all changes per version.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for more information on how to contribute to this project.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for more information on how to contribute to this project.
 
 ## License
 
-See [LICENSE](LICENSE) for more information on the license for this project.
+See [LICENSE](../LICENSE.md) for more information on the license for this project.
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) for more information on the security policy for this project.
+See [SECURITY.md](../SECURITY.md) for more information on the security policy for this project.
 
 ---
-_Copyright (c) Koninklijke KPN N.V._ 
+_Copyright (c) Koninklijke KPN N.V._
