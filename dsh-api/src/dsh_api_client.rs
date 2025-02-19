@@ -49,6 +49,7 @@ use crate::{DshApiError, OPENAPI_SPEC};
 use bytes::Bytes;
 use dsh_sdk::ManagementApiTokenFetcher;
 use futures::TryStreamExt;
+use log::{debug, trace};
 use progenitor_client::{ByteStream, Error as ProgenitorError, ResponseValue as ProgenitorResponseValue};
 use reqwest::StatusCode as ReqwestStatusCode;
 use std::fmt::{Debug, Display, Formatter};
@@ -102,13 +103,11 @@ impl DshApiClient {
       Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => {
         let status = DshApiResponseStatus::from(response.status());
         let response = response.into_inner();
-        log::debug!("response / {} / {:?}", status, response);
+        debug!("response / {}", status);
+        trace!("{:#?}", response);
         Ok((status, response))
       }
-      Err(progenitor_error) => {
-        log::debug!("progenitor error: {}", progenitor_error);
-        Err(DshApiError::async_from_progenitor_error(progenitor_error).await)
-      }
+      Err(progenitor_error) => Err(DshApiError::async_from_progenitor_error(progenitor_error).await),
     }
   }
 
@@ -118,16 +117,13 @@ impl DshApiClient {
         let status = DshApiResponseStatus::from(response.status());
         let mut inner = response.into_inner();
         let mut string = String::new();
-        log::debug!("string response / {} / {}", status, string);
+        debug!("string response / {} / {}", status, string);
         while let Some::<Bytes>(ref bytes) = inner.try_next().await? {
           string.push_str(std::str::from_utf8(bytes)?)
         }
         Ok((status, string))
       }
-      Err(progenitor_error) => {
-        log::debug!("progenitor error: {}", progenitor_error);
-        Err(DshApiError::async_from_progenitor_error(progenitor_error).await)
-      }
+      Err(progenitor_error) => Err(DshApiError::async_from_progenitor_error(progenitor_error).await),
     }
   }
 
@@ -159,7 +155,13 @@ impl DshApiClient {
   /// it is advised to request a new token from this method before each API call.
   /// An internal caching mechanism will make sure that no unnecessary calls will be made.
   pub async fn token(&self) -> Result<String, DshApiError> {
-    self.token_fetcher.get_token().await.map_err(DshApiError::from)
+    match self.token_fetcher.get_token().await {
+      Ok(token) => {
+        debug!("token fetched");
+        Ok(token)
+      }
+      Err(error) => Err(DshApiError::from(error)),
+    }
   }
 }
 

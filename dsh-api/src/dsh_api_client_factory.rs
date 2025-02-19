@@ -69,7 +69,7 @@ use crate::generated::Client as GeneratedClient;
 use crate::platform::DshPlatform;
 use crate::{password_environment_variable, password_file_environment_variable, DshApiError};
 use dsh_sdk::{ManagementApiTokenFetcherBuilder, Platform as SdkPlatform};
-use log::info;
+use log::debug;
 use std::env;
 
 /// # Factory for DSH API client
@@ -132,7 +132,10 @@ impl DshApiClientFactory {
   /// # }
   /// ```
   pub fn create(tenant: DshApiTenant, password: String) -> Result<Self, DshApiError> {
-    Ok(DshApiClientFactory { generated_client: GeneratedClient::new(tenant.platform().rest_api_endpoint().as_str()), tenant, password })
+    let endpoint = tenant.platform().rest_api_endpoint();
+    let factory = DshApiClientFactory { generated_client: GeneratedClient::new(endpoint.as_str()), tenant: tenant.clone(), password };
+    debug!("dsh api client factory created for '{}' at endpoint '{}'", tenant, endpoint);
+    Ok(factory)
   }
 
   /// # Create default factory for DSH API client
@@ -156,19 +159,10 @@ impl DshApiClientFactory {
   /// # }
   /// ```
   pub fn try_default() -> Result<Self, DshApiError> {
-    let platform = DshPlatform::try_default()?;
     let tenant = DshApiTenant::try_default()?;
-    let password = match get_password(&tenant) {
-      Ok(password) => password,
-      Err(error) => panic!("{}", error),
-    };
-    match DshApiClientFactory::create(tenant.clone(), password) {
-      Ok(factory) => {
-        info!("default dsh api client factory for {}@{} created", tenant.name(), platform.to_string());
-        Ok(factory)
-      }
-      Err(error) => panic!("{}", error),
-    }
+    let password = get_password(&tenant)?;
+    debug!("create default dsh api client factory for '{}'", tenant);
+    DshApiClientFactory::create(tenant.clone(), password)
   }
 
   /// # Returns the factories platform
@@ -214,7 +208,10 @@ impl DshApiClientFactory {
       .client_secret(self.password.clone())
       .build()
     {
-      Ok(token_fetcher) => Ok(DshApiClient::new(token_fetcher, self.generated_client, self.tenant.clone())),
+      Ok(token_fetcher) => {
+        debug!("dsh api client created for '{}'", self.tenant);
+        Ok(DshApiClient::new(token_fetcher, self.generated_client, self.tenant.clone()))
+      }
       Err(rest_token_error) => Err(DshApiError::Unexpected(
         format!("could not create token fetcher ({})", rest_token_error),
         Some(rest_token_error.to_string()),
@@ -235,10 +232,7 @@ impl Default for DshApiClientFactory {
   /// [`create()`](DshApiClientFactory::create) function.
   fn default() -> Self {
     match Self::try_default() {
-      Ok(factory) => {
-        info!("default dsh api client factory for {} created", factory.tenant);
-        factory
-      }
+      Ok(factory) => factory,
       Err(error) => panic!("{}", error),
     }
   }
@@ -253,6 +247,10 @@ fn get_password(tenant: &DshApiTenant) -> Result<String, DshApiError> {
         if trimmed_password.is_empty() {
           Err(DshApiError::Configuration(format!("password file '{}' is empty", password_file_from_env_var)))
         } else {
+          debug!(
+            "password read from file '{}' in environment variable '{}'",
+            password_file_from_env_var, password_file_env_var
+          );
           Ok(trimmed_password.to_string())
         }
       }
@@ -264,8 +262,11 @@ fn get_password(tenant: &DshApiTenant) -> Result<String, DshApiError> {
     Err(_) => {
       let password_env_var = password_environment_variable(tenant.platform(), tenant.name());
       match env::var(&password_env_var) {
-        Ok(password_from_env_var) => Ok(password_from_env_var),
-        Err(_) => Err(DshApiError::Configuration(format!("environment variable {} not set", password_env_var))),
+        Ok(password_from_env_var) => {
+          debug!("password read from environment variable '{}'", password_env_var);
+          Ok(password_from_env_var)
+        }
+        Err(_) => Err(DshApiError::Configuration(format!("environment variable '{}' not set", password_env_var))),
       }
     }
   }

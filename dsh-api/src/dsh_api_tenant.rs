@@ -2,7 +2,7 @@
 use crate::platform::DshPlatform;
 use crate::{DshApiError, ENV_VAR_TENANT};
 use lazy_static::lazy_static;
-use log::info;
+use log::{debug, info};
 use std::env;
 use std::fmt::{Display, Formatter};
 
@@ -199,5 +199,11 @@ lazy_static! {
 }
 
 fn get_default_tenant_name() -> Result<String, DshApiError> {
-  env::var(ENV_VAR_TENANT).map_err(|_| DshApiError::Configuration(format!("environment variable {} not set", ENV_VAR_TENANT)))
+  match env::var(ENV_VAR_TENANT) {
+    Ok(tenant_name) => {
+      debug!("default tenant '{}' from environment variable '{}'", tenant_name, ENV_VAR_TENANT);
+      Ok(tenant_name)
+    }
+    Err(_) => Err(DshApiError::Configuration(format!("environment variable '{}' not set", ENV_VAR_TENANT))),
+  }
 }
