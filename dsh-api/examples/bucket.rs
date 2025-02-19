@@ -1,33 +1,31 @@
-use crate::common::print_header;
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-use dsh_api::types::{AllocationStatus, Bucket, BucketStatus};
-use std::collections::HashMap;
-
+#[allow(unused_imports)]
 #[path = "common.rs"]
 mod common;
 
+use crate::common::{initialize_logger, print_header};
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+use dsh_api::types::{AllocationStatus, Bucket, BucketStatus};
+use std::collections::HashMap;
+
 #[tokio::main]
 async fn main() -> Result<(), String> {
-  env_logger::init();
+  initialize_logger();
 
   let bucket_id = "schema-registry";
 
-  let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
+  let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;
 
   print_header("get_bucket");
   let bucket: BucketStatus = client.get_bucket(bucket_id).await?;
   println!("{} -> {}", bucket_id, bucket);
 
-  #[cfg(feature = "actual")]
-  {
-    print_header("get_bucket_actual_configuration");
-    let bucket_actual: Bucket = client.get_bucket_actual_configuration(bucket_id).await?;
-    println!("{} -> {}", bucket_id, bucket_actual);
-  }
+  print_header("get_bucket_actual_configuration");
+  let bucket_actual: Bucket = client.get_bucket_actual(bucket_id).await?;
+  println!("{} -> {}", bucket_id, bucket_actual);
 
   print_header("get_bucket_allocation_status");
-  let bucket_status: AllocationStatus = client.get_bucket_allocation_status(bucket_id).await?;
+  let bucket_status: AllocationStatus = client.get_bucket_status(bucket_id).await?;
   println!("{} -> {}", bucket_id, bucket_status);
 
   print_header("get_bucket_configuration");

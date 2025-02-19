@@ -1,4 +1,4 @@
-use dsh_api_build_helpers::generate_generic::generate_generic;
+use dsh_api_build_helpers::generate_wrapped::generate_wrapped;
 use dsh_api_build_helpers::update_openapi::update_openapi;
 use openapiv3::OpenAPI;
 use std::error::Error;
@@ -12,6 +12,6 @@ fn main() -> Result<(), Box<dyn Error>> {
   update_openapi(&mut openapi_spec, true, true, true)?;
   let mut writer: BufWriter<std::io::Stdout> = BufWriter::new(std::io::stdout());
   // let mut writer: BufWriter<std::io::Sink> = BufWriter::new(std::io::sink());
-  generate_generic(&mut writer, &openapi_spec)?;
+  generate_wrapped(&mut writer, &openapi_spec)?;
   Ok(())
 }

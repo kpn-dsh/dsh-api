@@ -1,26 +1,27 @@
-use crate::common::print_header;
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+#[allow(unused_imports)]
+#[path = "common.rs"]
+mod common;
+
+use crate::common::{initialize_logger, print_header};
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::types::AllocationStatus;
 use dsh_api::types::{Certificate, CertificateStatus};
 use dsh_api::UsedBy;
-
-#[path = "common.rs"]
-mod common;
 
 static CERTIFICATE_ID: &str = "broker-kafka-proxy-certificate";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
-  env_logger::init();
+  initialize_logger();
 
-  let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+  let client = DshApiClientFactory::default().client().await?;
 
   print_header("get_certificate");
   let certificate: CertificateStatus = client.get_certificate(CERTIFICATE_ID).await.unwrap();
   println!("{:#?}", certificate);
 
   print_header("get_certificate_allocation_status");
-  let allocation_status: AllocationStatus = client.get_certificate_allocation_status(CERTIFICATE_ID).await.unwrap();
+  let allocation_status: AllocationStatus = client.get_certificate_status(CERTIFICATE_ID).await.unwrap();
   println!("{:#?}", allocation_status);
 
   print_header("get_certificate_configuration");
@@ -28,7 +29,7 @@ async fn main() -> Result<(), String> {
   println!("{:#?}", certificate);
 
   print_header("get_certificate_ids");
-  let certificate_ids: Vec<String> = client.list_certificate_ids().await.unwrap();
+  let certificate_ids: Vec<String> = client.get_certificate_ids().await.unwrap();
   println!("{:#?}", certificate_ids);
 
   print_header("get_certificate_with_usage");

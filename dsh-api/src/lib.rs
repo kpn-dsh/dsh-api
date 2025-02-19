@@ -8,22 +8,72 @@
 //!
 //! This crate contains functions and definitions that provide support for using the functions
 //! of the DSH resource management API. The crate was originally developed as part of the
-//! [dcli](https://github.com/kpn-dsh/dcli) tool, but has now been promoted to a separate library.
+//! [`dsh`](https://github.com/kpn-dsh/dsh) command line tool,
+//! but has now been promoted to a separate library.
+//!
+//! # [`DshApiClient`]
+//!
+//! The crate consists basically of the struct [`DshApiClient`],
+//! which has many associated methods.
+//! In order to use these methods, you first need to acquire an instance of the struct.
+//! This is a two-step process.
+//! * First you need to get a
+//!   [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory):
+//!   * Either use the
+//!     [`DshApiClientFactory::default()`](dsh_api_client_factory::DshApiClientFactory::default),
+//!     method, which is configured from
+//!     [environment variables](dsh_api_client_factory/index.html#environment-variables),
+//!   * or you can create a factory explicitly by providing the `platform`,
+//!     `tenant` and API `password` yourself and feeding them to the
+//!     [`DshApiClientFactory::create()`](dsh_api_client_factory::DshApiClientFactory::create)
+//!     function.
+//! * Once you have the [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory),
+//!   you can call its [`client()`](dsh_api_client_factory::DshApiClientFactory::client) method.
+//!
+//! You can now call the client's methods to interact with the DSH resource management API.
+//!
+//! The client will contain an embedded
+//! [`ManagementApiTokenFetcher`](dsh_sdk::ManagementApiTokenFetcher)
+//! (provided by the [`DSH SDK`](https://crates.io/crates/dsh_sdk)),
+//! which will make sure that you always use a valid token when calling the API functions.
+//!
+//! # [`types`]
+//!
+//! For their parameters and return values the methods and functions in the crate
+//! make use of rust `struct`s that where generated from the DSH resource management API
+//! Openapi specification (version 1.9.0).
+//!
+//! The generated types are defined as follows:
+//!
+//! ```rust
+//! # use serde::{Deserialize, Serialize};
+//! #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+//! pub struct Secret {
+//!   pub name: String,
+//!   pub value: String,
+//! }
+//! ```
+//!
+//! * All types are `pub`.
+//! * All fields are `pub`.
+//! * All types have derived implementations of the [`Clone`], [`Debug`], [`Deserialize`],
+//!   [`PartialEq`] and [`Serialize`] traits.
+//! * Some [selected types](crate::display) also have an implementation of the [`Display`] trait.
 //!
 //! # Examples
 //!
 //! ## Minimal example
 //!
 //! The first minimal example will print a list of all the applications that are deployed
-//! in a tenant environment. This example requires that the tenant's name, group id, user id,
+//! in a tenant environment. This example requires that the tenant's name,
 //! platform and API password are configured via [environment variables](dsh_api_client_factory).
 //!
 //! ```ignore
-//! use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+//! use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 //!
 //! # use dsh_api::DshApiError;
 //! # async fn hide() -> Result<(), DshApiError> {
-//! let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+//! let client = DshApiClientFactory::default().client().await?;
 //! for (application_id, application) in client.list_applications()? {
 //!   println!("{} -> {}", application_id, application);
 //! }
@@ -40,18 +90,15 @@
 //! methods, that returns a list of all applications for which the provided predicate
 //! evaluates to `true`.
 //!
-//!
 //! ```ignore
-//! use dsh_api::dsh_api_client_factory::DshApiClientFactory;
-//! use dsh_api::dsh_api_tenant::DshApiTenant;
-//! use dsh_api::platform::DshPlatform;
-//! use dsh_api::types::Application;
-//!
+//! # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+//! # use dsh_api::dsh_api_tenant::DshApiTenant;
+//! # use dsh_api::platform::DshPlatform;
+//! # use dsh_api::types::Application;
 //! # use dsh_api::DshApiError;
 //! # async fn hide() -> Result<(), DshApiError> {
 //! let tenant = DshApiTenant::new(
 //!   "my-tenant".to_string(),
-//!   1234,
 //!   DshPlatform::try_from("np-aws-lz-dsh")?
 //! );
 //! let password = "...".to_string();
@@ -66,21 +113,28 @@
 //! # }
 //! ```
 //!
-//! ## Features
+//! # Features
+//!
+//! By enabling/disabling the features described below you have control over what's included
+//! in your library and what's not.
+//! All features are disabled by default.
 //!
 //! The following features are defined:
 //!
-//! * `actual` - When this feature is enabled the library will include all the "actual"
-//!   method versions of the REST API. By default, these methods will not be included.
-//! * `generic` - When this feature is enabled the library will also include the generic methods.
-//!   This feature is disabled by default.
+//! * `appcatalog` - Enables the app catalog methods.
+//! * `generic` - Enables the generic methods.
+//! * `manage` -  Enables the manage methods.
+//! * `robot` - Enables the robot operation.
 
 /// # Types generated from openapi file
 pub use crate::generated::types;
 
+#[allow(dead_code)]
 pub(crate) mod generated {
-  include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
+  include!(concat!(env!("OUT_DIR"), "/progenitor_client.rs"));
 }
+
+include!(concat!(env!("OUT_DIR"), "/wrapped.rs"));
 
 /// Openapi specification version 1.9.0
 pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/openapi.json"));
@@ -88,11 +142,13 @@ pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/openapi.
 /// Specification of default platforms
 pub static DEFAULT_PLATFORMS: &str = include_str!("../default-platforms.json");
 
-use dsh_sdk::error::DshRestTokenError;
-
 use crate::platform::DshPlatform;
+use crate::types::error::ConversionError;
+use dsh_sdk::management_api::ManagementApiTokenError;
 use log::{debug, error};
+use progenitor_client::Error as ProgenitorError;
 use reqwest::Error as ReqwestError;
+use reqwest::StatusCode as ReqwestStatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Error as SerdeJsonError;
 use std::error::Error as StdError;
@@ -100,7 +156,7 @@ use std::fmt::{Display, Formatter};
 use std::str::Utf8Error;
 
 pub mod app;
-pub mod app_configuration;
+#[cfg(feature = "appcatalog")]
 pub mod app_manifest;
 pub mod application;
 pub mod bucket;
@@ -112,10 +168,8 @@ pub mod dsh_api_tenant;
 #[cfg(feature = "generic")]
 pub mod generic;
 pub mod platform;
-pub mod proxy;
 pub mod query_processor;
 pub mod secret;
-// pub mod stream;
 pub mod topic;
 pub mod vhost;
 pub mod volume;
@@ -125,26 +179,26 @@ pub mod volume;
 /// ## Example
 ///
 /// ```
-/// assert_eq!(dsh_api::crate_version(), "0.4.0");
+/// assert_eq!(dsh_api::crate_version(), "0.5.0");
 /// ```
 pub fn crate_version() -> &'static str {
-  "0.4.0"
+  "0.5.0"
 }
 
 /// # Returns the version of the openapi spec
 ///
-/// Version number of the open api file that the crate has been generated from.
+/// Version number of the openapi file that the crate has been generated from.
 ///
 /// ## Example
 ///
 /// ```
-/// assert_eq!(dsh_api::api_version(), "1.9.0");
+/// assert_eq!(dsh_api::openapi_version(), "1.9.0");
 /// ```
-pub fn api_version() -> &'static str {
+pub fn openapi_version() -> &'static str {
   generated::Client::new("").api_version()
 }
 
-/// # Enumeration that denotes an injection of a resource
+/// # Describes an injection of a resource
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Injection {
   /// Environment variable injection, where the value is the name of the environment variable.
@@ -161,32 +215,33 @@ pub enum Injection {
   VhostResource(String),
 }
 
-/// # Enumeration that denotes where a resource has been used
+/// # Describes where a resource has been used
 ///
 /// There are a number of methods that return where a certain resource (e.g. a secret,
 /// a volume or an environment variable) has been used.
 /// This enum represents one usage of the resource.
 #[derive(Debug, Deserialize, Serialize)]
 pub enum UsedBy {
-  /// Resource is used in an [`AppCatalogApp`](types::AppCatalogApp).
+  /// Resource is used in an [`AppCatalogApp`].
   /// * Id of the `AppCatalogApp`.
   /// * Ids of the resources.
   App(String, Vec<String>),
-  /// Resource is used in an [`Application`](types::Application).
+  /// Resource is used in an [`Application`].
   /// * Application id.
   /// * Number of instances.
   /// * Injections.
   Application(String, u64, Vec<Injection>),
 }
 
-/// Enumeration of the recognized api errors
+/// Describes an API error
 #[derive(Debug)]
 pub enum DshApiError {
+  BadRequest(String),
   Configuration(String),
   NotAuthorized,
   NotFound,
   Parameter(String),
-  Unexpected(String, Option<Box<dyn StdError + Send + Sync>>),
+  Unexpected(String, Option<String>),
 }
 
 /// Generic result type
@@ -223,27 +278,18 @@ impl Display for UsedBy {
   }
 }
 
-impl StdError for DshApiError {
-  fn source(&self) -> Option<&(dyn StdError + 'static)> {
-    match self {
-      Self::Configuration(_) => None,
-      Self::NotAuthorized => None,
-      Self::NotFound => None,
-      Self::Parameter(_) => None,
-      Self::Unexpected(_, source) => source.as_deref()?.source(),
-    }
-  }
-}
+impl StdError for DshApiError {}
 
 impl Display for DshApiError {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
+      DshApiError::BadRequest(message) => write!(f, "{}", message),
       DshApiError::Configuration(message) => write!(f, "{}", message),
       DshApiError::NotAuthorized => write!(f, "not authorized"),
       DshApiError::NotFound => write!(f, "not found"),
       DshApiError::Parameter(message) => write!(f, "{}", message),
       DshApiError::Unexpected(message, cause) => match cause {
-        Some(cause) => write!(f, "unexpected error ({})", cause),
+        Some(cause) => write!(f, "unexpected error ({}, {})", message, cause),
         None => write!(f, "unexpected error ({})", message),
       },
     }
@@ -252,40 +298,40 @@ impl Display for DshApiError {
 
 impl From<SerdeJsonError> for DshApiError {
   fn from(error: SerdeJsonError) -> Self {
-    DshApiError::Unexpected(error.to_string(), Some(Box::new(error)))
+    DshApiError::Unexpected("json error".to_string(), Some(error.to_string()))
   }
 }
 
-impl From<DshRestTokenError> for DshApiError {
-  fn from(error: DshRestTokenError) -> Self {
+impl From<ManagementApiTokenError> for DshApiError {
+  fn from(error: ManagementApiTokenError) -> Self {
     match error {
-      DshRestTokenError::UnknownClientId => DshApiError::Unexpected("unknown client id".to_string(), Some(Box::new(error))),
-      DshRestTokenError::UnknownClientSecret => DshApiError::Unexpected("unknown client secret".to_string(), Some(Box::new(error))),
-      DshRestTokenError::FailureTokenFetch(_) => DshApiError::Unexpected("could not fetch token".to_string(), Some(Box::new(error))),
-      DshRestTokenError::StatusCode { status_code, ref error_body } => {
+      ManagementApiTokenError::UnknownClientId => DshApiError::Unexpected("unknown client id".to_string(), Some(error.to_string())),
+      ManagementApiTokenError::UnknownClientSecret => DshApiError::Unexpected("unknown client secret".to_string(), Some(error.to_string())),
+      ManagementApiTokenError::FailureTokenFetch(_) => DshApiError::Unexpected("could not fetch token".to_string(), Some(error.to_string())),
+      ManagementApiTokenError::StatusCode { status_code, ref error_body } => {
         if status_code == 401 {
           DshApiError::NotAuthorized
         } else {
           let message = format!("unexpected error fetching token (status code {})", status_code);
           error!("{}", message);
           debug!("{:?}", error_body);
-          DshApiError::Unexpected(message, Some(Box::new(error)))
+          DshApiError::Unexpected(message, Some(error.to_string()))
         }
       }
-      _ => DshApiError::Unexpected(format!("unrecognized error ({})", error), Some(Box::new(error))),
+      _ => DshApiError::Unexpected(format!("unrecognized error ({})", error), None),
     }
   }
 }
 
 impl From<ReqwestError> for DshApiError {
   fn from(error: ReqwestError) -> Self {
-    DshApiError::Unexpected(error.to_string(), Some(Box::new(error)))
+    DshApiError::Unexpected(error.to_string(), None)
   }
 }
 
 impl From<Utf8Error> for DshApiError {
   fn from(error: Utf8Error) -> Self {
-    DshApiError::Unexpected(error.to_string(), Some(Box::new(error)))
+    DshApiError::Unexpected(error.to_string(), None)
   }
 }
 
@@ -307,47 +353,74 @@ impl From<DshApiError> for String {
   }
 }
 
-/// Environment variable used to specify the name of a file with an alternative list of platforms
-pub const ENV_VAR_PLATFORMS_FILE_NAME: &str = "DSH_API_PLATFORMS_FILE";
+impl From<ConversionError> for DshApiError {
+  fn from(value: ConversionError) -> Self {
+    DshApiError::Unexpected(value.to_string(), None)
+  }
+}
 
-/// Environment variable used to define the target platform
-pub const ENV_VAR_PLATFORM: &str = "DSH_API_PLATFORM";
+impl DshApiError {
+  // async version of impl From<ProgenitorError> for DshApiError
+  pub(crate) async fn async_from_progenitor_error(progenitor_error: ProgenitorError) -> Self {
+    match progenitor_error {
+      ProgenitorError::InvalidRequest(ref string) => Self::Unexpected(format!("invalid request ({})", string), Some(progenitor_error.to_string())),
+      ProgenitorError::CommunicationError(ref reqwest_error) => Self::Unexpected(
+        format!("communication error (reqwest error: {})", reqwest_error),
+        Some(progenitor_error.to_string()),
+      ),
+      ProgenitorError::InvalidUpgrade(ref reqwest_error) => Self::Unexpected(format!("invalid upgrade (reqwest error: {})", reqwest_error), Some(progenitor_error.to_string())),
+      ProgenitorError::ErrorResponse(ref progenitor_response_value) => Self::Unexpected(
+        format!("error response (progenitor response value: {:?})", progenitor_response_value),
+        Some(progenitor_error.to_string()),
+      ),
+      ProgenitorError::ResponseBodyError(ref reqwest_error) => Self::Unexpected(
+        format!("response body error (reqwest error: {})", reqwest_error),
+        Some(progenitor_error.to_string()),
+      ),
+      ProgenitorError::InvalidResponsePayload(ref _bytes, ref json_error) => {
+        Self::Unexpected(format!("invalid response payload (json error: {})", json_error), Some(progenitor_error.to_string()))
+      }
+      ProgenitorError::UnexpectedResponse(reqwest_response) => match &reqwest_response.status().clone() {
+        &ReqwestStatusCode::BAD_REQUEST => match reqwest_response.text().await {
+          Ok(error_text) => Self::BadRequest(error_text),
+          Err(response_error) => Self::BadRequest(response_error.to_string()),
+        },
+        &ReqwestStatusCode::NOT_FOUND => Self::NotFound,
+        &ReqwestStatusCode::UNAUTHORIZED | &ReqwestStatusCode::FORBIDDEN | &ReqwestStatusCode::METHOD_NOT_ALLOWED => Self::NotAuthorized,
+        other_status_code => Self::Unexpected(format!("unexpected response (status: {}, reqwest response: )", other_status_code), None),
+      },
+      ProgenitorError::PreHookError(string) => Self::Unexpected(format!("pre-hook error ({})", string), None),
+    }
+  }
+}
 
-/// Environment variable used to define the client tenant
-pub const ENV_VAR_TENANT: &str = "DSH_API_TENANT";
+// Environment variable used to specify the name of a file with an alternative list of platforms
+pub(crate) const ENV_VAR_PLATFORMS_FILE_NAME: &str = "DSH_API_PLATFORMS_FILE";
+
+// Environment variable used to define the target platform
+pub(crate) const ENV_VAR_PLATFORM: &str = "DSH_API_PLATFORM";
+
+// Environment variable used to define the client tenant
+pub(crate) const ENV_VAR_TENANT: &str = "DSH_API_TENANT";
 
 pub(crate) const ENV_VAR_PREFIX_PASSWORD: &str = "DSH_API_PASSWORD";
 pub(crate) const ENV_VAR_PREFIX_PASSWORD_FILE: &str = "DSH_API_PASSWORD_FILE";
-pub(crate) const ENV_VAR_PREFIX_GUID: &str = "DSH_API_GUID";
 
-/// # Create client password environment variable
-///
-/// This function creates the environment variable used to define the client tenant's password
-/// from the platform name and the tenant name. The format of the environment variable is
-/// `DSH_API_PASSWORD_[platform_name]_[tenant_name]`,
-/// where the `platform_name` and the `tenant_name` will be converted to uppercase and
-/// `-` will be replaced by `_`.
-///
-/// # Parameters
-/// * `platform` - target platform
-/// * `tenant_name` - client tenant name
-///
-/// # Returns
-/// Client password environment variable.
-///
-/// # Example
-/// ```
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// use dsh_api::password_environment_variable;
-/// use dsh_api::platform::DshPlatform;
-///
-/// let env_var =
-///   password_environment_variable(&DshPlatform::try_from("np-aws-lz-dsh")?, "my-tenant");
-/// assert_eq!(env_var, "DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT".to_string());
-/// # Ok(())
-/// # }
-/// ```
-pub fn password_environment_variable(platform: &DshPlatform, tenant_name: &str) -> String {
+// # Create client password environment variable
+//
+// This function creates the environment variable used to define the client tenant's password
+// from the platform name and the tenant name. The format of the environment variable is
+// `DSH_API_PASSWORD_[platform_name]_[tenant_name]`,
+// where the `platform_name` and the `tenant_name` will be converted to uppercase and
+// `-` will be replaced by `_`.
+//
+// # Parameters
+// * `platform` - target platform
+// * `tenant_name` - client tenant name
+//
+// # Returns
+// Client password environment variable.
+pub(crate) fn password_environment_variable(platform: &DshPlatform, tenant_name: &str) -> String {
   format!(
     "{}_{}_{}",
     ENV_VAR_PREFIX_PASSWORD,
@@ -356,34 +429,21 @@ pub fn password_environment_variable(platform: &DshPlatform, tenant_name: &str) 
   )
 }
 
-/// # Create client password file environment variable
-///
-/// This function creates the environment variable used to define the client tenant's password file
-/// from the platform name and the tenant name. The format of the environment variable is
-/// `DSH_API_PASSWORD_FILE_[platform_name]_[tenant_name]`,
-/// where the `platform_name` and the `tenant_name` will be converted to uppercase and
-/// `-` will be replaced by `_`.
-///
-/// # Parameters
-/// * `platform` - target platform
-/// * `tenant_name` - client tenant name
-///
-/// # Returns
-/// Client password file environment variable.
-///
-/// # Example
-/// ```
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// use dsh_api::password_file_environment_variable;
-/// use dsh_api::platform::DshPlatform;
-///
-/// let env_var =
-///   password_file_environment_variable(&DshPlatform::try_from("np-aws-lz-dsh")?, "my-tenant");
-/// assert_eq!(env_var, "DSH_API_PASSWORD_FILE_NP_AWS_LZ_DSH_MY_TENANT".to_string());
-/// # Ok(())
-/// # }
-/// ```
-pub fn password_file_environment_variable(platform: &DshPlatform, tenant_name: &str) -> String {
+// # Create client password file environment variable
+//
+// This function creates the environment variable used to define the client tenant's password file
+// from the platform name and the tenant name. The format of the environment variable is
+// `DSH_API_PASSWORD_FILE_[platform_name]_[tenant_name]`,
+// where the `platform_name` and the `tenant_name` will be converted to uppercase and
+// `-` will be replaced by `_`.
+//
+// # Parameters
+// * `platform` - target platform
+// * `tenant_name` - client tenant name
+//
+// # Returns
+// Client password file environment variable.
+pub(crate) fn password_file_environment_variable(platform: &DshPlatform, tenant_name: &str) -> String {
   format!(
     "{}_{}_{}",
     ENV_VAR_PREFIX_PASSWORD_FILE,
@@ -392,34 +452,9 @@ pub fn password_file_environment_variable(platform: &DshPlatform, tenant_name: &
   )
 }
 
-/// # Create client tenant guid environment variable
-///
-/// This function creates the environment variable used to define the client tenant's guid
-/// from the tenant's name. The format of the environment variable is
-/// `DSH_API_GUID_[tenant_name]`,
-/// where the `tenant_name` will be converted to uppercase and
-/// `-` will be replaced by `_`.
-///
-/// # Parameters
-/// * `tenant_name` - client tenant name
-///
-/// # Returns
-/// Client tenants guid environment variable.
-///
-/// # Example
-/// ```
-/// use dsh_api::guid_environment_variable;
-///
-/// let env_var = guid_environment_variable("my-tenant");
-/// assert_eq!(env_var, "DSH_API_GUID_MY_TENANT".to_string());
-/// ```
-pub fn guid_environment_variable(tenant_name: &str) -> String {
-  format!("{}_{}", ENV_VAR_PREFIX_GUID, tenant_name.to_ascii_uppercase().replace('-', "_"))
-}
-
 #[test]
 fn test_dsh_api_error_is_send() {
-  fn assert_send<T: StdError + Send>() {}
+  fn assert_send<T: Send>() {}
   assert_send::<DshApiError>();
 }
 
@@ -428,47 +463,3 @@ fn test_dsh_api_error_is_sync() {
   fn assert_sync<T: Sync>() {}
   assert_sync::<DshApiError>();
 }
-
-// Function naming conventions
-//
-//                       parameter   returns
-//
-// find_Ys               predicate   zero or more Xs from one Y, that match a predicate
-// find_Ys_that_use_X    x_id        find all Ys that use X
-// find_Ys_that_use_Xs   x_ids       find all Ys that use one of Xs
-// get_X_from_Y          x_id        optional X from Y, that matches x_id
-// get_X_from_Ys         x_id        optional X from Ys, that matches x_id
-// get_Xs_from_Y         x_ids       zero or more Xs from one Y, that match one of the x_ids
-// get_Xs_from_Ys        x_ids       zero or more Xs from multiple Ys, that match one of the x_ids
-// X_from_Y                          (optional) X from Y
-// X_from_Ys                         (optional) X from Ys
-// Xs_from_Y                         zero or more Xs from one Y
-// Xs_from_Ys                        zero or more Xs from multiple Ys
-//
-// _with_Z                           result contains tuples (X, Z)
-// _with_Zs                          result contains tuples (X, Zs)
-
-// API naming convention
-//
-// Configuration is what was configured
-// Actual is what is actual deployed
-// Naming conventions
-// create_SUBJECT                        SUBJECT_id?, CONFIG    create SUBJECT
-// delete_SUBJECT                        SUBJECT_id             delete SUBJECT
-// deploy_SUBJECT                        SUBJECT_id?, CONFIG    deploy SUBJECT
-// get_SUBJECT                           SUBJECT_id             get all actual/current SUBJECT data, by SUBJECT_id
-// get_SUBJECT_[SUB]_allocation_status   SUBJECT_id, SUB_id     get SUB allocation status, by SUBJECT_id and SUB_id
-// get_SUBJECT_actual_configuration      SUBJECT_id             get actual/current configuration, by SUBJECT_id
-// get_SUBJECT_actual_configurations                            get actual/current configurations, for all SUBJECTs
-// get_SUBJECT_allocation_status         SUBJECT_id             get SUBJECT allocation status, by SUBJECT_id
-// get_SUBJECT_configuration             SUBJECT_id             get configuration provided at creation, by SUBJECT_id
-// get_SUBJECT_configurations                                   get configurations provided at creation, for all SUBJECTs
-// get_SUBJECT_derived_task_ids          SUBJECT_id             get all taskIids for all derived tasks, by SUBJECT_id
-// get_SUBJECT_ids                                              get all ids, for all SUBJECTs
-// get_SUBJECT_ids_with_derived_tasks                           get ids for all SUBJECTs that have derived tasks
-// get_SUBJECT_SPECIFIC                  SUBJECT_id             get SUBJECT specific data, by SUBJECT_id
-// get_SUBJECT_SPECIFICs                 SUBJECT_id             get SUBJECT specific data, for all SUBJECTs
-// get_SUBJECT_SUB_allocation_status     SUBJECT_id, SUB_id     get SUB allocation status, by SUBJECT_id and SUB_id
-// get_SUBJECTs                                                 get all actual/current SUBJECT data, for all SUBJECTs
-// undeploy_SUBJECT                      SUBJECT_id             undeploy SUBJECT, by SUBJECT_id
-// update_SUBJECT                        SUBJECT_id, CONFIG     deploy SUBJECT, by SUBJECT_id

@@ -1,58 +1,39 @@
 //! Generate the generic client code
 
-use crate::PathElement;
+use crate::dsh_api_operation::{method_api_operations, DshApiOperation, ParameterType};
+use crate::openapi_utils::{method_path_operations, OpenApiOperationKind};
+use crate::{article, revise, Method, RequestBodyType, ResponseBodyType, MANAGED_PARAMETERS, METHODS};
 use indoc::formatdoc;
-use itertools::Itertools;
-use openapiv3::{
-  AdditionalProperties, OpenAPI, Operation, Parameter, ParameterSchemaOrContent, PathItem, ReferenceOr, RequestBody, Response, Schema, SchemaKind, StatusCode, Type,
-};
-use std::collections::HashSet;
+use openapiv3::{OpenAPI, Operation};
 use std::error::Error;
-use std::fmt::{Display, Formatter};
 use std::io::Write;
 
-// TODO For development testing only
-#[allow(dead_code)]
-const PATHS_FILTER: [&str; 3] = [
-  // "/allocation/{tenant}/application/configuration",
-  // "/allocation/{tenant}/application/{appid}/configuration",
-  // "/allocation/{tenant}/task",
-  // "/allocation/{tenant}/task/{appid}",
-  "/allocation/{tenant}/secret",
-  "/allocation/{tenant}/secret/{id}/configuration",
-  "/allocation/{tenant}/secret/{id}",
-];
-#[allow(dead_code)]
-const METHODS_FILTER: [Method; 6] = [Method::Delete, Method::Get, Method::Head, Method::Patch, Method::Post, Method::Put];
-
 pub fn generate_generic(writer: &mut dyn Write, openapi_spec: &OpenAPI) -> Result<(), Box<dyn Error>> {
-  let mut generic_operations: Vec<(Method, Vec<GenericOperation>)> = vec![];
+  let mut generic_operations: Vec<(Method, Vec<DshApiOperation>)> = vec![];
   for method in &METHODS {
     let path_operations: Vec<(&String, &Operation)> = method_path_operations(method, openapi_spec);
-    generic_operations.push((method.to_owned(), method_generic_operations(method, &path_operations)?));
+    generic_operations.push((method.to_owned(), method_api_operations(method, &path_operations)?));
   }
-
   writeln!(writer, "#[cfg_attr(rustfmt, rustfmt_skip)]")?;
   writeln!(writer, "{}", USE)?;
   writeln!(writer)?;
   writeln!(writer, "{}", COMMENT_OUTER)?;
-  writeln!(writer)?;
-  writeln!(writer, "impl DshApiClient<'_> {{")?;
-
+  writeln!(writer, "impl DshApiClient {{")?;
   let mut first = true;
   for (method, operations) in &generic_operations {
-    if !operations.is_empty() {
-      if !first {
-        writeln!(writer)?;
-      }
-      write_method_operations(writer, method, operations)?;
-      first = false;
+    if !first {
+      writeln!(writer)?;
     }
+    if operations.is_empty() {
+      write_empty_method_operations(writer, method)?;
+    } else {
+      write_method_operations(writer, method, operations)?;
+    }
+    first = false;
   }
   writeln!(writer, "}}")?;
   writeln!(writer)?;
   writeln!(writer, "{}", METHOD_DESCRIPTOR_STRUCT)?;
-
   for (method, operations) in &generic_operations {
     writeln!(writer)?;
     write_method_operations_descriptors(writer, method, operations)?;
@@ -60,49 +41,84 @@ pub fn generate_generic(writer: &mut dyn Write, openapi_spec: &OpenAPI) -> Resul
   Ok(())
 }
 
-fn write_method_operations(writer: &mut dyn Write, method: &Method, operations: &[GenericOperation]) -> Result<(), Box<dyn Error>> {
+fn write_method_operations(writer: &mut dyn Write, method: &Method, operations: &[DshApiOperation]) -> Result<(), Box<dyn Error>> {
   writeln!(writer, "  /// # Generic `{}` operations", method)?;
   writeln!(writer, "  ///")?;
-  writeln!(writer, "  /// <div class=\"warning\">")?;
-  writeln!(writer, "  ///   This function is only available when the <code>generic</code> feature is enabled.")?;
-  writeln!(writer, "  /// </div>")?;
-
-  if let Some(method_comment) = method.comment() {
-    writeln!(writer, "  ///")?;
-    writeln!(writer, "{}", method_comment)?;
-  }
+  writeln!(writer, "  /// _This function is only available when the `generic` feature is enabled._")?;
+  writeln!(writer, "  ///")?;
+  writeln!(writer, "{}", method_comment(method))?;
   writeln!(writer, "  ///")?;
   writeln!(writer, "  /// ## Supported operation selectors for the `{}` method", method)?;
   for operation in operations.iter() {
     writeln!(writer, "  ///")?;
     writeln!(writer, "  /// # __`{}`__", operation.selector)?;
     if let Some(ref description) = operation.description {
-      writeln!(writer, "  /// {}", description)?;
-      writeln!(writer, "  ///")?;
+      writeln!(writer, "  /// * {}", description)?;
     }
-    writeln!(writer, "  /// `{}` `{}`", method.to_string().as_str().to_uppercase(), operation.path)?;
-    for (parameter_name, parameter_type, description) in &operation.parameters {
+    writeln!(writer, "  /// * `{} {}`", method.to_string().as_str().to_uppercase(), operation.path)?;
+    let mut parameter_index = 0;
+    for (parameter_name, _, description) in &operation.parameters {
       if !MANAGED_PARAMETERS.contains(&parameter_name.as_str()) {
         if let Some(description) = description {
-          writeln!(writer, "  /// * `{}` : `{}` - {}", parameter_name, parameter_type, description)?;
+          writeln!(writer, "  /// * `parameters[{}] = {}` - {}", parameter_index, parameter_name, description)?;
         } else {
-          writeln!(writer, "  /// * `{}` : `{}`", parameter_name, parameter_type)?;
+          writeln!(writer, "  /// * `parameters[{}] = {}`", parameter_index, parameter_name)?;
         }
+        parameter_index += 1;
       }
     }
     if let Some(ref request_body) = operation.request_body {
-      writeln!(writer, "  /// * `body` : {}", request_body.doc_type())?;
+      match request_body {
+        RequestBodyType::String => writeln!(
+          writer,
+          "  /// * `body` : `Into<String>` yielding a quoted (e.g. valid `json`) string (e.g. `\"ABCDEF\"`)"
+        )?,
+        RequestBodyType::SerializableType(serializable_type) => writeln!(
+          writer,
+          "  /// * `body` : `Into<String>` yielding `json` text that deserializes to {} [`{}`]",
+          article(serializable_type),
+          serializable_type
+        )?,
+      }
     }
-    writeln!(writer, "  ///")?;
-    writeln!(writer, "  /// Returns {}.", operation.ok_response.doc_return_value())?;
+    match &operation.ok_response {
+      ResponseBodyType::Ids => writeln!(
+        writer,
+        "  /// * On success a trait object is returned that will deserialize to a vector of id `String`s."
+      )?,
+      ResponseBodyType::Ok(_) => writeln!(writer, "  /// * On success `Ok(())` is returned.")?,
+      ResponseBodyType::SerializableMap(value_type) => writeln!(
+        writer,
+        "  /// * On success a trait object is returned that will deserialize to a `HashMap<String, `[`{}`]`>`.",
+        value_type
+      )?,
+      ResponseBodyType::SerializableScalar(scalar_type) => writeln!(
+        writer,
+        "  /// * On success a trait object is returned that will deserialize to {} [`{}`].",
+        article(scalar_type),
+        scalar_type
+      )?,
+      ResponseBodyType::SerializableVector(element_type) => writeln!(
+        writer,
+        "  /// * On success a trait object is returned that will deserialize to a `Vec<`[`{}`]`>`.",
+        element_type
+      )?,
+      ResponseBodyType::String => writeln!(writer, "  /// * On success a trait object is returned that will deserialize to a `String`.")?,
+    }
+    match operation.kind {
+      OpenApiOperationKind::Allocation => {}
+      OpenApiOperationKind::AppCatalog => writeln!(writer, "  /// * _This selector is only available when the `appcatalog` feature is enabled._")?,
+      OpenApiOperationKind::Manage => writeln!(writer, "  /// * _This selector is only available when the `manage` feature is enabled._")?,
+      OpenApiOperationKind::Robot => writeln!(writer, "  /// * _This selector is only available when the `robot` feature is enabled._")?,
+    }
   }
-  writeln!(writer, "  {} {{", method.signature())?;
+  writeln!(writer, "  {} {{", method_signature(method, ""))?;
   let mut first = true;
   for operation in operations.iter() {
     if first {
-      write!(writer, "    {}", operation.to_if_block())?;
+      write!(writer, "    {}", if_block(operation))?;
     } else {
-      write!(writer, " else {}", operation.to_if_block())?;
+      write!(writer, " else {}", if_block(operation))?;
     }
     first = false;
   }
@@ -117,14 +133,161 @@ fn write_method_operations(writer: &mut dyn Write, method: &Method, operations: 
   Ok(())
 }
 
-const MANAGED_PARAMETERS: [&str; 1] = ["Authorization"];
+fn method_signature(method: &Method, prefix: &str) -> String {
+  match method {
+    Method::Delete => format!(
+      "pub async fn delete(&self, {}selector: &str, {}parameters: &[&str]) -> DshApiResult<()>",
+      prefix, prefix
+    ),
+    Method::Get => format!(
+      "pub async fn get(&self, {}selector: &str, {}parameters: &[&str]) -> DshApiResult<Box<dyn erased_serde::Serialize>>",
+      prefix, prefix
+    ),
+    Method::Head => format!(
+      "pub async fn head(&self, {}selector: &str, {}parameters: &[&str]) -> DshApiResult<()>",
+      prefix, prefix
+    ),
+    Method::Patch => format!(
+      "pub async fn patch<T: Into<String>>(&self, {}selector: &str, {}parameters: &[&str], {}body: Option<T>) -> DshApiResult<()>",
+      prefix, prefix, prefix
+    ),
+    Method::Post => format!(
+      "pub async fn post<T: Into<String>>(&self, {}selector: &str, {}parameters: &[&str], {}body: Option<T>) -> DshApiResult<()>",
+      prefix, prefix, prefix
+    ),
+    Method::Put => format!(
+      "pub async fn put<T: Into<String>>(&self, {}selector: &str, {}parameters: &[&str], {}body: Option<T>) -> DshApiResult<()>",
+      prefix, prefix, prefix
+    ),
+  }
+}
 
-fn write_method_operations_descriptors(writer: &mut dyn Write, method: &Method, operations: &[GenericOperation]) -> Result<(), Box<dyn Error>> {
+fn method_comment(method: &Method) -> &str {
+  match method {
+    Method::Delete => DELETE_COMMENT,
+    Method::Get => GET_COMMENT,
+    Method::Head => HEAD_COMMENT,
+    Method::Patch => PATCH_COMMENT,
+    Method::Post => POST_COMMENT,
+    Method::Put => PUT_COMMENT,
+  }
+}
+
+fn comments(operation: &DshApiOperation) -> Vec<String> {
+  let mut comments = vec![];
+  comments.push(format!("{} {}", operation.method.to_string().as_str().to_uppercase(), operation.path));
+  for (parameter_name, parameter_type, description) in &operation.parameters {
+    if !MANAGED_PARAMETERS.contains(&parameter_name.as_str()) {
+      match description {
+        Some(description) => comments.push(format!("{}:{}, {}", parameter_name, parameter_type, revise(description.to_string()))),
+        None => comments.push(format!("{}:{}", parameter_name, parameter_type)),
+      }
+    }
+  }
+  if let Some(request_body) = operation.request_body.clone().map(|request_body| request_body.to_string()) {
+    comments.push(format!("body: {}", request_body));
+  }
+  comments.push(generic_doc_return_value(&operation.ok_response).to_string());
+  comments
+}
+
+fn if_block(operation: &DshApiOperation) -> String {
+  let mut parameter_counter = -1;
+  let mut parameters = operation
+    .parameters
+    .iter()
+    .map(|(parameter_name, parameter_type, _)| {
+      if parameter_name == "Authorization" {
+        "self.token().await?.as_str()".to_string()
+      } else {
+        parameter_counter += 1;
+        parameter_type_to_index_parameter(parameter_type, parameter_counter, parameter_name)
+      }
+    })
+    .collect::<Vec<_>>();
+  if let Some(ref request_body_type) = operation.request_body {
+    match request_body_type {
+            RequestBodyType::String => parameters.push(
+                "serde_json::from_str::<String>(body.unwrap().into().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid String\".to_string()))?.to_string()"
+                    .to_string(),
+            ),
+            RequestBodyType::SerializableType(serializable_type) => parameters.push(format!(
+                "&serde_json::from_str::<{}>(body.unwrap().into().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid {}\".to_string()))?",
+                serializable_type, serializable_type
+            )),
+        }
+  }
+  let number_of_expected_parameters = if operation.request_body.is_none() { parameters.len() as i64 - 1 } else { parameters.len() as i64 - 2 };
+  let (parameter_length_check, wrong_parameter_length_error) = match number_of_expected_parameters {
+    0 => ("!parameters.is_empty()".to_string(), "none expected".to_string()),
+    1 => ("parameters.len() != 1".to_string(), "one parameter expected".to_string()),
+    _ => (
+      format!("parameters.len() != {}", number_of_expected_parameters),
+      format!("{} parameters expected", number_of_expected_parameters),
+    ),
+  };
+  let body_check: String = if operation.method.has_body_argument() {
+    match operation.request_body {
+      Some(ref request_body) => format!(
+        r#"}} else if body.is_none() {{
+        Err(DshApiError::Parameter("body expected ({})".to_string()))
+      "#,
+        request_body
+      ),
+      None => r#"} else if body.is_some() {
+        Err(DshApiError::Parameter("no body expected".to_string()))
+      "#
+      .to_string(),
+    }
+  } else {
+    "".to_string()
+  };
+  let selector = &operation.selector;
+  let path = &operation.path;
+  let comments = comments(operation).join("\n      // ");
+  let ok_response_processing_function = operation.ok_response.processing_function();
+  let operation_id = &operation.operation_id;
+  let parameters = parameters.join(",\n                ");
+  let ok_response_response_mapping = generic_response_mapping(&operation.ok_response, &operation.method);
+  formatdoc!(
+    r#"
+        if selector == "{selector}" || selector == "{path}" {{
+              // {comments}
+              if {parameter_length_check} {{
+                Err(DshApiError::Parameter("wrong number of parameters ({wrong_parameter_length_error})".to_string()))
+              {body_check}}} else {{
+                self
+                  .{ok_response_processing_function}(
+                    self
+                      .generated_client
+                      .{operation_id}(
+                        self.tenant_name(),
+                        {parameters},
+                      )
+                      .await,
+                  )
+                  {ok_response_response_mapping}
+              }}
+            }}"#
+  )
+}
+
+fn write_empty_method_operations(writer: &mut dyn Write, method: &Method) -> Result<(), Box<dyn Error>> {
+  writeln!(writer, "  /// # Generic `{}` operations", method)?;
+  writeln!(writer, "  ///")?;
+  writeln!(writer, "  /// _This function is only available when the `generic` feature is enabled._")?;
+  writeln!(writer, "  ///")?;
+  writeln!(writer, "  /// ## There are no supported operations for the `{}` method", method)?;
+  writeln!(writer, "  {} {{", method_signature(method, "_"))?;
+  writeln!(writer, "    Err(DshApiError::Configuration(\"no {} methods available\".to_string()))", method)?;
+  writeln!(writer, "  }}")?;
+  Ok(())
+}
+
+fn write_method_operations_descriptors(writer: &mut dyn Write, method: &Method, operations: &[DshApiOperation]) -> Result<(), Box<dyn Error>> {
   writeln!(writer, "/// `{}` method descriptors", method)?;
   writeln!(writer, "///")?;
-  writeln!(writer, "/// <div class=\"warning\">")?;
-  writeln!(writer, "///   This constant is only available when the <code>generic</code> feature is enabled.")?;
-  writeln!(writer, "/// </div>")?;
+  writeln!(writer, "/// _This constant is only available when the `generic` feature is enabled._")?;
   writeln!(writer, "///")?;
   writeln!(writer, "/// Vector that describes all available `{}` methods.", method)?;
   writeln!(writer, "///")?;
@@ -165,7 +328,7 @@ fn write_method_operations_descriptors(writer: &mut dyn Write, method: &Method, 
       } else {
         writeln!(writer, "      body_type: None,")?;
       }
-      writeln!(writer, "      response_type: Some(\"{}\")", operation.ok_response)?;
+      writeln!(writer, "      response_type: Some(\"{}\")", generic_return_descriptor(&operation.ok_response))?;
       writeln!(writer, "    }}")?;
       writeln!(writer, "  ),")?;
     }
@@ -175,7 +338,43 @@ fn write_method_operations_descriptors(writer: &mut dyn Write, method: &Method, 
   Ok(())
 }
 
-fn create_parameters(operation: &GenericOperation) -> Vec<String> {
+fn generic_response_mapping(response_body_type: &ResponseBodyType, method: &Method) -> &'static str {
+  match method {
+    Method::Get => match response_body_type {
+      ResponseBodyType::Ok(_) => ".await.map(|(_, result)| result)",
+      ResponseBodyType::Ids
+      | ResponseBodyType::SerializableMap(_)
+      | ResponseBodyType::SerializableScalar(_)
+      | ResponseBodyType::SerializableVector(_)
+      | ResponseBodyType::String => ".await.map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
+    },
+    _ => ".await.map(|(_, _)| ())",
+  }
+}
+
+fn generic_return_descriptor(response_body_type: &ResponseBodyType) -> String {
+  match response_body_type {
+    ResponseBodyType::Ids => "Vec<String>".to_string(),
+    ResponseBodyType::Ok(desc) => desc.to_string(),
+    ResponseBodyType::SerializableMap(value_type) => format!("HashMap<String, {}>", value_type),
+    ResponseBodyType::SerializableScalar(scalar_type) => scalar_type.to_string(),
+    ResponseBodyType::SerializableVector(element_type) => format!("Vec<{}>", element_type),
+    ResponseBodyType::String => "String".to_string(),
+  }
+}
+
+fn generic_doc_return_value(response_body_type: &ResponseBodyType) -> String {
+  match response_body_type {
+    ResponseBodyType::Ids => "`Vec<String>`".to_string(),
+    ResponseBodyType::Ok(desc) => format!("`Ok(())` when {}", desc),
+    ResponseBodyType::SerializableMap(value_type) => format!("`HashMap<String, `[`{}`]`>`", value_type),
+    ResponseBodyType::SerializableScalar(scalar_type) => format!("[`{}`]", scalar_type),
+    ResponseBodyType::SerializableVector(element_type) => format!("`Vec<`[`{}`]`>`", element_type),
+    ResponseBodyType::String => "String".to_string(),
+  }
+}
+
+fn create_parameters(operation: &DshApiOperation) -> Vec<String> {
   operation
     .parameters
     .iter()
@@ -191,649 +390,268 @@ fn create_parameters(operation: &GenericOperation) -> Vec<String> {
     .collect::<Vec<_>>()
 }
 
-fn get_method_operation<'a>(method: &Method, path_item: &'a PathItem) -> Option<&'a Operation> {
-  match method {
-    Method::Delete => path_item.delete.as_ref(),
-    Method::Get => path_item.get.as_ref(),
-    Method::Head => path_item.head.as_ref(),
-    Method::Patch => path_item.patch.as_ref(),
-    Method::Post => path_item.post.as_ref(),
-    Method::Put => path_item.put.as_ref(),
+fn parameter_type_to_index_parameter(parameter_type: &ParameterType, index: isize, name: &str) -> String {
+  let get_or_first = if index == 0 { "first()".to_string() } else { format!("get({})", index) };
+  match parameter_type {
+    ParameterType::ConstructedTypeOwned(constructed_type) => format!(
+      "/* {}: constructed owned */ {}::from_str(parameters.{}.unwrap())?",
+      name, constructed_type, get_or_first
+    ),
+    ParameterType::ConstructedTypeRef(constructed_type) => format!(
+      "/* {}: constructed ref */ &{}::from_str(parameters.{}.unwrap())?",
+      name, constructed_type, get_or_first
+    ),
+    ParameterType::SerializableType(serializable_type) => format!(
+      "/* {}: serializable */ &{}::from_str(parameters.{}.unwrap())?",
+      name, serializable_type, get_or_first
+    ),
+    ParameterType::RefStr => format!("/* {}: &str */ parameters.{}.unwrap()", name, get_or_first),
   }
 }
 
-// Returns all (path, operation) pairs for a given method
-fn method_path_operations<'a>(method: &Method, openapi: &'a OpenAPI) -> Vec<(&'a String, &'a Operation)> {
-  let mut method_path_items: Vec<(&String, &Operation)> = vec![];
-  for (path, path_item) in openapi.paths.iter() {
-    // if !PATHS_FILTER.contains(&path.as_str()) {
-    //   continue;
-    // }
-    if let ReferenceOr::Item(ref path_item) = path_item {
-      if let Some(operation) = get_method_operation(method, path_item) {
-        method_path_items.push((path, operation))
-      }
-    }
-  }
-  method_path_items
-}
+const USE: &str = r#"use crate::dsh_api_client::DshApiClient;
+use crate::types::*;
+use crate::{DshApiError, DshApiResult};
+use std::str::FromStr;"#;
 
-fn method_generic_operations(method: &Method, path_operations: &Vec<(&String, &Operation)>) -> Result<Vec<GenericOperation>, Box<dyn Error>> {
-  let mut method_generic_operations: Vec<GenericOperation> = vec![];
-  let mut selectors: HashSet<String> = HashSet::new();
-  for (path, operation) in path_operations {
-    let mut generic_operation = create_generic_operation(method.clone(), path.to_string(), operation)?;
-    if selectors.contains(&generic_operation.selector) {
-      generic_operation.selector = selector_from_path_elements(&generic_operation.path_elements, &generic_operation.ok_response, true);
-    }
-    selectors.insert(generic_operation.selector.clone());
-    method_generic_operations.push(generic_operation);
-  }
-  check_duplicate_selectors(&method_generic_operations, method)?;
-  Ok(method_generic_operations)
-}
+const COMMENT_OUTER: &str = r#"/// # Generic API function calls
+///
+/// Module that contains methods to call the API methods in a generic way.
+/// What this means is that the API functions can be called indirect,
+/// where the path of the method must be provided as an argument.
+///
+/// This has a number of consequences which are caused by the limitations
+/// of the `rust` language with respect to abstraction:
+/// * The number and types of the required parameters for each method
+///   are not known at compile time, which means that (emulated) dynamic typing is used
+///   and parameter errors will occur at run-time instead of compile time.
+///   * Path parameters must be provided as `&str`.
+///   * Body parameters must be provided as a json formatted `String`
+///     that can be deserialized at run-time into the expected type.
+/// * The response type for each method is not known at compile time.
+///   * For `GET` methods the responses will be returned as dynamic trait objects
+///     that implement [`erased_serde::Serialize`], defined in the
+///     [`erased_serde`](https://crates.io/crates/erased-serde) crate.
+///     These objects can be serialized into `json`, `yaml` or `toml` without any type information.
+///   * If `DELETE`, `HEAD`, `PATCH`, `POST` and `PUT` methods return data this will be ignored
+///     and only errors will be returned.
+///
+/// # Examples
+///
+/// Get the configuration of the application `my-application` and print it as json.
+///
+/// ```ignore
+/// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # let client = DshApiClientFactory::default().client().await?;
+/// let application = client.get("application_configuration", &["my-application"]).await?;
+/// println!("{}", serde_json::to_string_pretty(&application)?);
+/// # Ok(())
+/// # }
+/// ```
+///
+/// Update the secret `abcdef` to the value `ABCDEF`.
+///
+/// ```ignore
+/// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # let client = DshApiClientFactory::default().client().await?;
+///  let secret = serde_json::to_string("ABCDEF")?;
+///  client.put("secret", &["abcdef"], &secret).await?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # API functions
+///
+/// [`DshApiClient`] methods that call the DSH resource management API.
+///
+/// * [`delete(path, [parameters]) -> Ok`](DshApiClient::delete)
+/// * [`get(path, [parameters]) -> serialized`](DshApiClient::get)
+/// * [`head(path, [parameters], body) -> Ok`](DshApiClient::head)
+/// * [`patch(path, [parameters], body) -> Ok`](DshApiClient::patch)
+/// * [`post(path, [parameters], body) -> Ok`](DshApiClient::post)
+/// * [`put(path, [parameters], body) -> Ok`](DshApiClient::put)"#;
 
-fn selector_from_path_elements(path_elements: &[PathElement], ok_response: &ResponseBodyType, include_variables: bool) -> String {
-  let mut selector = path_elements
-    .iter()
-    .filter_map(|path_element| match path_element {
-      PathElement::Literal(literal) => {
-        if literal != "allocation" {
-          Some(literal.to_string())
-        } else {
-          None
-        }
-      }
-      PathElement::Variable(variable) => {
-        if variable == "tenant" || variable == "manager" {
-          None
-        } else if include_variables || (variable != "id" && variable != "appid") {
-          Some(variable.to_string())
-        } else {
-          None
-        }
-      }
-    })
-    .collect::<Vec<_>>()
-    .join("-");
-  match ok_response {
-    ResponseBodyType::Ids => selector = format!("{}-ids", selector),
-    ResponseBodyType::Ok(_) => {}
-    ResponseBodyType::SerializableMap(_) => selector = format!("{}-map", selector),
-    ResponseBodyType::SerializableScalar(_) => {}
-    ResponseBodyType::SerializableVector(_) => selector = format!("{}s", selector),
-    ResponseBodyType::String => {}
-  }
-  selector
-}
+const DELETE_COMMENT: &str = r#"  /// The `delete` function enables the generic calling of all
+  /// `DELETE` functions of the DSH API, where the specific function is
+  /// selected by the `selector` parameter.
+  /// By the generic nature of this function the number of parameters and their type
+  /// are not known at compile time. This has some consequences:
+  /// * The method parameters must be provided as a list of strings in the form of a `&[&str]`.
+  ///   Validation of the number of parameters and their type/syntax will be done at run-time.
+  /// * The result of this method can only indicate whether the DSH API web service
+  ///   has successfully accepted the call or not.
+  ///
+  /// ## Example
+  ///
+  /// Delete the secret `my-secret`.
+  ///
+  /// ```ignore
+  /// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+  /// # #[tokio::main]
+  /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # let client = DshApiClientFactory::default().client().await?;
+  /// client.delete("secret-configuration", &["my-secret"]).await?;
+  /// # Ok(())
+  /// # }
+  /// ```"#;
 
-fn create_generic_operation(method: Method, path: String, operation: &Operation) -> Result<GenericOperation, Box<dyn Error>> {
-  let operation_id = operation.operation_id.clone().expect("missing operation id");
-  let parameters: Vec<(String, ParameterType, Option<String>)> = operation
-    .parameters
-    .iter()
-    .skip(1)
-    .map(|parameter| parameter_to_parameter_type(parameter, &operation_id))
-    .collect::<Vec<_>>();
-  let request_body = operation.request_body.clone().map(|request_body| match request_body {
-    ReferenceOr::Reference { reference } => RequestBodyType::SerializableType(reference_to_string(reference.as_ref())),
-    ReferenceOr::Item(request_body_item) => RequestBodyType::from(&request_body_item),
-  });
-  let mut ok_responses: Vec<(u16, ResponseBodyType)> = vec![];
-  let mut error_responses: Vec<(u16, ResponseBodyType)> = vec![];
-  for (status_code, response) in operation.responses.responses.clone() {
-    if let StatusCode::Code(numerical_status_code) = status_code {
-      if (200..300).contains(&numerical_status_code) {
-        ok_responses.push((numerical_status_code, ResponseBodyType::from(&response)))
-      } else {
-        error_responses.push((numerical_status_code, ResponseBodyType::from(&response)))
-      }
-    }
-  }
-  let ok_response = ok_responses.iter().min_by_key(|(status_code, _)| status_code).ok_or("")?.1.clone();
-  let path_elements = PathElement::vec_from_str(&path);
-  let selector = selector_from_path_elements(&path_elements, &ok_response, false);
-  Ok(GenericOperation {
-    method,
-    selector,
-    path,
-    path_elements,
-    description: operation.summary.clone().map(revise),
-    parameters,
-    request_body,
-    operation_id,
-    ok_response,
-    ok_responses,
-    error_responses,
-  })
-}
+const GET_COMMENT: &str = r#"  /// The `get` function enables the generic calling of all
+  /// `GET` functions of the DSH API, where the specific function is
+  /// selected by the `selector` parameter.
+  /// By the generic nature of this function the number of parameters and their type
+  /// and the type of the response are not known at compile time. This has some consequences:
+  /// * The method parameters must be provided as a list of strings in the form of a `&[&str]`.
+  ///   Validation of the number of parameters and their type/syntax will be done at run-time.
+  /// * The results of this method will be returned as a dynamic trait object
+  ///   that implements [`erased_serde::Serialize`].
+  ///   This object can be used to serialize the result to json, yaml or toml or
+  ///   any other compatible `rust` serialization solution,
+  ///   without the need of any type information.
+  ///   This will require an (implicit) dependency to the
+  ///   [`erased_serde`](https://crates.io/crates/erased-serde) crate.
+  ///
+  /// ## Example
+  ///
+  /// Get the configuration of the application `my-service` and print it as json.
+  ///
+  /// ```ignore
+  /// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+  /// # #[tokio::main]
+  /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # let client = DshApiClientFactory::default().client().await?;
+  /// let application = client.get("application-configuration", &["my-service"]).await?;
+  /// println!("{}", serde_json::to_string_pretty(&application)?);
+  /// # Ok(())
+  /// # }
+  /// ```"#;
 
-#[derive(Clone, Eq, Hash, PartialEq)]
-enum Method {
-  Delete,
-  Get,
-  Head,
-  Patch,
-  Post,
-  Put,
-}
+const HEAD_COMMENT: &str = r#"  /// The `head` function enables the generic calling of all
+  /// `HEAD` functions of the DSH API, where the specific function is
+  /// selected by the `selector` parameter.
+  /// By the generic nature of this function the number of parameters and their type
+  /// are not known at compile time. This has some consequences:
+  /// * The method parameters must be provided as a list of strings in the form of a `&[&str]`.
+  ///   Validation of the number of parameters and their type/syntax will be done at run-time.
+  /// * The result of this method can only indicate whether the DSH API web service
+  ///   has successfully accepted the call or not.
+  ///
+  /// ## Example
+  ///
+  /// Check whether the tenant `my-tenant` has write access to the topic `my-topic`.
+  ///
+  /// ```ignore
+  /// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+  /// # #[tokio::main]
+  /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # let client = DshApiClientFactory::default().client().await?;
+  /// match client.head(
+  ///   "manage-stream-internal-streamid-access-write",
+  ///   &["my-topic", "my-tenant"]
+  /// ).await {
+  ///   Ok(()) => println!("tenant has write access"),
+  ///   Err(_) => println!("tenant does not have write access"),
+  /// }
+  /// # Ok(())
+  /// # }
+  /// ```"#;
 
-const METHODS: [Method; 6] = [Method::Delete, Method::Get, Method::Head, Method::Patch, Method::Post, Method::Put];
+const PATCH_COMMENT: &str = r#"  /// The `patch` function enables the generic calling of all
+  /// `PATCH` functions of the DSH API, where the specific function is
+  /// selected by the `selector` parameter.
+  /// By the generic nature of this function the number of parameters and their type
+  /// and the type of the optional body parameter
+  /// are not known at compile time. This has some consequences:
+  /// * The method parameters must be provided as a list of strings in the form of a `&[&str]`.
+  ///   Validation of the number of parameters and their type/syntax will be done at run-time.
+  /// * The body parameter must be provided as a string in the form of an optional `Into<String>`,
+  ///   where the string must be deserializable into the expected type. This is checked at runtime.
+  /// * The result of this method can only indicate whether the DSH API web service
+  ///   has successfully accepted the call or not.
+  ///
+  /// ## Example
+  ///
+  /// For tenant `my-tenant`, set the cpu limit to `2.0` and the memory limit to `1000 MiB`.
+  ///
+  /// ```ignore
+  /// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+  /// # #[tokio::main]
+  /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # let client = DshApiClientFactory::default().client().await?;
+  /// let limit_values: Vec<LimitValue> =
+  ///   vec![
+  ///     LimitValue::Cpu(LimitValueCpu { name: LimitValueCpuName::Cpu, value: 2.0 }),
+  ///     LimitValue::Mem(LimitValueMem { name: LimitValueMemName::Mem, value: 1000.0 })
+  ///   ];
+  /// let body = serde_json::to_string(&limit_values)?;
+  /// client.patch("manage-tenant-limit", &["my-tenant"], Some(body)).await?;
+  /// # Ok(())
+  /// # }
+  /// ```"#;
 
-impl Method {
-  pub(crate) fn signature(&self) -> &str {
-    match self {
-      Self::Delete => "pub async fn delete(&self, selector: &str, parameters: &[&str]) -> DshApiResult<()>",
-      Self::Get => "pub async fn get(&self, selector: &str, parameters: &[&str]) -> DshApiResult<Box<dyn erased_serde::Serialize>>",
-      Self::Head => "pub async fn head(&self, selector: &str, parameters: &[&str]) -> DshApiResult<()>",
-      Self::Patch => "pub async fn patch<T: Into<String>>(&self, selector: &str, parameters: &[&str], body: Option<T>) -> DshApiResult<()>",
-      Self::Post => "pub async fn post<T: Into<String>>(&self, selector: &str, parameters: &[&str], body: Option<T>) -> DshApiResult<()>",
-      Self::Put => "pub async fn put<T: Into<String>>(&self, selector: &str, parameters: &[&str], body: Option<T>) -> DshApiResult<()>",
-    }
-  }
+const POST_COMMENT: &str = r#"  /// The `post` function enables the generic calling of all
+  /// `POST` functions of the DSH API, where the specific function is
+  /// selected by the `selector` parameter.
+  /// By the generic nature of this function the number of parameters and their type
+  /// and the type of the optional body parameter
+  /// are not known at compile time. This has some consequences:
+  /// * The method parameters must be provided as a list of strings in the form of a `&[&str]`.
+  ///   Validation of the number of parameters and their type/syntax will be done at run-time.
+  /// * The body parameter must be provided as a string in the form of an optional `Into<String>`,
+  ///   where the string must be deserializable into the expected type. This is checked at runtime.
+  /// * The result of this method can only indicate whether the DSH API web service
+  ///   has successfully accepted the call or not.
+  ///
+  /// ## Example
+  ///
+  /// Create a new secret `abcdef` with the value `ABCDEF`.
+  ///
+  /// ```ignore
+  /// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+  /// # #[tokio::main]
+  /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # let client = DshApiClientFactory::default().client().await?;
+  /// let secret: Secret = Secret {
+  ///   name: "abcdef".to_string(),
+  ///   value: "ABCDEF".to_string()
+  /// };
+  /// let body = serde_json::to_string(&secret)?;
+  /// client.post("secret", &[], Some(body)).await?;
+  /// # Ok(())
+  /// # }
+  /// ```"#;
 
-  pub(crate) fn has_body_argument(&self) -> bool {
-    match self {
-      Self::Get | Self::Delete | Self::Head => false,
-      Self::Patch | Self::Post | Self::Put => true,
-    }
-  }
-
-  fn comment(&self) -> Option<&'static str> {
-    match self {
-      Method::Delete => None,
-      Method::Get => Some(GET_COMMENT),
-      Method::Head => None,
-      Method::Patch => None,
-      Method::Post => None,
-      Method::Put => Some(PUT_COMMENT),
-    }
-  }
-}
-
-impl Display for Method {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::Delete => write!(f, "delete"),
-      Self::Get => write!(f, "get"),
-      Self::Head => write!(f, "head"),
-      Self::Patch => write!(f, "patch"),
-      Self::Post => write!(f, "post"),
-      Self::Put => write!(f, "put"),
-    }
-  }
-}
-
-enum ParameterType {
-  ConstructedTypeOwned(String),
-  ConstructedTypeRef(String),
-  SerializableType(String),
-  RefStr,
-}
-
-impl ParameterType {
-  fn to_index_parameter(&self, index: isize, name: &str) -> String {
-    let get_or_first = if index == 0 { "first()".to_string() } else { format!("get({})", index) };
-    match self {
-      ParameterType::ConstructedTypeOwned(constructed_type) => format!(
-        "/* {}: constructed owned */ {}::from_str(parameters.{}.unwrap())?",
-        name, constructed_type, get_or_first
-      ),
-      ParameterType::ConstructedTypeRef(constructed_type) => format!(
-        "/* {}: constructed ref */ &{}::from_str(parameters.{}.unwrap())?",
-        name, constructed_type, get_or_first
-      ),
-      ParameterType::SerializableType(serializable_type) => format!(
-        "/* {}: serializable */ &{}::from_str(parameters.{}.unwrap())?",
-        name, serializable_type, get_or_first
-      ),
-      ParameterType::RefStr => format!("/* {}: &str */ parameters.{}.unwrap()", name, get_or_first),
-    }
-  }
-}
-
-impl Display for ParameterType {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::ConstructedTypeOwned(parameter_type) => write!(f, "{}", parameter_type),
-      Self::ConstructedTypeRef(parameter_type) => write!(f, "{}", parameter_type),
-      Self::SerializableType(parameter_type) => write!(f, "{}", parameter_type),
-      Self::RefStr => write!(f, "str"),
-    }
-  }
-}
-
-#[derive(Clone, Debug)]
-enum RequestBodyType {
-  String,
-  SerializableType(String),
-}
-
-impl RequestBodyType {
-  fn doc_type(&self) -> String {
-    match self {
-      Self::String => "`&str`".to_string(),
-      Self::SerializableType(serializable_type) => format!("serialized [`{}`]", serializable_type),
-    }
-  }
-}
-
-impl Display for RequestBodyType {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::String => write!(f, "String"),
-      Self::SerializableType(serializable_type) => write!(f, "{}", serializable_type),
-    }
-  }
-}
-
-#[derive(Clone, Debug)]
-enum ResponseBodyType {
-  Ids,
-  Ok(String),
-  SerializableMap(String),
-  SerializableScalar(String),
-  SerializableVector(String),
-  String,
-}
-
-impl ResponseBodyType {
-  fn response_mapping(&self, method: &Method) -> &str {
-    match method {
-      Method::Get => match self {
-        Self::Ids => ".map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
-        Self::Ok(_) => ".map(|(_, result)| result)",
-        Self::SerializableMap(_) => ".map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
-        Self::SerializableScalar(_) => ".map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
-        Self::SerializableVector(_) => ".map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
-        Self::String => ".await.map(|(_, result)| Box::new(result) as Box<dyn erased_serde::Serialize>)",
-      },
-      _ => ".map(|(_, _)| ())",
-    }
-  }
-
-  fn processing_function(&self) -> &str {
-    match self {
-      Self::String => "process_string",
-      _ => "process",
-    }
-  }
-
-  fn doc_return_value(&self) -> String {
-    match self {
-      Self::Ids => "`Vec<String>`".to_string(),
-      Self::Ok(desc) => format!("`Ok(())` when {}", desc),
-      Self::SerializableMap(value_type) => format!("`HashMap<String, `[`{}`]`>`", value_type),
-      Self::SerializableScalar(scalar_type) => format!("[`{}`]", scalar_type),
-      Self::SerializableVector(element_type) => format!("`Vec<`[`{}`]`>`", element_type),
-      Self::String => "String".to_string(),
-    }
-  }
-}
-
-impl Display for ResponseBodyType {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::Ids => write!(f, "Vec<String>"),
-      Self::Ok(desc) => write!(f, "{}", desc),
-      Self::SerializableMap(value_type) => write!(f, "HashMap<String, {}>", value_type),
-      Self::SerializableScalar(scalar_type) => write!(f, "{}", scalar_type),
-      Self::SerializableVector(element_type) => write!(f, "Vec<{}>", element_type),
-      Self::String => write!(f, "str"),
-    }
-  }
-}
-
-struct GenericOperation {
-  method: Method,
-  selector: String,
-  path: String,
-  path_elements: Vec<PathElement>,
-  description: Option<String>,
-  parameters: Vec<(String, ParameterType, Option<String>)>,
-  request_body: Option<RequestBodyType>,
-  operation_id: String,
-  ok_response: ResponseBodyType,
-  #[allow(dead_code)]
-  ok_responses: Vec<(u16, ResponseBodyType)>,
-  #[allow(dead_code)]
-  error_responses: Vec<(u16, ResponseBodyType)>,
-}
-
-impl GenericOperation {
-  fn comments(&self) -> Vec<String> {
-    let mut comments = vec![];
-    comments.push(format!("{} {}", self.method.to_string().as_str().to_uppercase(), self.path));
-    for (parameter_name, parameter_type, description) in &self.parameters {
-      if !MANAGED_PARAMETERS.contains(&parameter_name.as_str()) {
-        match description {
-          Some(description) => comments.push(format!("{}:{}, {}", parameter_name, parameter_type, revise(description.to_string()))),
-          None => comments.push(format!("{}:{}", parameter_name, parameter_type)),
-        }
-      }
-    }
-    if let Some(request_body) = self.request_body.clone().map(|request_body| request_body.to_string()) {
-      comments.push(format!("body: {}", request_body));
-    }
-    comments.push(self.ok_response.doc_return_value().to_string());
-    comments
-  }
-
-  fn to_if_block(&self) -> String {
-    let mut parameter_counter = -1;
-    let mut parameters = self
-      .parameters
-      .iter()
-      .map(|(parameter_name, parameter_type, _)| {
-        if parameter_name == "Authorization" {
-          "self.token().await?.as_str()".to_string()
-        } else {
-          parameter_counter += 1;
-          parameter_type.to_index_parameter(parameter_counter, parameter_name)
-        }
-      })
-      .collect::<Vec<_>>();
-    if let Some(ref request_body_type) = self.request_body {
-      match request_body_type {
-                RequestBodyType::String => parameters.push(
-                    "serde_json::from_str::<String>(body.unwrap().into().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid String\".to_string()))?.to_string()"
-                        .to_string(),
-                ),
-                RequestBodyType::SerializableType(serializable_type) => parameters.push(format!(
-                    "&serde_json::from_str::<{}>(body.unwrap().into().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid {}\".to_string()))?",
-                    serializable_type, serializable_type
-                )),
-            }
-    }
-    let number_of_expected_parameters = if self.request_body.is_none() { parameters.len() as i64 - 1 } else { parameters.len() as i64 - 2 };
-    let (parameter_length_check, wrong_parameter_length_error) = match number_of_expected_parameters {
-      0 => ("!parameters.is_empty()".to_string(), "none expected".to_string()),
-      1 => ("parameters.len() != 1".to_string(), "one parameter expected".to_string()),
-      _ => (
-        format!("parameters.len() != {}", number_of_expected_parameters),
-        format!("{} parameters expected", number_of_expected_parameters),
-      ),
-    };
-    let body_check: Option<String> = if self.method.has_body_argument() {
-      match self.request_body {
-        Some(ref request_body) => Some(format!(
-          r#"}} else if body.is_none() {{
-        Err(DshApiError::Parameter("body expected ({})".to_string()))
-      "#,
-          request_body
-        )),
-        None => Some(
-          r#"} else if body.is_some() {
-        Err(DshApiError::Parameter("no body expected".to_string()))
-      "#
-          .to_string(),
-        ),
-      }
-    } else {
-      None
-    };
-    formatdoc!(
-      r#"
-        if selector == "{}" || selector == "{}" {{
-              // {}
-              if {} {{
-                Err(DshApiError::Parameter("wrong number of parameters ({})".to_string()))
-              {}}} else {{
-                self
-                  .{}(
-                    self
-                      .generated_client
-                      .{}(
-                        self.tenant_name(),
-                        {},
-                      )
-                      .await,
-                  )
-                  {}
-              }}
-            }}"#,
-      self.selector,
-      self.path,
-      self.comments().join("\n      // "),
-      parameter_length_check,
-      wrong_parameter_length_error,
-      body_check.unwrap_or_default(),
-      self.ok_response.processing_function(),
-      self.operation_id,
-      parameters.join(",\n                "),
-      self.ok_response.response_mapping(&self.method),
-    )
-  }
-}
-
-impl From<&Type> for ResponseBodyType {
-  fn from(openapi_type: &Type) -> Self {
-    match openapi_type {
-      Type::String(_) => ResponseBodyType::String,
-      Type::Number(_) => unimplemented!(),
-      Type::Integer(_) => unimplemented!(),
-      Type::Object(object_type) => match object_type.additional_properties {
-        Some(ref additional_properties) => match additional_properties {
-          AdditionalProperties::Any(_) => unimplemented!(),
-          AdditionalProperties::Schema(schema) => ResponseBodyType::SerializableMap(schema_to_string(schema)),
-        },
-        None => unimplemented!(),
-      },
-      Type::Array(array_type) => match array_type.items {
-        Some(ref items) => ResponseBodyType::SerializableVector(boxed_schema_to_string(items)),
-        None => unimplemented!(),
-      },
-      Type::Boolean(_) => unimplemented!(),
-    }
-  }
-}
-
-fn type_to_string(openapi_type: &Type) -> String {
-  match openapi_type {
-    Type::String(_) => "str".to_string(),
-    Type::Number(_) => unimplemented!(),
-    Type::Integer(_) => unimplemented!(),
-    Type::Object(object_type) => match object_type.additional_properties {
-      Some(ref additional_properties) => match additional_properties {
-        AdditionalProperties::Any(_) => unimplemented!(),
-        AdditionalProperties::Schema(schema) => format!("HashMap<String, {}>", schema_to_string(schema)),
-      },
-      None => unimplemented!(),
-    },
-    Type::Array(array_type) => match array_type.items {
-      Some(ref items) => format!("Vec<{}>", boxed_schema_to_string(items)),
-      None => unimplemented!(),
-    },
-    Type::Boolean(_) => unimplemented!(),
-  }
-}
-
-impl From<&ReferenceOr<Schema>> for ResponseBodyType {
-  fn from(schema: &ReferenceOr<Schema>) -> Self {
-    match schema {
-      ReferenceOr::Reference { reference } => {
-        let scalar_type = reference_to_string(reference);
-        if scalar_type == "ChildList" {
-          ResponseBodyType::Ids
-        } else {
-          ResponseBodyType::SerializableScalar(reference_to_string(reference))
-        }
-      }
-      ReferenceOr::Item(schema) => {
-        let schema_kind = schema.schema_kind.clone();
-        match schema_kind {
-          SchemaKind::Type(ref schema_kind_type) => ResponseBodyType::from(schema_kind_type),
-          SchemaKind::OneOf { .. } => unimplemented!(),
-          SchemaKind::AllOf { .. } => unimplemented!(),
-          SchemaKind::AnyOf { .. } => unimplemented!(),
-          SchemaKind::Not { .. } => unimplemented!(),
-          SchemaKind::Any(_) => unimplemented!(),
-        }
-      }
-    }
-  }
-}
-
-fn schema_to_string(schema: &ReferenceOr<Schema>) -> String {
-  match schema {
-    ReferenceOr::Reference { reference } => reference_to_string(reference),
-    ReferenceOr::Item(schema) => {
-      let schema_kind = schema.schema_kind.clone();
-      match schema_kind {
-        SchemaKind::Type(ref schema_kind_type) => type_to_string(schema_kind_type),
-        SchemaKind::OneOf { .. } => unimplemented!(),
-        SchemaKind::AllOf { .. } => unimplemented!(),
-        SchemaKind::AnyOf { .. } => unimplemented!(),
-        SchemaKind::Not { .. } => unimplemented!(),
-        SchemaKind::Any(_) => unimplemented!(),
-      }
-    }
-  }
-}
-
-fn boxed_schema_to_string(parameter: &ReferenceOr<Box<Schema>>) -> String {
-  match parameter {
-    ReferenceOr::Reference { reference } => reference_to_string(reference),
-    ReferenceOr::Item(schema) => {
-      let schema_kind = schema.schema_kind.clone();
-      match schema_kind {
-        SchemaKind::Type(ref schema_kind_type) => type_to_string(schema_kind_type),
-        _ => unimplemented!(),
-      }
-    }
-  }
-}
-
-fn revise<T: Into<String>>(description: T) -> String {
-  let description = description.into();
-  if description.is_empty() {
-    description
-  } else {
-    let trimmed = description.trim();
-    match (trimmed.chars().collect::<Vec<_>>()[0].is_uppercase(), trimmed.ends_with('.')) {
-      (false, false) => format!("{}.", capitalize(trimmed)),
-      (false, true) => capitalize(trimmed),
-      (true, false) => format!("{}.", trimmed),
-      (true, true) => description,
-    }
-  }
-}
-
-fn capitalize<T: AsRef<str>>(string: T) -> String {
-  let mut chars = string.as_ref().chars();
-  match chars.next() {
-    None => String::new(),
-    Some(first_char) => first_char.to_uppercase().collect::<String>() + chars.as_str(),
-  }
-}
-
-fn to_type_name(operation_id: &str, name: &str) -> String {
-  format!("{}{}", operation_id.split('_').map(capitalize).collect::<Vec<_>>().join(""), capitalize(name))
-}
-
-fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>, operation_id: &str) -> (String, ParameterType, Option<String>) {
-  match parameter {
-    ReferenceOr::Reference { .. } => unimplemented!(),
-    ReferenceOr::Item(parameter_item) => {
-      let parameter_data = parameter_item.clone().parameter_data();
-      match parameter_data.format {
-        ParameterSchemaOrContent::Schema(ref schema) => match schema {
-          ReferenceOr::Reference { reference } => (
-            parameter_data.name,
-            ParameterType::SerializableType(reference_to_string(reference)),
-            parameter_data.description.map(capitalize),
-          ),
-          ReferenceOr::Item(item) => match &item.schema_kind {
-            SchemaKind::Type(schema_kind_type) => match schema_kind_type {
-              Type::String(string_type) => {
-                let has_pattern = string_type.pattern.is_some();
-                let has_enumeration = !string_type.enumeration.is_empty();
-                match (has_pattern, has_enumeration) {
-                  (false, false) => (parameter_data.name, ParameterType::RefStr, parameter_data.description.map(capitalize)), // No pattern, no enumeration -> &str
-                  (false, true) => (
-                    parameter_data.name.clone(),
-                    ParameterType::ConstructedTypeOwned(to_type_name(operation_id, parameter_data.name.as_str())),
-                    parameter_data.description.map(capitalize),
-                  ), // No pattern, enumeration -> Constructed owned type
-                  (true, false) => (
-                    parameter_data.name.clone(),
-                    ParameterType::ConstructedTypeRef(to_type_name(operation_id, parameter_data.name.as_str())),
-                    parameter_data.description.map(capitalize),
-                  ), // Pattern, no enumeration -> Constructed ref type
-                  (true, true) => unimplemented!(),                                                                           // Pattern and enumeration -> Should not occur
-                }
-              }
-              _ => unimplemented!(),
-            },
-            _ => unimplemented!(),
-          },
-        },
-        ParameterSchemaOrContent::Content(_) => unimplemented!(),
-      }
-    }
-  }
-}
-
-impl From<&ReferenceOr<Response>> for ResponseBodyType {
-  fn from(response: &ReferenceOr<Response>) -> Self {
-    match response {
-      ReferenceOr::Reference { .. } => unimplemented!(),
-      ReferenceOr::Item(response) => match response.content.get("application/json") {
-        Some(media_type) => match &media_type.schema {
-          Some(schema) => ResponseBodyType::from(schema),
-          None => unimplemented!(),
-        },
-        None => match response.content.get("text/plain") {
-          Some(_) => ResponseBodyType::String,
-          None => ResponseBodyType::Ok(response.description.clone()),
-        },
-      },
-    }
-  }
-}
-
-fn reference_to_string(reference: &str) -> String {
-  match reference.strip_prefix("#/components/schemas/") {
-    Some(reference_type) => reference_type.to_string(),
-    None => format!("$ref: {}", reference),
-  }
-}
-
-impl From<&RequestBody> for RequestBodyType {
-  fn from(request_body: &RequestBody) -> Self {
-    match request_body.content.get("application/json") {
-      Some(media_type) => match &media_type.schema {
-        Some(schema) => RequestBodyType::SerializableType(schema_to_string(schema)),
-        None => unimplemented!(),
-      },
-      None => match request_body.content.get("text/plain") {
-        Some(_) => RequestBodyType::String,
-        None => unimplemented!(),
-      },
-    }
-  }
-}
-
-// Method will check whether duplicate selectors exist
-fn check_duplicate_selectors(method_operations: &[GenericOperation], method: &Method) -> Result<(), Box<dyn Error>> {
-  let mut selectors = method_operations.iter().map(|operation| operation.selector.clone()).collect::<Vec<_>>();
-  selectors.sort();
-  let mut duplicate_selectors = Vec::new();
-  for (selector, chunk) in &selectors.into_iter().chunk_by(|b| b.clone()) {
-    if chunk.collect::<Vec<_>>().len() > 1 {
-      duplicate_selectors.push(selector);
-    }
-  }
-  if !duplicate_selectors.is_empty() {
-    Err(Box::from(format!(
-      "duplicate selectors for {} method ({})",
-      method,
-      duplicate_selectors.into_iter().join(", ")
-    )))
-  } else {
-    Ok(())
-  }
-}
+const PUT_COMMENT: &str = r#"  /// The `put` function enables the generic calling of all
+  /// `PUT` functions of the DSH API, where the specific function is
+  /// selected by the `selector` parameter.
+  /// By the generic nature of this function the number of parameters and their type
+  /// and the type of the optional body parameter
+  /// are not known at compile time. This has some consequences:
+  /// * The method parameters must be provided as a list of strings in the form of a `&[&str]`.
+  ///   Validation of the number of parameters and their type/syntax will be done at run-time.
+  /// * The body parameter must be provided as a string in the form of an optional `Into<String>`,
+  ///   where the string must be deserializable into the expected type. This is checked at runtime.
+  /// * The result of this method can only indicate whether the DSH API web service
+  ///   has successfully accepted the call or not.
+  ///
+  /// ## Example
+  ///
+  /// Set the existing secret `abcdef` to the value `ABCDEF`.
+  ///
+  /// ```ignore
+  /// # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+  /// # #[tokio::main]
+  /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # let client = DshApiClientFactory::default().client().await?;
+  /// let new_secret = "ABCDEF";
+  /// let body = serde_json::to_string(new_secret)?;
+  /// client.put("secret", &["abcdef"], Some(body)).await?;
+  /// # Ok(())
+  /// # }
+  /// ```"#;
 
 const METHOD_DESCRIPTOR_STRUCT: &str = r#"/// # Describes one method
 ///
@@ -864,122 +682,3 @@ pub struct MethodDescriptor {
   pub body_type: Option<&'static str>,
   pub response_type: Option<&'static str>
 }"#;
-
-const COMMENT_OUTER: &str = r#"/// # Generic API function calls
-///
-/// Module that contains methods to call the api methods in a generic way.
-/// What this means is that the API functions can be called indirect,
-/// where the path of the method must be provided as an argument.
-///
-/// This has a number of consequences which are caused by the limitations
-/// of the `rust` language with respect to abstraction:
-/// * The number and types of the required parameters for each method
-///   are not known at compile time, which means that (emulated) dynamic typing is used
-///   and parameters errors will occur at run-time instead of compile time.
-///   * Path parameters must be provided as `&str`.
-///   * Body parameters must be provided as a json `&str` that can be deserialized at runtime
-///     into the expected type.
-/// * The response type for each method is not known at compile time.
-///   * For `GET` methods the responses will be returned as dynamic trait objects
-///     that implement [`erased_serde::Serialize`], defined in the
-///     [`erased_serde`](https://crates.io/crates/erased-serde) crate.
-///     These objects can be serialized into json, yaml or toml without any type information.
-///   * If `DELETE`, `POST` and `PUT` methods return data this will be ignored
-///     and only errors will be returned.
-///
-/// # Examples
-///
-/// Get the configuration of the application `keyring-dev` and print it as json.
-///
-/// ```ignore
-/// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-/// # #[tokio::main]
-/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
-/// let application = client.get(
-///   "get_application_configuration_by_tenant_by_appid",
-///   &["keyring-dev"]
-/// ).await?;
-/// println!("{}", serde_json::to_string_pretty(&application)?);
-/// # Ok(())
-/// # }
-/// ```
-///
-/// Update the secret `abcdef` to the value `ABCDEF`.
-///
-/// ```ignore
-/// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-/// # #[tokio::main]
-/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
-///  let secret = serde_json::to_string("ABCDEF")?;
-///  client.put("put_secret_by_tenant_by_id", &["abcdef"], &secret).await?;
-/// # Ok(())
-/// # }
-/// ```
-///
-/// # API functions
-///
-/// [`DshApiClient`] methods that call the DSH resource management API.
-///
-/// * [`delete(path, [parameters]) -> Ok`](DshApiClient::delete)
-/// * [`get(path, [parameters]) -> serialized`](DshApiClient::get)
-/// * [`head(path, [parameters], body) -> Ok`](DshApiClient::head)
-/// * [`patch(path, [parameters], body) -> Ok`](DshApiClient::patch)
-/// * [`post(path, [parameters], body) -> Ok`](DshApiClient::post)
-/// * [`put(path, [parameters], body) -> Ok`](DshApiClient::put)"#;
-
-const GET_COMMENT: &str = r#"  /// The`get` function enables the generic calling of all
-  /// `get` functions of the Dsh API, where the specific function is
-  /// selected by the `selector` parameter.
-  /// By the generic nature of this function, the types of the parameters and the response
-  /// are not known at compile time. This has some consequences.
-  /// * All parameters must be provided as a list of strings in the form of a `&[&str]`.
-  /// * The results of this method will be returned as a dynamic trait object
-  ///   that implements [`erased_serde::Serialize`].
-  ///   This object can be used to serialize the result to json, yaml or toml or
-  ///   any other compatible `rust` serialization solution, without the need of any type information.
-  ///
-  /// This does however require a dependency to the
-  /// [`erased_serde`](https://crates.io/crates/erased-serde) crate.
-  /// Add the following line to the `dependencies` section of your `Cargo.toml` file.
-  /// ```toml
-  /// [dependencies]
-  /// erased-serde = "0.4"
-  /// ```
-  /// ## Example
-  ///
-  /// Get the configuration of the application `my-service` and print it as json.
-  ///
-  /// ```ignore
-  /// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-  /// # #[tokio::main]
-  /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
-  /// let application = client.get(
-  ///   "get_application_configuration_by_tenant_by_appid",
-  ///   &["my-service"]
-  /// ).await?;
-  /// println!("{}", serde_json::to_string_pretty(&application)?);
-  /// # Ok(())
-  /// # }
-  /// ```"#;
-
-const PUT_COMMENT: &str = r#"  /// ## Example
-  /// Update the secret `abcdef` to the value `ABCDEF`.
-  ///
-  /// ```ignore
-  /// # use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-  /// # #[tokio::main]
-  /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
-  ///  let secret = serde_json::to_string("ABCDEF")?;
-  ///  client.put("put_secret_by_tenant_by_id", &["abcdef"], &secret).await?;
-  /// # Ok(())
-  /// # }
-  /// ```"#;
-
-const USE: &str = r#"use crate::dsh_api_client::DshApiClient;
-use crate::types::*;
-use crate::{DshApiError, DshApiResult};
-use std::str::FromStr;"#;

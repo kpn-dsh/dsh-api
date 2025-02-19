@@ -1,7 +1,9 @@
-use std::error::Error;
-
+#[allow(unused_imports)]
 #[path = "common.rs"]
 mod common;
+
+use crate::common::initialize_logger;
+use std::error::Error;
 
 #[cfg(not(feature = "generic"))]
 fn main() -> Result<(), Box<dyn Error>> {
@@ -11,12 +13,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
   use crate::common::print_header;
-  use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-  env_logger::init();
+  use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+  use dsh_api::types::{LimitValue, LimitValueCpu, LimitValueCpuName, LimitValueMem, LimitValueMemName};
+  initialize_logger();
 
   const APPLICATION_ID: &str = "keyring-dev";
 
-  let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+  let client = DshApiClientFactory::default().client().await?;
 
   print_header("get application_configuration_by_tenant_by_appid");
   let application = client.get("application-configuration", &[APPLICATION_ID]).await?;
@@ -39,6 +42,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
   print_header("put secret");
   let secret = serde_json::to_string("ABCDEF")?;
   client.put("secret", &["abcdef"], Some(secret)).await?;
+
+  let limit_values: Vec<LimitValue> =
+    vec![LimitValue::Cpu(LimitValueCpu { name: LimitValueCpuName::Cpu, value: 2.0 }), LimitValue::Mem(LimitValueMem { name: LimitValueMemName::Mem, value: 1000 })];
+  let body = serde_json::to_string(&limit_values)?;
+  client.patch("manage-tenant-limit", &["my-tenant"], Some(body)).await?;
 
   Ok(())
 }

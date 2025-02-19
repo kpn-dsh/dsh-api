@@ -12,18 +12,21 @@
 
 use std::fmt::{Display, Formatter};
 
+pub mod dsh_api_operation;
 pub mod generate_client;
 pub mod generate_generic;
+pub mod generate_wrapped;
+pub mod openapi_utils;
 pub mod update_openapi;
 
 #[derive(Debug, PartialEq)]
-enum PathElement {
+pub(crate) enum PathElement {
   Literal(String),
   Variable(String),
 }
 
 impl PathElement {
-  fn vec_from_str(string: &str) -> Vec<PathElement> {
+  pub(crate) fn vec_from_str(string: &str) -> Vec<PathElement> {
     string
       .split('/')
       .collect::<Vec<_>>()
@@ -61,75 +64,104 @@ impl From<&PathElement> for String {
   }
 }
 
-#[derive(Debug)]
-enum OpenApiOperationKind {
-  Allocation,
-  AppCatalog,
-  Manage,
-  Robot,
+#[derive(Clone, Debug)]
+pub(crate) enum RequestBodyType {
+  String,
+  SerializableType(String),
 }
 
-impl From<&str> for OpenApiOperationKind {
-  fn from(kind: &str) -> Self {
-    match kind {
-      "allocation" => Self::Allocation,
-      "manage" => Self::Manage,
-      "appcatalog" => Self::AppCatalog,
-      "robot" => Self::Robot,
-      _ => {
-        panic!("unrecognized operation kind '{}'", kind)
-      }
-    }
-  }
-}
-
-impl Display for OpenApiOperationKind {
+impl Display for RequestBodyType {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::Allocation => write!(f, "allocation"),
-      Self::Manage => write!(f, "manage"),
-      Self::AppCatalog => write!(f, "appcatalog"),
-      Self::Robot => write!(f, "robot"),
+      Self::String => write!(f, "String"),
+      Self::SerializableType(serializable_type) => write!(f, "{}", serializable_type),
     }
   }
 }
 
-#[derive(Debug)]
-struct OpenApiOperation {
-  method: String,
-  kind: OpenApiOperationKind,
-  subjects: Vec<String>,
-  by_parameters: Vec<String>,
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum ResponseBodyType {
+  Ids,
+  Ok(String),
+  SerializableMap(String),
+  SerializableScalar(String),
+  SerializableVector(String),
+  String,
 }
 
-impl OpenApiOperation {
-  fn new(method: &str, path_elements: &[PathElement]) -> Self {
-    let kind: OpenApiOperationKind = OpenApiOperationKind::from(path_elements.first().unwrap().to_string().as_str());
-    let subjects = path_elements
-      .iter()
-      .skip(1)
-      .filter_map(|element| match element {
-        PathElement::Literal(subject) => Some(subject.to_lowercase().replace('-', "_").to_string()),
-        PathElement::Variable(_) => None,
-      })
-      .collect::<Vec<_>>();
-    let by_parameters = path_elements
-      .iter()
-      .filter_map(|element| match element {
-        PathElement::Literal(_) => None,
-        PathElement::Variable(variable) => Some(variable.to_lowercase().replace('-', "_").to_string()),
-      })
-      .collect::<Vec<_>>();
-    OpenApiOperation { method: method.to_string(), kind, subjects, by_parameters }
+impl ResponseBodyType {
+  pub(crate) fn processing_function(&self) -> &str {
+    match self {
+      Self::String => "process_string",
+      _ => "process",
+    }
   }
+}
 
-  fn operation_id(&self) -> String {
-    let kind = match self.kind {
-      OpenApiOperationKind::AppCatalog => "_appcatalog",
-      _ => "",
-    };
-    let parameters =
-      if self.by_parameters.is_empty() { format!("_{}", self.subjects.join("_")) } else { format!("_{}_by_{}", self.subjects.join("_"), self.by_parameters.join("_by_")) };
-    format!("{}{}{}", self.method, kind, parameters)
+#[derive(Clone, Eq, Hash, PartialEq)]
+pub enum Method {
+  Delete,
+  Get,
+  Head,
+  Patch,
+  Post,
+  Put,
+}
+
+pub const METHODS: [Method; 6] = [Method::Delete, Method::Get, Method::Head, Method::Patch, Method::Post, Method::Put];
+
+impl Method {
+  pub fn has_body_argument(&self) -> bool {
+    match self {
+      Self::Get | Self::Delete | Self::Head => false,
+      Self::Patch | Self::Post | Self::Put => true,
+    }
+  }
+}
+
+impl Display for Method {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Delete => write!(f, "delete"),
+      Self::Get => write!(f, "get"),
+      Self::Head => write!(f, "head"),
+      Self::Patch => write!(f, "patch"),
+      Self::Post => write!(f, "post"),
+      Self::Put => write!(f, "put"),
+    }
+  }
+}
+
+pub const MANAGED_PARAMETERS: [&str; 1] = ["Authorization"];
+
+pub fn capitalize<T: AsRef<str>>(string: T) -> String {
+  let mut chars = string.as_ref().chars();
+  match chars.next() {
+    None => String::new(),
+    Some(first_char) => first_char.to_uppercase().collect::<String>() + chars.as_str(),
+  }
+}
+
+fn revise<T: Into<String>>(description: T) -> String {
+  let description = description.into();
+  if description.is_empty() {
+    description
+  } else {
+    let trimmed = description.trim();
+    match (trimmed.chars().collect::<Vec<_>>()[0].is_uppercase(), trimmed.ends_with('.')) {
+      (false, false) => format!("{}.", capitalize(trimmed)),
+      (false, true) => capitalize(trimmed),
+      (true, false) => format!("{}.", trimmed),
+      (true, true) => description,
+    }
+  }
+}
+
+fn article(noun: &str) -> &'static str {
+  const VOWELS: [char; 5] = ['a', 'e', 'i', 'o', 'u'];
+  if VOWELS.iter().any(|&vowel| noun.to_lowercase().starts_with(vowel)) {
+    "an"
+  } else {
+    "a"
   }
 }

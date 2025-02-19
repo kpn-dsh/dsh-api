@@ -23,7 +23,7 @@ async fn test_get_certificate() {
 #[tokio::test]
 async fn test_get_certificate_allocation_status() {
   if let Ok(client) = get_client().await {
-    let allocation_status: AllocationStatus = client.get_certificate_allocation_status(CERTIFICATE_ID).await.unwrap();
+    let allocation_status: AllocationStatus = client.get_certificate_status(CERTIFICATE_ID).await.unwrap();
     print_header("get_certificate_allocation_status");
     println!("{:#?}", allocation_status);
   }
@@ -41,7 +41,7 @@ async fn test_get_certificate_configuration() {
 #[tokio::test]
 async fn test_get_certificate_ids() {
   if let Ok(client) = get_client().await {
-    let certificate_ids: Vec<String> = client.list_certificate_ids().await.unwrap();
+    let certificate_ids: Vec<String> = client.get_certificate_ids().await.unwrap();
     print_header("get_certificate_ids");
     println!("{:#?}", certificate_ids);
   }

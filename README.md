@@ -10,19 +10,18 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.4.0" 
+dsh_api = "0.5.0" 
 ```
 
 ### Minimal example
 
 The first minimal example will print a list of all the applications that are deployed
-in a tenant environment. This example requires that the tenant's name, group and user id,
+in a tenant environment. This example requires that the tenant's name,
 platform and API secret are configured via environment variables as follows:.
 
 ```bash
 > export DSH_API_PLATFORM=np-aws-lz-dsh
 > export DSH_API_TENANT=my-tenant
-> export DSH_API_GUID_MY_TENANT=1234
 > export DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT=...
 ````
 
@@ -30,11 +29,11 @@ See the paragraph on environment variables for more details.
 Then the following program will list all applications for this tenant on the given platform.
 
 ```rust
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+    let client = DshApiClientFactory::default().client().await?;
     for (application_id, application) in client.list_applications().await? {
         println!("{} -> {}", application_id, application);
     }
@@ -62,7 +61,6 @@ use dsh_api::DshApiError;
 async fn main() -> Result<(), DshApiError> {
     let tenant = DshApiTenant::new(
         "my-tenant".to_string(),
-        1234,
         DshPlatform::try_from("np-aws-lz-dsh")?
     );
     let secret = "...".to_string();
@@ -78,9 +76,9 @@ async fn main() -> Result<(), DshApiError> {
 }
 ```
 
-### Generic api example
+### Generic API example
 
-The generic methods in the library make all rest api methods (`delete`, `get`, `head`, `patch`,
+The generic methods in the library make all rest API methods (`delete`, `get`, `head`, `patch`,
 `post` and `put`) available for all paths in the OpenApi specification,
 but the generic nature has some limitations due to the lack of abstract datatypes in rust.
 The main limitation is that static type checking is not possible.
@@ -93,7 +91,7 @@ The generic methods requires the `generic` feature to be enabled:
 
 ```toml
 [dependencies]
-dsh_api = { version = "0.4.0", features = ["generic"] }
+dsh_api = { version = "0.5.0", features = ["generic"] }
 ```
 
 The example below will add a new secret to the tenant's secret store.
@@ -112,12 +110,11 @@ where `secret-name` and `secret-value` will be the name and value of the new sec
 Now the `post` method can be called with the following parameters:
 
 * `selector: &str` - this is either an identifier for the path of the requested method in the rest
-  api
-  (`secret`) or the explicit path (`/allocation/{tenant}/secret`).
-* `parameters: &[&str]` - a vector with the expected path parameters for the api method,
+  API (`secret`) or the explicit path (`/allocation/{tenant}/secret`).
+* `parameters: &[&str]` - a vector with the expected path parameters for the API method,
   but __without__ the first path parameter (`{tenant}` or sometimes `{manager}`).
   The first path parameters is handled in a special way,
-  since it identifies the tenant that is making the api call and is used for
+  since it identifies the tenant that is making the API call and is used for
   authorization/authentication. For the example below there are no path parameters,
   so the vector must be empty.
 * `body: Option<String>` - a string that must deserialize to the expected data type
@@ -128,12 +125,12 @@ Now the `post` method can be called with the following parameters:
 The example expects the same environment variables from the "Minimal example" to be set.
 
 ```rust
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::DshApiResult;
 
 #[tokio::main]
 async fn main() -> DshApiResult<()> {
-    let client = &DEFAULT_DSH_API_CLIENT_FACTORY.client().await?;
+    let client = DshApiClientFactory::default().client().await?;
     let secret_json = r#"{"name": "secret-name","value": "secret-value"}"#.to_string();
     client.post("secret", &[], Some(secret_json)).await
 }
@@ -146,8 +143,7 @@ Most library functions need at least the following parameters to run:
 * platform - the platform that the resources reside on,
 * tenant - this is the tenant that is making the function calls,
   needed for authentication and authorization,
-* group and user id - needed for some special occasions,
-* the rest api password for the tenant on the platform.
+* the rest API password for the tenant on the platform.
 
 These parameters can be provided explicitly when creating an `DshApiClientFactory` object
 (see "More elaborate example"), or they can be provided via environment variables.
@@ -197,15 +193,15 @@ gets the default value from the environment variables decribed below.
     <tr valign="top">
         <td><code>DSH_API_TENANT</code></td>
         <td>
-            Tenant id for the tenant that is making the api requests (the client tenant). 
+            Tenant id for the tenant that is making the API requests (the client tenant). 
             In some cases this is not the same tenant as the tenant whose resources 
-            will be managed via the api. The latter will be called the target tenant.
+            will be managed via the API. The latter will be called the target tenant.
         </td>
     </tr>
     <tr valign="top">
         <td><code>DSH_API_PASSWORD_[platform]_[tenant]</code></td>
         <td>
-            Secret api token for the client tenant. 
+            Secret API token for the client tenant. 
             For better security, the use of <code>DSH_API_PASSWORD_FILE_[platform]_[tenant]</code>
             is preferred over this variable.<br/>
             The placeholders <code>[platform]</code> and <code>[tenant]</code> 
@@ -219,7 +215,7 @@ gets the default value from the environment variables decribed below.
     <tr valign="top">
         <td><code>DSH_API_PASSWORD_FILE_[platform]_[tenant]</code></td>
         <td>
-            This environment variable specifies a file containing the secret api 
+            This environment variable specifies a file containing the secret API
             token/password for the client tenant.<br/>
             The placeholders <code>[platform]</code> and <code>[tenant]</code> 
             need to be substituted with the platform name and the tenant name in all capitals, 
@@ -227,17 +223,6 @@ gets the default value from the environment variables decribed below.
             E.g. if the platform is <code>np-aws-lz-dsh</code> and the tenant name is 
             <code>my-tenant</code>, the environment variable must be
             <code>DSH_API_PASSWORD_FILE_NP_AWS_LZ_DSH_MY_TENANT</code>.
-        </td>
-    </tr>
-    <tr valign="top">
-        <td><code>DSH_API_GUID_[tenant]</code></td>
-        <td>
-            Group id and user id for the client tenant.<br/>
-            The placeholder <code>[tenant]</code> needs to be substituted 
-            with the tenant name in all capitals, with hyphens (<code>-</code>) 
-            replaced by underscores (<code>_</code>).
-            E.g. if the tenant name is <code>my-tenant</code>, the environment variable must be
-            <code>DSH_API_GUID_MY_TENANT</code>.
         </td>
     </tr>
     <tr valign="top">
@@ -260,7 +245,7 @@ gets the default value from the environment variables decribed below.
     "alias": "nplz",
     "is-production": false,
     "cloud-provider": "aws",
-    "key-cloak-url": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth",
+    "access-token-endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/dev-lz-dsh/protocol/openid-connect/token",
     "realm": "dev-lz-dsh",
     "public-domain": "dsh-dev.dsh.np.aws.kpn.com",
     "private-domain": "dsh-dev.dsh.np.aws.kpn.org"
@@ -276,23 +261,25 @@ gets the default value from the environment variables decribed below.
 </tr>
 </table>
 
-E.g., for tenant `my-tenant` (gid/uid `1234`) at platform `np-aws-lz-dsh`, use:
+E.g., for tenant `my-tenant` at platform `np-aws-lz-dsh`, use:
 
 ```bash
-> export DSH_API_PLATFORM=np-aws-lz-dsh && \
-  export DSH_API_TENANT=my-tenant && \
-  export DSH_API_GUID_MY_TENANT=1234 && \
-  export DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT=..
+> export DSH_API_PLATFORM=np-aws-lz-dsh
+> export DSH_API_TENANT=my-tenant
+> export DSH_API_PASSWORD_NP_AWS_LZ_DSH_MY_TENANT=..
 ```
 
 ## Features
 
+By enabling/disabling the features described below you have control over what's included
+in your library and what's not.
+All features are disabled by default.
 The following features are defined:
 
-* `actual` - When this feature is enabled the library will include all the "actual"
-  method versions of the REST API. By default, these methods will not be included.
-* `generic` - When this feature is enabled the library will also include the generic methods.
-  This feature is disabled by default.
+* `appcatalog` - Enables the app catalog methods.
+* `generic` - Enables the generic methods.
+* `manage` - Enables the manage methods.
+* `robot` - Enables the robot operation.
 
 ## Coding guidelines
 

@@ -1,19 +1,32 @@
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
-use dsh_api::types::{AllocationStatus, AppCatalogAppConfiguration};
+#[allow(unused_imports)]
+#[path = "common.rs"]
+mod common;
 
+use crate::common::initialize_logger;
+#[cfg(not(feature = "appcatalog"))]
+use std::error::Error;
+
+#[cfg(not(feature = "appcatalog"))]
+fn main() -> Result<(), Box<dyn Error>> {
+  Ok(())
+}
+#[cfg(feature = "appcatalog")]
 #[tokio::main]
 async fn main() -> Result<(), String> {
-  env_logger::init();
+  use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+  use dsh_api::types::{AllocationStatus, AppCatalogAppConfiguration};
+
+  initialize_logger();
 
   let app_catalog_id = "keyring-dev-proxy";
 
-  let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
+  let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;
 
-  let configuration: AppCatalogAppConfiguration = client.get_app_catalog_configuration(app_catalog_id).await?;
+  let configuration: AppCatalogAppConfiguration = client.get_appcatalog_appcatalogapp_appcatalogappid_configuration(app_catalog_id).await?;
   println!("{}", serde_json::to_string_pretty(&configuration).unwrap());
 
-  let status: AllocationStatus = client.get_app_catalog_configuration_allocation_status(app_catalog_id).await?;
+  let status: AllocationStatus = client.get_appcatalog_appcatalogapp_appcatalogappid_status(app_catalog_id).await?;
   println!("{}", serde_json::to_string_pretty(&status).unwrap());
 
   Ok(())

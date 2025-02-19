@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 #[path = "common.rs"]
 mod common;
 
@@ -7,12 +8,13 @@ const SERVICE_NAME: &str = "my-service";
 const TENANT_NAME: &str = "my-tenant";
 const VHOST: &str = "my-vhost";
 
+use crate::common::initialize_logger;
 use dsh_api::platform::DshPlatform;
 use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-  env_logger::init();
+  initialize_logger();
 
   match DshPlatform::try_default() {
     Ok(default_platform) => println!("default platform is {}", default_platform.name()),
@@ -41,7 +43,7 @@ fn print_platform(platform: DshPlatform) {
   println!("alias                       {}", platform.alias());
   println!("is production               {}", platform.is_production());
   println!("cloud provider              {}", platform.cloud_provider());
-  println!("url key cloak               {}", platform.key_cloak_url());
+  println!("access token endpoint       {}", platform.access_token_endpoint());
   println!("realm                       {}", platform.realm());
   println!("public domain               {}", platform.public_domain());
   match platform.private_domain() {
@@ -54,7 +56,6 @@ fn print_platform(platform: DshPlatform) {
   println!("domain console              {}", platform.console_domain());
   println!("domain internal service     {}", platform.internal_service_domain(SERVICE_NAME));
   println!("domain rest api             {}", platform.rest_api_domain());
-  println!("endpoint access token       {}", platform.access_token_endpoint());
   println!("endpoint mqtt token         {}", platform.mqtt_token_endpoint());
   println!("endpoint rest api           {}", platform.rest_api_endpoint());
   match platform.tenant_private_vhost_domain(TENANT_NAME, VHOST) {

@@ -1,12 +1,13 @@
-use crate::common::print_header;
-use dsh_api::dsh_api_client_factory::DEFAULT_DSH_API_CLIENT_FACTORY;
+#[allow(unused_imports)]
+#[path = "common.rs"]
+mod common;
+
+use crate::common::{initialize_logger, print_header};
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::query_processor::{parts_to_ansi_formatted_string, Part, RegexQueryProcessor};
 use dsh_api::types::{AllocationStatus, Application, TaskStatus};
 use dsh_api::Injection;
 use std::collections::HashMap;
-
-#[path = "common.rs"]
-mod common;
 
 const APPLICATION_ID: &str = "my-application";
 const TASK_ID: &str = "974cf8b68-smlmg-00000000";
@@ -15,13 +16,13 @@ const SECRET: &str = "backend_password";
 #[tokio::main]
 
 async fn main() -> Result<(), String> {
-  env_logger::init();
+  initialize_logger();
 
-  let client_factory = &DEFAULT_DSH_API_CLIENT_FACTORY;
+  let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;
 
   print_header("find_application_ids_with_derived_tasks");
-  let mut applications_with_tasks: Vec<String> = client.list_application_ids_with_derived_tasks().await?;
+  let mut applications_with_tasks: Vec<String> = client.get_task_ids().await?;
   applications_with_tasks.sort();
   println!("{}", applications_with_tasks.len());
   for application_id in applications_with_tasks {
@@ -29,55 +30,46 @@ async fn main() -> Result<(), String> {
   }
 
   print_header("get_application");
-  let application: Application = client.get_application(APPLICATION_ID).await?;
+  let application: Application = client.get_application_configuration(APPLICATION_ID).await?;
   println!("{} -> {}", APPLICATION_ID, application);
 
-  #[cfg(feature = "actual")]
-  {
-    print_header("get_application_actual_configuration");
-    let application: Application = client.get_application_actual(APPLICATION_ID).await?;
-    println!("{} -> {}", APPLICATION_ID, application);
-  }
+  print_header("get_application_actual_configuration");
+  let application: Application = client.get_application_actual(APPLICATION_ID).await?;
+  println!("{} -> {}", APPLICATION_ID, application);
 
-  #[cfg(feature = "actual")]
-  {
-    print_header("get_applications_actual");
-    let applications_actual: HashMap<String, Application> = client.get_applications_actual().await?;
-    println!("{}", applications_actual.len());
-    for (application_id, application) in applications_actual {
-      println!("{} -> {}", application_id, application);
-    }
+  print_header("get_applications_actual");
+  let applications_actual: HashMap<String, Application> = client.get_application_actual_map().await?;
+  println!("{}", applications_actual.len());
+  for (application_id, application) in applications_actual {
+    println!("{} -> {}", application_id, application);
   }
 
   print_header("get_application_allocation_status");
-  let allocation_status: AllocationStatus = client.get_application_allocation_status(APPLICATION_ID).await?;
+  let allocation_status: AllocationStatus = client.get_application_status(APPLICATION_ID).await?;
   println!("{} -> {}", APPLICATION_ID, allocation_status);
 
   print_header("get_application_task");
-  let task_status: TaskStatus = client.get_application_task(APPLICATION_ID, TASK_ID).await?;
+  let task_status: TaskStatus = client.get_task(APPLICATION_ID, TASK_ID).await?;
   println!("({}, {}) -> {}", APPLICATION_ID, TASK_ID, task_status);
 
   print_header("get_application_task_allocation_status");
-  let allocation_status: AllocationStatus = client.get_application_task_allocation_status(APPLICATION_ID, TASK_ID).await?;
+  let allocation_status: AllocationStatus = client.get_task_status(APPLICATION_ID, TASK_ID).await?;
   println!("({}, {}) -> {}", APPLICATION_ID, TASK_ID, allocation_status);
 
-  #[cfg(feature = "actual")]
-  {
-    use dsh_api::types::Task;
-    print_header("get_application_task_state");
-    let task: Task = client.get_application_task_state(APPLICATION_ID, TASK_ID).await?;
-    println!("({}, {}) -> {}", APPLICATION_ID, TASK_ID, task);
-  }
+  use dsh_api::types::Task;
+  print_header("get_application_task_state");
+  let task: Task = client.get_task_actual(APPLICATION_ID, TASK_ID).await?;
+  println!("({}, {}) -> {}", APPLICATION_ID, TASK_ID, task);
 
   print_header("get_applications");
-  let applications: HashMap<String, Application> = client.get_applications().await?;
+  let applications: HashMap<String, Application> = client.get_application_configuration_map().await?;
   println!("{}", applications.len());
   for (application_id, application) in applications {
     println!("{} -> {}", application_id, application);
   }
 
   print_header("list_application_derived_task_ids");
-  let mut application_task_ids: Vec<String> = client.list_application_derived_task_ids(APPLICATION_ID).await?;
+  let mut application_task_ids: Vec<String> = client.get_task_appid_ids(APPLICATION_ID).await?;
   application_task_ids.sort();
   println!("{} -> {}", APPLICATION_ID, application_task_ids.len());
   for application_task_id in application_task_ids {
