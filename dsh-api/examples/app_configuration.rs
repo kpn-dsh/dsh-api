@@ -1,5 +1,11 @@
+#[allow(unused_imports)]
+#[path = "common.rs"]
+mod common;
+
+use crate::common::initialize_logger;
 #[cfg(not(feature = "appcatalog"))]
 use std::error::Error;
+
 #[cfg(not(feature = "appcatalog"))]
 fn main() -> Result<(), Box<dyn Error>> {
   Ok(())
@@ -10,7 +16,7 @@ async fn main() -> Result<(), String> {
   use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   use dsh_api::types::{AllocationStatus, AppCatalogAppConfiguration};
 
-  env_logger::init();
+  initialize_logger();
 
   let app_catalog_id = "keyring-dev-proxy";
 

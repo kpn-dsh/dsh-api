@@ -1,12 +1,13 @@
-use crate::common::print_header;
-use dsh_api::dsh_api_client_factory::DshApiClientFactory;
-
+#[allow(unused_imports)]
 #[path = "common.rs"]
 mod common;
 
+use crate::common::{initialize_logger, print_header};
+use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+
 #[tokio::main]
 async fn main() -> Result<(), String> {
-  env_logger::init();
+  initialize_logger();
 
   let _secret_id = "boss-account-ids";
 

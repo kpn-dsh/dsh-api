@@ -1,17 +1,18 @@
-use crate::common::print_header;
+#[allow(unused_imports)]
+#[path = "common.rs"]
+mod common;
+
+use crate::common::{initialize_logger, print_header};
 use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::types::AllocationStatus;
 use dsh_api::types::{Certificate, CertificateStatus};
 use dsh_api::UsedBy;
 
-#[path = "common.rs"]
-mod common;
-
 static CERTIFICATE_ID: &str = "broker-kafka-proxy-certificate";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
-  env_logger::init();
+  initialize_logger();
 
   let client = DshApiClientFactory::default().client().await?;
 

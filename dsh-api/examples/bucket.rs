@@ -1,14 +1,15 @@
-use crate::common::print_header;
+#[allow(unused_imports)]
+#[path = "common.rs"]
+mod common;
+
+use crate::common::{initialize_logger, print_header};
 use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::types::{AllocationStatus, Bucket, BucketStatus};
 use std::collections::HashMap;
 
-#[path = "common.rs"]
-mod common;
-
 #[tokio::main]
 async fn main() -> Result<(), String> {
-  env_logger::init();
+  initialize_logger();
 
   let bucket_id = "schema-registry";
 

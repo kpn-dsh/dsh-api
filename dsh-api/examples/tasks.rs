@@ -1,3 +1,8 @@
+#[allow(unused_imports)]
+#[path = "common.rs"]
+mod common;
+
+use crate::common::initialize_logger;
 use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::types::AllocationStatus;
 
@@ -6,7 +11,7 @@ const TASK_ID: &str = "8f4b5747-lnmj4-00000000";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
-  env_logger::init();
+  initialize_logger();
 
   let application_id = SERVICE_ID;
   let task_id = TASK_ID;

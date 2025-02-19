@@ -1,12 +1,13 @@
-use crate::common::print_header;
+#[allow(unused_imports)]
+#[path = "common.rs"]
+mod common;
+
+use crate::common::{initialize_logger, print_header};
 use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::query_processor::{parts_to_ansi_formatted_string, Part, RegexQueryProcessor};
 use dsh_api::types::{AllocationStatus, Application, TaskStatus};
 use dsh_api::Injection;
 use std::collections::HashMap;
-
-#[path = "common.rs"]
-mod common;
 
 const APPLICATION_ID: &str = "my-application";
 const TASK_ID: &str = "974cf8b68-smlmg-00000000";
@@ -15,7 +16,7 @@ const SECRET: &str = "backend_password";
 #[tokio::main]
 
 async fn main() -> Result<(), String> {
-  env_logger::init();
+  initialize_logger();
 
   let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;

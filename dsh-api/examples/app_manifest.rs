@@ -1,5 +1,11 @@
+#[allow(unused_imports)]
+#[path = "common.rs"]
+mod common;
+
+use crate::common::initialize_logger;
 #[cfg(not(feature = "appcatalog"))]
 use std::error::Error;
+
 #[cfg(not(feature = "appcatalog"))]
 fn main() -> Result<(), Box<dyn Error>> {
   Ok(())
@@ -14,7 +20,7 @@ async fn main() -> Result<(), String> {
   use serde_json::de::from_str;
   use serde_json::Value;
 
-  env_logger::init();
+  initialize_logger();
 
   let app_catalog_id = "keyring-050";
 
