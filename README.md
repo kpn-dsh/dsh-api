@@ -245,7 +245,7 @@ gets the default value from the environment variables decribed below.
     "alias": "nplz",
     "is-production": false,
     "cloud-provider": "aws",
-    "key-cloak-url": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth",
+    "access-token-endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/dev-lz-dsh/protocol/openid-connect/token",
     "realm": "dev-lz-dsh",
     "public-domain": "dsh-dev.dsh.np.aws.kpn.com",
     "private-domain": "dsh-dev.dsh.np.aws.kpn.org"
