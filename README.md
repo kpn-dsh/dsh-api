@@ -295,4 +295,29 @@ return without any remarks:
 > cargo clippy
 ```
 
-Consider configuring your IDE to automatically apply the formatting rules when saving a file. 
+Consider configuring your IDE to automatically apply the formatting rules when saving a file.
+
+## Release
+
+This library consists of two crates. The first one (`dsh_api_build_helpers`)
+is required as a `build-dependency` for the second one (`dsh_api`).
+
+While developing it is convenient that `dsh_api` uses a local build dependency,
+but for publishing it is required that `dsh_api` only has dependencies to already published crates.
+This means that during development you should have the following build dependency
+in `dsh_api/Cargo.toml`:
+
+```toml
+[build-dependencies]
+dsh_api_build_helpers = { path = "../dsh-api-build" }
+```
+
+When it is time to release, you first have to publish the `dsh_api_build_helpers` crate.
+Once this is ready, you must change the build dependency in `dsh_api` to the published crate:
+
+```toml
+[build-dependencies]
+dsh_api_build_helpers = "0.5.1"
+```
+
+You can then normally test, build and publish the `dsh_api` crate to `crates.io`.
