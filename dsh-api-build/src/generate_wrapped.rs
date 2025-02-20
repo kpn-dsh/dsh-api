@@ -51,12 +51,14 @@ fn write_wrapped_operation(writer: &mut dyn Write, operation: &DshApiOperation) 
     writeln!(writer, "  ///")?;
   }
   writeln!(writer, "  /// `{}` `{}`", operation.method.to_string().as_str().to_uppercase(), operation.path)?;
-  if !&operation.parameters.is_empty() || operation.request_body.is_some() {
-    writeln!(writer, "  ///")?;
-    writeln!(writer, "  /// # Parameters")?;
-  }
+  let mut parameters_header_written = false;
   for (parameter_name, parameter_type, description) in &operation.parameters {
     if !MANAGED_PARAMETERS.contains(&parameter_name.as_str()) {
+      if !parameters_header_written {
+        writeln!(writer, "  ///")?;
+        writeln!(writer, "  /// # Parameters")?;
+        parameters_header_written = true;
+      }
       if let Some(description) = description {
         writeln!(writer, "  /// * `{}` : `{}` - {}", parameter_name, parameter_type, description)?;
       } else {
@@ -65,6 +67,10 @@ fn write_wrapped_operation(writer: &mut dyn Write, operation: &DshApiOperation) 
     }
   }
   if let Some(ref request_body) = operation.request_body {
+    if !parameters_header_written {
+      writeln!(writer, "  ///")?;
+      writeln!(writer, "  /// # Parameters")?;
+    }
     match request_body {
       RequestBodyType::String => writeln!(writer, "  /// * `body` : &str")?,
       RequestBodyType::SerializableType(serializable_type) => writeln!(writer, "  /// * `body` : &[`{}`]", serializable_type)?,

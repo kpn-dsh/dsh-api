@@ -10,7 +10,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.5.0" 
+dsh_api = "0.5.1" 
 ```
 
 ### Minimal example
@@ -91,7 +91,7 @@ The generic methods requires the `generic` feature to be enabled:
 
 ```toml
 [dependencies]
-dsh_api = { version = "0.5.0", features = ["generic"] }
+dsh_api = { version = "0.5.1", features = ["generic"] }
 ```
 
 The example below will add a new secret to the tenant's secret store.
@@ -148,7 +148,7 @@ Most library functions need at least the following parameters to run:
 These parameters can be provided explicitly when creating an `DshApiClientFactory` object
 (see "More elaborate example"), or they can be provided via environment variables.
 In the latter case, the library functions use their default implementations and the library
-gets the default value from the environment variables decribed below.
+gets the default value from the environment variables described below.
 
 <table>
     <tr valign="top">
@@ -295,4 +295,29 @@ return without any remarks:
 > cargo clippy
 ```
 
-Consider configuring your IDE to automatically apply the formatting rules when saving a file. 
+Consider configuring your IDE to automatically apply the formatting rules when saving a file.
+
+## Release
+
+This library consists of two crates. The first one (`dsh_api_build_helpers`)
+is required as a `build-dependency` for the second one (`dsh_api`).
+
+While developing it is convenient that `dsh_api` uses a local build dependency,
+but for publishing it is required that `dsh_api` only has dependencies to already published crates.
+This means that during development you should have the following build dependency
+in `dsh_api/Cargo.toml`:
+
+```toml
+[build-dependencies]
+dsh_api_build_helpers = { path = "../dsh-api-build" }
+```
+
+When it is time to release, you first have to publish the `dsh_api_build_helpers` crate.
+Once this is ready, you must change the build dependency in `dsh_api` to the published crate:
+
+```toml
+[build-dependencies]
+dsh_api_build_helpers = "0.5.1"
+```
+
+You can then normally test, build and publish the `dsh_api` crate to `crates.io`.
