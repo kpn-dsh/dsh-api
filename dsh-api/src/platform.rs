@@ -254,6 +254,23 @@ impl DshPlatform {
     &self.description
   }
 
+  /// # Returns the internal domain name for a tenant
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.internal_domain("my-tenant"),
+  ///   "my-tenant.marathon.mesos".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn internal_domain<T: AsRef<str>>(&self, tenant: T) -> String {
+    format!("{}.marathon.mesos", tenant.as_ref())
+  }
+
   /// # Returns the internal domain name for a service
   ///
   /// # Examples
@@ -261,14 +278,14 @@ impl DshPlatform {
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.internal_service_domain("my-service"),
-  ///   "my-service.marathon.mesos".to_string()
+  ///   DshPlatform::try_from("nplz")?.internal_service_domain("my-tenant", "my-service"),
+  ///   "my-service.my-tenant.marathon.mesos".to_string()
   /// );
   /// # Ok(())
   /// # }
   /// ```
-  pub fn internal_service_domain<S: AsRef<str>>(&self, service: S) -> String {
-    format!("{}.marathon.mesos", service.as_ref())
+  pub fn internal_service_domain<T: AsRef<str>, S: AsRef<str>>(&self, tenant: T, service: S) -> String {
+    format!("{}.{}", service.as_ref(), self.internal_domain(tenant))
   }
 
   /// # Returns whether the platform is production

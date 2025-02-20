@@ -54,7 +54,8 @@ fn print_platform(platform: DshPlatform) {
   println!("client id                   {}", platform.client_id());
   println!("client id tenant            {}", platform.tenant_client_id(TENANT_NAME));
   println!("domain console              {}", platform.console_domain());
-  println!("domain internal service     {}", platform.internal_service_domain(SERVICE_NAME));
+  println!("domain internal             {}", platform.internal_domain(TENANT_NAME));
+  println!("domain internal service     {}", platform.internal_service_domain(TENANT_NAME, SERVICE_NAME));
   println!("domain rest api             {}", platform.rest_api_domain());
   println!("endpoint mqtt token         {}", platform.mqtt_token_endpoint());
   println!("endpoint rest api           {}", platform.rest_api_endpoint());
