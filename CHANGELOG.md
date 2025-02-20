@@ -8,7 +8,8 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ### Fixed
 
-* Fixed bug with wrong internal domains for a platform.
+* Fixed bug with incorrect internal domain for a platform.
+* Fixed bug in generated doc comments.
 
 ## [0.5.0] - 2025-02-19
 
