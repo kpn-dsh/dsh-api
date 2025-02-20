@@ -4,6 +4,12 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.5.1] - 2025-02-20
+
+### Fixed
+
+* Fixed bug with wrong internal domains for a platform.
+
 ## [0.5.0] - 2025-02-19
 
 ### Breaking changes

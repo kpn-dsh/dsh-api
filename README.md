@@ -10,7 +10,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.5.0" 
+dsh_api = "0.5.1" 
 ```
 
 ### Minimal example
@@ -91,7 +91,7 @@ The generic methods requires the `generic` feature to be enabled:
 
 ```toml
 [dependencies]
-dsh_api = { version = "0.5.0", features = ["generic"] }
+dsh_api = { version = "0.5.1", features = ["generic"] }
 ```
 
 The example below will add a new secret to the tenant's secret store.
@@ -148,7 +148,7 @@ Most library functions need at least the following parameters to run:
 These parameters can be provided explicitly when creating an `DshApiClientFactory` object
 (see "More elaborate example"), or they can be provided via environment variables.
 In the latter case, the library functions use their default implementations and the library
-gets the default value from the environment variables decribed below.
+gets the default value from the environment variables described below.
 
 <table>
     <tr valign="top">
