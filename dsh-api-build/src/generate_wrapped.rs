@@ -48,8 +48,11 @@ fn write_wrapped_operation(writer: &mut dyn Write, operation: &DshApiOperation) 
   writeln!(writer, "  ///")?;
   if let Some(ref description) = operation.description {
     writeln!(writer, "  /// {}", description)?;
-    writeln!(writer, "  ///")?;
   }
+  if operation.ok_response == ResponseBodyType::Ids {
+    writeln!(writer, "  /// The returned list will be sorted alphabetically.")?;
+  }
+  writeln!(writer, "  ///")?;
   writeln!(writer, "  /// `{}` `{}`", operation.method.to_string().as_str().to_uppercase(), operation.path)?;
   let mut parameters_header_written = false;
   for (parameter_name, parameter_type, description) in &operation.parameters {
@@ -130,9 +133,31 @@ fn wrapped_method(dsh_api_operation: &DshApiOperation) -> String {
   let operation_id = &dsh_api_operation.operation_id;
   let return_type = wrapped_return_value_type(&dsh_api_operation.ok_response);
   let processing_function = dsh_api_operation.ok_response.processing_function();
-  let map_childlist = if dsh_api_operation.ok_response == ResponseBodyType::Ids { "\n      .map(|ids| ids.iter().map(|id| id.to_string()).collect())" } else { "" };
-  formatdoc!(
-    r#"
+  if dsh_api_operation.ok_response == ResponseBodyType::Ids {
+    formatdoc!(
+      r#"
+          pub async fn {method}_{selector}(&self{signature_parameters}) -> DshApiResult<{return_type}> {{
+              match self
+                .{processing_function}(
+                  self
+                    .generated_client
+                    .{operation_id}(self.tenant_name(){call_parameters})
+                    .await
+                )
+                .await
+                .map(|(_, result)| result)
+                .map(|ids| ids.iter().map(|id| id.to_string()).collect::<Vec<_>>()) {{
+                  Ok(mut ids) => {{
+                    ids.sort();
+                    Ok(ids)
+                  }}
+                  Err(error) => Err(error)
+                }}
+            }}"#
+    )
+  } else {
+    formatdoc!(
+      r#"
           pub async fn {method}_{selector}(&self{signature_parameters}) -> DshApiResult<{return_type}> {{
               self
                 .{processing_function}(
@@ -142,9 +167,10 @@ fn wrapped_method(dsh_api_operation: &DshApiOperation) -> String {
                     .await
                 )
                 .await
-                .map(|(_, result)| result){map_childlist}
+                .map(|(_, result)| result)
             }}"#
-  )
+    )
+  }
 }
 
 fn wrapped_return_value_type(response_body_type: &ResponseBodyType) -> String {

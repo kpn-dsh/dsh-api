@@ -4,6 +4,12 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.5.2] - 2025-02-28
+
+### Changed
+
+* Identifier lists returned by some wrapped functions are now sorted.
+
 ## [0.5.1] - 2025-02-20
 
 ### Fixed
