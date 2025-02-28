@@ -44,8 +44,8 @@ tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 toml = { version = "0.8", features = ["display"] }
 
 [build-dependencies]
-dsh_api_build_helpers = { path = "../dsh-api-build" }
-#dsh_api_build_helpers = "0.5.2"
+#dsh_api_build_helpers = { path = "../dsh-api-build" }
+dsh_api_build_helpers = "0.5.2"
 openapiv3 = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
