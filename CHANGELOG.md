@@ -4,7 +4,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
-## [0.5.2] - yyyy-mm-dd
+## [0.5.2] - 2025-02-28
 
 ### Changed
 
