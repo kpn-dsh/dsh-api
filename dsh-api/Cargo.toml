@@ -2,7 +2,7 @@
 [package]
 name = "dsh_api"
 readme = "README.md"
-version = "0.5.2"
+version = "0.6.0"
 authors.workspace = true
 description.workspace = true
 edition.workspace = true
@@ -16,7 +16,6 @@ rust-version.workspace = true
 all-features = true
 
 [features]
-appcatalog = []
 generic = ["dep:erased-serde"]
 manage = []
 robot = []
@@ -44,8 +43,8 @@ tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 toml = { version = "0.8", features = ["display"] }
 
 [build-dependencies]
-#dsh_api_build_helpers = { path = "../dsh-api-build" }
-dsh_api_build_helpers = "0.5.2"
+dsh_api_build_helpers = { path = "../dsh-api-build" }
+#dsh_api_build_helpers = "0.6.0"
 openapiv3 = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

@@ -76,12 +76,6 @@ impl DshApiClient {
     Self { token_fetcher, generated_client, tenant }
   }
 
-  /// # Returns the version of the openapi spec
-  #[deprecated(since = "0.4.0", note = "please use `dsh_api::api_version()` method instead")]
-  pub fn api_version(&self) -> &'static str {
-    self.generated_client.api_version()
-  }
-
   /// # Returns the openapi spec used to generate the client code
   ///
   /// Note that this is not the original openapi specification exposed by the
@@ -89,7 +83,7 @@ impl DshApiClient {
   /// The version exposed by this function differs from the original specification as follows:
   /// * Added authorization header specification to each operation.
   /// * Added operationId parameter to each operation.
-  /// * Depending on whether the `appcatalog`, `manage` and/or `robot` features are
+  /// * Depending on whether the `manage` and/or `robot` features are
   ///   enabled or not, not all operations might be present.
   pub fn openapi_spec() -> &'static str {
     OPENAPI_SPEC

@@ -107,7 +107,7 @@ fn write_method_operations(writer: &mut dyn Write, method: &Method, operations: 
     }
     match operation.kind {
       OpenApiOperationKind::Allocation => {}
-      OpenApiOperationKind::AppCatalog => writeln!(writer, "  /// * _This selector is only available when the `appcatalog` feature is enabled._")?,
+      OpenApiOperationKind::AppCatalog => {}
       OpenApiOperationKind::Manage => writeln!(writer, "  /// * _This selector is only available when the `manage` feature is enabled._")?,
       OpenApiOperationKind::Robot => writeln!(writer, "  /// * _This selector is only available when the `robot` feature is enabled._")?,
     }
