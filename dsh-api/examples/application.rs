@@ -85,7 +85,7 @@ async fn main() -> Result<(), String> {
   }
 
   print_header("find_applications_with_secret_injection");
-  let applications: Vec<(String, Application, Vec<Injection>)> = client.find_applications_with_secret_injections(SECRET).await?;
+  let applications: Vec<(String, Application, Vec<Injection>)> = client.find_applications_with_secrets(SECRET).await?;
   println!("{} applications have secret injection for secret '{}'", applications.len(), SECRET);
   for (application_id, application, envs) in applications {
     println!(
@@ -118,7 +118,7 @@ async fn main() -> Result<(), String> {
   }
 
   print_header("list_applications_with_secret_injections");
-  let applications: Vec<(String, Application, Vec<(String, Vec<Injection>)>)> = client.list_applications_with_secret_injections().await?;
+  let applications: Vec<(String, Application, Vec<(String, Vec<Injection>)>)> = client.list_applications_with_secrets().await?;
   println!("{}", applications.len());
   for (application_id, application, secrets) in applications {
     println!("{} -> {}", application_id, application);

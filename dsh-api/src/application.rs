@@ -12,11 +12,11 @@
 //!
 //! * [`find_applications(predicate) -> [(id, application)]`](DshApiClient::find_applications)
 //! * [`find_applications_that_use_env_value(query) -> [(id, application, envs)]`](DshApiClient::find_applications_that_use_env_value)
-//! * [`find_applications_with_secret_injections(secret) -> [(id, application, injections)]`](DshApiClient::find_applications_with_secret_injections)
+//! * [`find_applications_with_secrets(secret) -> [(id, application, injections)]`](DshApiClient::find_applications_with_secrets)
 //! * [`list_application_allocation_statuses() -> [(id, allocation_status)]`](DshApiClient::list_application_allocation_statuses)
 //! * [`list_application_ids() -> [id]`](DshApiClient::list_application_ids)
 //! * [`list_applications() -> [(id, application)]`](DshApiClient::list_applications)
-//! * [`list_applications_with_secret_injections() -> [(id, application, injections)]`](DshApiClient::list_applications_with_secret_injections)
+//! * [`list_applications_with_secrets() -> [(id, application, injections)]`](DshApiClient::list_applications_with_secrets)
 use crate::dsh_api_client::DshApiClient;
 use crate::query_processor::{Part, QueryProcessor};
 use crate::types::{AllocationStatus, Application, ApplicationSecret, ApplicationVolumes, HealthCheck, Metrics, PortMapping};
@@ -42,11 +42,11 @@ use std::collections::HashMap;
 ///
 /// * [`find_applications(predicate) -> [(id, application)]`](DshApiClient::find_applications)
 /// * [`find_applications_that_use_env_value(query) -> [(id, application, envs)]`](DshApiClient::find_applications_that_use_env_value)
-/// * [`find_applications_with_secret_injections(secret) -> [(id, application, injections)]`](DshApiClient::find_applications_with_secret_injections)
+/// * [`find_applications_with_secrets(secret) -> [(id, application, injections)]`](DshApiClient::find_applications_with_secrets)
 /// * [`list_application_allocation_statuses() -> [(id, allocation_status)]`](DshApiClient::list_application_allocation_statuses)
 /// * [`list_application_ids() -> [id]`](DshApiClient::list_application_ids)
 /// * [`list_applications() -> [(id, application)]`](DshApiClient::list_applications)
-/// * [`list_applications_with_secret_injections() -> [(id, application, injections)]`](DshApiClient::list_applications_with_secret_injections)
+/// * [`list_applications_with_secrets() -> [(id, application, injections)]`](DshApiClient::list_applications_with_secrets)
 impl DshApiClient {
   /// # List application ids with the corresponding allocation status
   ///
@@ -115,7 +115,7 @@ impl DshApiClient {
   ///   Each tuple consist of the application id, the `Application` and a list of secret ids
   ///   with the environment variables that the secrets are injected into.
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn list_applications_with_secret_injections(&self) -> DshApiResult<Vec<(String, Application, Vec<(String, Vec<Injection>)>)>> {
+  pub async fn list_applications_with_secrets(&self) -> DshApiResult<Vec<(String, Application, Vec<(String, Vec<Injection>)>)>> {
     Ok(
       self
         .find_applications(&|application| !application.secrets.is_empty())
@@ -172,7 +172,7 @@ impl DshApiClient {
   ///   Each tuple consist of the application id, the `Application` and a map of
   ///   environment variables that the secret is injected into.
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn find_applications_with_secret_injections(&self, secret_id: &str) -> DshApiResult<Vec<(String, Application, Vec<Injection>)>> {
+  pub async fn find_applications_with_secrets(&self, secret_id: &str) -> DshApiResult<Vec<(String, Application, Vec<Injection>)>> {
     Ok(
       self
         .find_applications(&|application| !application.secrets.is_empty())
