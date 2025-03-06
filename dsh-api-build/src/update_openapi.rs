@@ -7,16 +7,10 @@
 
 use crate::openapi_utils::OpenApiOperationKind;
 use crate::PathElement;
+use itertools::Itertools;
 use openapiv3::{OpenAPI, Operation, Parameter, ParameterData, ParameterSchemaOrContent, ReferenceOr};
 
-pub fn update_openapi(original_openapi_spec: &mut OpenAPI, prune_appcatalog: bool, prune_manage: bool, prune_robot: bool) -> Result<(), String> {
-  // If feature appcatalog is not enabled, prune all /appcatalog/... paths
-  if prune_appcatalog {
-    prune_paths(original_openapi_spec, |path| path.starts_with("/appcatalog/"))?;
-  }
-  if prune_manage {
-    prune_paths(original_openapi_spec, |path| path.starts_with("/manage/"))?;
-  }
+pub fn update_openapi(original_openapi_spec: &mut OpenAPI, prune_manage: bool, prune_robot: bool) -> Result<(), String> {
   // If feature manage is not enabled, prune all /manage/... paths
   if prune_manage {
     prune_paths(original_openapi_spec, |path| path.starts_with("/manage/"))?;
@@ -176,8 +170,18 @@ impl OpenApiOperation {
       OpenApiOperationKind::AppCatalog => "_appcatalog",
       _ => "",
     };
-    let parameters =
-      if self.by_parameters.is_empty() { format!("_{}", self.subjects.join("_")) } else { format!("_{}_by_{}", self.subjects.join("_"), self.by_parameters.join("_by_")) };
+    let subjects: String = if self.subjects.len() >= 2 {
+      let mut subjects_iter = self.subjects.iter();
+      let first = subjects_iter.next().unwrap();
+      let mut second = subjects_iter.next().unwrap().as_str();
+      if let Some(stripped) = second.strip_prefix(first) {
+        second = stripped;
+      }
+      format!("{}_{}{}", first, second, subjects_iter.map(|subject| format!("_{}", subject)).join(""))
+    } else {
+      self.subjects.join("_")
+    };
+    let parameters = if self.by_parameters.is_empty() { format!("_{}", subjects) } else { format!("_{}_by_{}", subjects, self.by_parameters.join("_by_")) };
     format!("{}{}{}", self.method, kind, parameters)
   }
 }
