@@ -16,7 +16,7 @@ async fn main() -> Result<(), String> {
   let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;
 
-  let app_catalog_app: AppCatalogApp = client.get_appcatalogapp_appcatalogappid_configuration(app_catalog_id).await?;
+  let app_catalog_app: AppCatalogApp = client.get_appcatalogapp_configuration(app_catalog_id).await?;
   println!("{}", serde_json::to_string_pretty(&app_catalog_app).unwrap());
 
   let app_catalog_apps: HashMap<String, AppCatalogApp> = client.get_appcatalogapp_configuration_map().await?;

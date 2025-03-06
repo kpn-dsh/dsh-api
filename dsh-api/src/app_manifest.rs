@@ -1,13 +1,11 @@
 //! # Additional methods to manage the app catalog manifests
 //!
-//! _These methods are only available when the `appcatalog` feature is enabled._
-//!
 //! Module that contains methods to query the App Catalog for all manifest files.
 //!
 //! # Derived methods
 //! * [`list_app_catalog_manifest_ids() -> [id]`](DshApiClient::list_app_catalog_manifest_ids)
-//! * [`list_app_catalog_manifest_ids_with_versions() -> [id, [version]]`](DshApiClient::list_app_catalog_manifest_ids_with_versions)
-//! * [`list_app_catalog_manifests_with_versions() -> [id, [(version, manifest)]]`](DshApiClient::list_app_catalog_manifests_with_versions)
+//! * [`list_app_catalog_manifest_versions() -> [id, [version]]`](DshApiClient::list_app_catalog_manifest_versions)
+//! * [`list_app_catalog_manifests() -> [id, [(version, manifest)]]`](DshApiClient::list_app_catalog_manifests)
 use crate::dsh_api_client::DshApiClient;
 use crate::types::AppCatalogManifest;
 #[allow(unused_imports)]
@@ -37,8 +35,8 @@ pub const VERSION: &str = "version";
 ///
 /// # Derived methods
 /// * [`list_app_catalog_manifest_ids() -> [id]`](DshApiClient::list_app_catalog_manifest_ids)
-/// * [`list_app_catalog_manifest_ids_with_versions() -> [id, [version]]`](DshApiClient::list_app_catalog_manifest_ids_with_versions)
-/// * [`list_app_catalog_manifests_with_versions() -> [id, [(version, manifest)]]`](DshApiClient::list_app_catalog_manifests_with_versions)
+/// * [`list_app_catalog_manifest_versions() -> [id, [version]]`](DshApiClient::list_app_catalog_manifest_versions)
+/// * [`list_app_catalog_manifests() -> [id, [(version, manifest)]]`](DshApiClient::list_app_catalog_manifests)
 impl DshApiClient {
   /// # Return sorted list of all App Catalog manifest ids
   ///
@@ -67,7 +65,7 @@ impl DshApiClient {
   /// # Returns
   /// * `Ok<Vec<(String, Vec<String>)>>` - vector containing pairs of ids and versions
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn list_app_catalog_manifest_ids_with_versions(&self) -> DshApiResult<Vec<(String, Vec<String>)>> {
+  pub async fn list_app_catalog_manifest_versions(&self) -> DshApiResult<Vec<(String, Vec<String>)>> {
     let mut id_versions: HashMap<String, Vec<String>> = HashMap::new();
     for manifest in self.get_appcatalog_manifests().await? {
       match from_str::<Value>(manifest.payload.as_str())?.as_object() {
@@ -94,7 +92,7 @@ impl DshApiClient {
   /// # Returns
   /// * `Ok<Vec<(String, Vec<(String, Manifest)>)>>` - vector containing pairs of ids and versions
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn list_app_catalog_manifests_with_versions(&self) -> DshApiResult<Vec<(String, Vec<(String, Manifest)>)>> {
+  pub async fn list_app_catalog_manifests(&self) -> DshApiResult<Vec<(String, Vec<(String, Manifest)>)>> {
     let manifests: Vec<(String, Manifest)> = self
       .get_appcatalog_manifests()
       .await?

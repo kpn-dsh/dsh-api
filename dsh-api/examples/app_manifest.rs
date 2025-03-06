@@ -3,14 +3,7 @@
 mod common;
 
 use crate::common::initialize_logger;
-#[cfg(not(feature = "appcatalog"))]
-use std::error::Error;
 
-#[cfg(not(feature = "appcatalog"))]
-fn main() -> Result<(), Box<dyn Error>> {
-  Ok(())
-}
-#[cfg(feature = "appcatalog")]
 #[tokio::main]
 async fn main() -> Result<(), String> {
   use dsh_api::app_manifest::{Manifest, API_VERSION, ID, KIND, NAME, VENDOR, VERSION};
@@ -55,7 +48,7 @@ async fn main() -> Result<(), String> {
   println!("\n-------------------------------------------");
   println!("list_app_catalog_manifest_ids_with_versions");
   println!("-------------------------------------------");
-  let manifest_ids_with_versions: Vec<(String, Vec<String>)> = client.list_app_catalog_manifest_ids_with_versions().await?;
+  let manifest_ids_with_versions: Vec<(String, Vec<String>)> = client.list_app_catalog_manifest_versions().await?;
   for manifest_id_with_versions in manifest_ids_with_versions {
     println!("{} -> {:?}", manifest_id_with_versions.0, manifest_id_with_versions.1);
   }
@@ -63,7 +56,7 @@ async fn main() -> Result<(), String> {
   println!("-------------------------------------------");
   println!("list_app_catalog_manifests_with_versions");
   println!("-------------------------------------------");
-  let manifests_with_versions: Vec<(String, Vec<(String, Manifest)>)> = client.list_app_catalog_manifests_with_versions().await?;
+  let manifests_with_versions: Vec<(String, Vec<(String, Manifest)>)> = client.list_app_catalog_manifests().await?;
   for (manifest_id, versions) in manifests_with_versions {
     println!("{}", manifest_id);
     for (version, manifest) in versions {
@@ -71,7 +64,7 @@ async fn main() -> Result<(), String> {
     }
   }
 
-  let deployed_app: AppCatalogAppConfiguration = client.get_appcatalog_appcatalogapp_appcatalogappid_configuration(app_catalog_id).await?;
+  let deployed_app: AppCatalogAppConfiguration = client.get_appcatalog_app_configuration(app_catalog_id).await?;
   println!("{}", serde_json::to_string_pretty(&deployed_app).unwrap());
 
   Ok(())

@@ -18,10 +18,9 @@ fn main() -> Result<(), Box<dyn Error>> {
   let mut openapi_spec: OpenAPI = serde_json::from_reader(original_openapi_spec_file).unwrap();
 
   // Update openapi specification, add authorization and operation ids
-  let prune_appcatalog = std::env::var("CARGO_FEATURE_APPCATALOG").is_err();
   let prune_manage = std::env::var("CARGO_FEATURE_MANAGE").is_err();
   let prune_robot = std::env::var("CARGO_FEATURE_ROBOT").is_err();
-  update_openapi(&mut openapi_spec, prune_appcatalog, prune_manage, prune_robot)?;
+  update_openapi(&mut openapi_spec, prune_manage, prune_robot)?;
 
   // Make updated openapi spec available to the crate code
   let updated_openapi_spec_json = serde_json::to_string_pretty(&openapi_spec).unwrap();

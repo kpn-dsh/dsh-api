@@ -44,11 +44,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 ## Features
 
 By enabling/disabling the features described below you have control over what's included
-in your library and what's not.
-All features are disabled by default.
+in your library and what's not. All features are disabled by default.
 The following features are defined:
 
-* `appcatalog` - Enables the app catalog methods.
 * `generic` - Enables the generic methods.
 * `manage` - Enables the manage methods.
 * `robot` - Enables the robot operation.

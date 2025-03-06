@@ -121,7 +121,6 @@
 //!
 //! The following features are defined:
 //!
-//! * `appcatalog` - Enables the app catalog methods.
 //! * `generic` - Enables the generic methods.
 //! * `manage` -  Enables the manage methods.
 //! * `robot` - Enables the robot operation.
@@ -156,7 +155,6 @@ use std::fmt::{Display, Formatter};
 use std::str::Utf8Error;
 
 pub mod app;
-#[cfg(feature = "appcatalog")]
 pub mod app_manifest;
 pub mod application;
 pub mod bucket;
@@ -179,10 +177,10 @@ pub mod volume;
 /// ## Example
 ///
 /// ```
-/// assert_eq!(dsh_api::crate_version(), "0.5.2");
+/// assert_eq!(dsh_api::crate_version(), "0.6.0");
 /// ```
 pub fn crate_version() -> &'static str {
-  "0.5.2"
+  "0.6.0"
 }
 
 /// # Returns the version of the openapi spec

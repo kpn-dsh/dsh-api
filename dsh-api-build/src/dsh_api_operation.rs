@@ -35,6 +35,7 @@ pub(crate) fn method_api_operations(method: &Method, path_operations: &Vec<(&Str
     method_generic_operations.push(generic_operation);
   }
   check_duplicate_selectors(&method_generic_operations, method)?;
+  method_generic_operations.sort_by(|operation_a, operation_b| operation_a.selector.cmp(&operation_b.selector));
   Ok(method_generic_operations)
 }
 
@@ -153,37 +154,48 @@ fn to_type_name(operation_id: &str, name: &str) -> String {
 }
 
 fn selector_from_path_elements(path_elements: &[PathElement], ok_response: &ResponseBodyType, include_variables: bool) -> String {
-  let mut selector = path_elements
+  let selector_elements = path_elements
     .iter()
     .filter_map(|path_element| match path_element {
       PathElement::Literal(literal) => {
-        if literal != "allocation" {
-          Some(literal.to_lowercase())
-        } else {
+        if literal == "allocation" || literal == "manage" {
           None
+        } else if literal == "thirdpartybucketconcession" {
+          Some("thirdpartybucket".to_string())
+        } else {
+          Some(literal.to_lowercase())
         }
       }
       PathElement::Variable(variable) => {
         if variable == "tenant" || variable == "manager" {
           None
-        } else if include_variables || (variable != "id" && variable != "appid") {
+        } else if include_variables {
           Some(variable.to_lowercase())
         } else {
           None
         }
       }
     })
-    .collect::<Vec<_>>()
-    .join("-");
+    .collect::<Vec<_>>();
+  let selector = if selector_elements.len() >= 2 {
+    let mut subject_elements_iter = selector_elements.iter();
+    let first = subject_elements_iter.next().unwrap();
+    let mut second = subject_elements_iter.next().unwrap().as_str();
+    if let Some(stripped) = second.strip_prefix(first) {
+      second = stripped;
+    }
+    format!("{}-{}{}", first, second, subject_elements_iter.map(|subject| format!("-{}", subject)).join(""))
+  } else {
+    selector_elements.join("-")
+  };
   match ok_response {
-    ResponseBodyType::Ids => selector = format!("{}-ids", selector),
-    ResponseBodyType::Ok(_) => {}
-    ResponseBodyType::SerializableMap(_) => selector = format!("{}-map", selector),
-    ResponseBodyType::SerializableScalar(_) => {}
-    ResponseBodyType::SerializableVector(_) => selector = format!("{}s", selector),
-    ResponseBodyType::String => {}
+    ResponseBodyType::Ids => format!("{}-ids", selector),
+    ResponseBodyType::Ok(_) => selector,
+    ResponseBodyType::SerializableMap(_) => format!("{}-map", selector),
+    ResponseBodyType::SerializableScalar(_) => selector,
+    ResponseBodyType::SerializableVector(_) => format!("{}s", selector),
+    ResponseBodyType::String => selector,
   }
-  selector
 }
 
 pub enum ParameterType {

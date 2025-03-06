@@ -4,6 +4,23 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-03-06
+
+### Breaking changes
+
+* Shorter selector and generic method names.
+* Renamed some app catalog manifest methods.
+* Renamed some application methods.
+* Deleted feature `appcatalog`, which is now always enabled.
+
+### Changed
+
+* Method descriptors sorted alphabetically by selector.
+
+### Removed
+
+* Removed deprecated function `api_version`.
+
 ## [0.5.2] - 2025-02-28
 
 ### Changed
