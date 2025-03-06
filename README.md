@@ -276,7 +276,6 @@ in your library and what's not.
 All features are disabled by default.
 The following features are defined:
 
-* `appcatalog` - Enables the app catalog methods.
 * `generic` - Enables the generic methods.
 * `manage` - Enables the manage methods.
 * `robot` - Enables the robot operation.
