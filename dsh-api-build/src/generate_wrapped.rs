@@ -81,10 +81,8 @@ fn write_wrapped_operation(writer: &mut dyn Write, operation: &DshApiOperation) 
   }
   writeln!(writer, "  ///")?;
   match operation.kind {
-    OpenApiOperationKind::Allocation => {}
-    OpenApiOperationKind::AppCatalog | OpenApiOperationKind::Manage | OpenApiOperationKind::Robot => {
-      writeln!(writer, "  /// _This method is only available when the `{}` feature is enabled._", operation.kind)?
-    }
+    OpenApiOperationKind::Allocation | OpenApiOperationKind::AppCatalog => {}
+    OpenApiOperationKind::Manage | OpenApiOperationKind::Robot => writeln!(writer, "  /// _This method is only available when the `{}` feature is enabled._", operation.kind)?,
   }
   writeln!(writer, "  {}", wrapped_method(operation))?;
   Ok(())
