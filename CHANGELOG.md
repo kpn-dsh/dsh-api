@@ -4,6 +4,23 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.6.1] - yyyy-mm-dd
+
+### Added
+
+* DshApiClient methods:
+    * get_app_catalog_manifest,
+    * get_app_catalog_manifests,
+    * get_raw_manifest method.
+
+### Changed
+
+* Improved manifest data structures.
+
+### Fixed
+
+* Remove obsolete remark in generated comments.
+
 ## [0.6.0] - 2025-03-06
 
 ### Breaking changes

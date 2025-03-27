@@ -3,39 +3,19 @@
 mod common;
 
 use crate::common::initialize_logger;
+use dsh_api::app_manifest::Manifest;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
-  use dsh_api::app_manifest::{Manifest, API_VERSION, ID, KIND, NAME, VENDOR, VERSION};
   use dsh_api::dsh_api_client_factory::DshApiClientFactory;
-  use dsh_api::types::AppCatalogAppConfiguration;
-  use dsh_api::types::AppCatalogManifest;
-  use serde_json::de::from_str;
-  use serde_json::Value;
 
   initialize_logger();
 
-  let app_catalog_id = "keyring-050";
+  let manifest_id = "kpn/eavesdropper";
+  let manifest_version = "0.9.2";
 
   let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;
-
-  println!("-------------------------------------------");
-  println!("list_app_catalog_manifests");
-  println!("-------------------------------------------");
-  let manifests: Vec<AppCatalogManifest> = client.get_appcatalog_manifests().await?;
-  for manifest in manifests {
-    let payload = &manifest.payload;
-    let des = from_str::<Value>(payload.as_str()).unwrap();
-    let object = des.as_object().unwrap();
-    println!("api version    {}", object.get(API_VERSION).unwrap());
-    println!("id             {}", object.get(ID).unwrap().as_str().unwrap());
-    println!("kind           {}", object.get(KIND).unwrap());
-    println!("name           {}", object.get(NAME).unwrap());
-    println!("vendor         {}", object.get(VENDOR).unwrap());
-    println!("version        {}", object.get(VERSION).unwrap());
-    println!("-------------------------------------------");
-  }
 
   println!("\n-------------------------------------------");
   println!("list_app_catalog_manifest_ids");
@@ -58,14 +38,38 @@ async fn main() -> Result<(), String> {
   println!("-------------------------------------------");
   let manifests_with_versions: Vec<(String, Vec<(String, Manifest)>)> = client.list_app_catalog_manifests().await?;
   for (manifest_id, versions) in manifests_with_versions {
+    println!("-------------------------------------------");
     println!("{}", manifest_id);
     for (version, manifest) in versions {
-      println!("  {} -> {}", version, manifest);
+      println!("  {} -> {} : {}", version, manifest.name, manifest.description.unwrap_or_default());
     }
   }
 
-  let deployed_app: AppCatalogAppConfiguration = client.get_appcatalog_app_configuration(app_catalog_id).await?;
-  println!("{}", serde_json::to_string_pretty(&deployed_app).unwrap());
+  println!("-------------------------------------------");
+  println!("get_app_catalog_manifests");
+  println!("-------------------------------------------");
+  let manifests: Vec<(String, Manifest)> = client.get_app_catalog_manifests(manifest_id).await?;
+  for (version, manifest) in manifests {
+    println!("{}:{} -> {} : {}", manifest_id, version, manifest.name, manifest.description.unwrap_or_default());
+  }
+
+  println!("-------------------------------------------");
+  println!("get_app_catalog_manifest");
+  println!("-------------------------------------------");
+  let manifest = client.get_app_catalog_manifest(manifest_id, manifest_version).await?;
+  println!(
+    "{}:{} -> {} : {}",
+    manifest.id,
+    manifest.version,
+    manifest.name,
+    manifest.description.unwrap_or_default()
+  );
+
+  println!("-------------------------------------------");
+  println!("get_raw_manifest");
+  println!("-------------------------------------------");
+  let manifest = client.get_raw_manifest(manifest_id, manifest_version).await?;
+  println!("{}", manifest);
 
   Ok(())
 }
