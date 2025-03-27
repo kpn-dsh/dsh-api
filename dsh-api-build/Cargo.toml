@@ -2,7 +2,7 @@
 [package]
 name = "dsh_api_build_helpers"
 readme = "README.md"
-version = "0.6.0"
+version = "0.6.1"
 edition.workspace = true
 authors.workspace = true
 description.workspace = true
