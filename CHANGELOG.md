@@ -9,13 +9,14 @@ All notable changes to the DSH Api Client project will be documented in this fil
 ### Added
 
 * DshApiClient methods:
-    * get_app_catalog_manifest,
-    * get_app_catalog_manifests,
-    * get_raw_manifest method.
+    * `get_app_catalog_manifest`,
+    * `get_app_catalog_manifests`,
+    * `get_raw_manifest method`.
 
 ### Changed
 
 * Improved manifest data structures.
+* Added private domain to `prod-aws-lz-dsh` platform parameters.
 
 ### Fixed
 

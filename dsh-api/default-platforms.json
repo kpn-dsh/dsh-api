@@ -38,7 +38,8 @@
     "cloud-provider": "aws",
     "access-token-endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/prod-lz-dsh/protocol/openid-connect/token",
     "realm": "prod-lz-dsh",
-    "public-domain": "dsh-prod.dsh.prod.aws.kpn.com"
+    "public-domain": "dsh-prod.dsh.prod.aws.kpn.com",
+    "private-domain": "dsh-prod.dsh.prod.aws.kpn.org"
   },
   {
     "name": "prod-aws-lz-laas",
