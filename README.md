@@ -10,7 +10,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.5.2" 
+dsh_api = "0.6.1" 
 ```
 
 ### Minimal example
@@ -91,7 +91,7 @@ The generic methods requires the `generic` feature to be enabled:
 
 ```toml
 [dependencies]
-dsh_api = { version = "0.5.2", features = ["generic"] }
+dsh_api = { version = "0.6.1", features = ["generic"] }
 ```
 
 The example below will add a new secret to the tenant's secret store.
@@ -282,16 +282,16 @@ The following features are defined:
 
 ## Coding guidelines
 
-Before pushing code to github, make sure that you adhere to the code formatting defined in
-`rustfmt.toml` and that you have run the `clippy` linter. The following commands should
-return without any remarks:
+Before pushing code to `github`, make sure that all unit tests pass,
+that you adhere to the code formatting defined in`rustfmt.toml` and
+that you have run the `clippy` linter. The following commands should
+return without any warnings or errors:
 
 ```bash
+> cargo clippy --all-features
+> cargo doc --all-features
+> cargo test --all-features
 > cargo +nightly fmt --check
-```
-
-```bash
-> cargo clippy
 ```
 
 Consider configuring your IDE to automatically apply the formatting rules when saving a file.
@@ -316,7 +316,7 @@ Once this is ready, you must change the build dependency in `dsh_api` to the pub
 
 ```toml
 [build-dependencies]
-dsh_api_build_helpers = "0.5.2"
+dsh_api_build_helpers = "0.6.1"
 ```
 
 You can then normally test, build and publish the `dsh_api` crate to `crates.io`.

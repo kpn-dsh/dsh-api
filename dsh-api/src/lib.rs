@@ -143,6 +143,7 @@ pub static DEFAULT_PLATFORMS: &str = include_str!("../default-platforms.json");
 
 use crate::platform::DshPlatform;
 use crate::types::error::ConversionError;
+use chrono::{TimeZone, Utc};
 use dsh_sdk::management_api::ManagementApiTokenError;
 use log::{debug, error};
 use progenitor_client::Error as ProgenitorError;
@@ -177,10 +178,10 @@ pub mod volume;
 /// ## Example
 ///
 /// ```
-/// assert_eq!(dsh_api::crate_version(), "0.6.0");
+/// assert_eq!(dsh_api::crate_version(), "0.6.1");
 /// ```
 pub fn crate_version() -> &'static str {
-  "0.6.0"
+  "0.6.1"
 }
 
 /// # Returns the version of the openapi spec
@@ -448,6 +449,34 @@ pub(crate) fn password_file_environment_variable(platform: &DshPlatform, tenant_
     platform.name().to_ascii_uppercase().replace('-', "_"),
     tenant_name.to_ascii_uppercase().replace('-', "_")
   )
+}
+
+// Converts epoch timestamp in seconds to utc representation
+pub(crate) fn epoch_seconds_to_string(timestamp: impl Into<i64>) -> String {
+  Utc.timestamp_opt(timestamp.into(), 0).single().map(|ts| ts.to_string()).unwrap_or_default()
+}
+
+// Converts epoch timestamp in milliseconds to utc representation
+pub(crate) fn epoch_milliseconds_to_string(timestamp: impl Into<i64>) -> String {
+  epoch_seconds_to_string(timestamp.into() / 1000)
+}
+
+#[test]
+fn test_epoch_seconds_to_string() {
+  const REPRESENTATION: &str = "2000-01-01 00:00:00 UTC";
+  assert_eq!(epoch_seconds_to_string(946684800_i64), REPRESENTATION);
+  assert_eq!(epoch_seconds_to_string(946684800_u64 as i64), REPRESENTATION);
+  assert_eq!(epoch_seconds_to_string(946684800_u128 as i64), REPRESENTATION);
+  assert_eq!(epoch_seconds_to_string(946684800.0_f64 as i64), REPRESENTATION);
+}
+
+#[test]
+fn test_epoch_milliseconds_to_string() {
+  const REPRESENTATION: &str = "2000-01-01 00:00:00 UTC";
+  assert_eq!(epoch_milliseconds_to_string(946684800000_i64), REPRESENTATION);
+  assert_eq!(epoch_milliseconds_to_string(946684800000_u64 as i64), REPRESENTATION);
+  assert_eq!(epoch_milliseconds_to_string(946684800000_u128 as i64), REPRESENTATION);
+  assert_eq!(epoch_milliseconds_to_string(946684800000.0_f64 as i64), REPRESENTATION);
 }
 
 #[test]
