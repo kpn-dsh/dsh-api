@@ -224,12 +224,12 @@ pub struct Property {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum Resource {
   Application(Box<ApplicationResource>),
-  Bucket(String),
-  Certificate(String),
+  Bucket(Box<BucketResource>),
+  Certificate(String), // TODO Replace string by a CertificateResource struct
   Database(Box<DatabaseResource>),
-  Secret(String),
+  Secret(String), // TODO Replace string by a SecretResource struct
   Topic(Box<TopicResource>),
-  Vhost(String),
+  Vhost(String), // TODO Replace string by a VhostResource struct
   Volume(Box<VolumeResource>),
 }
 
@@ -263,17 +263,24 @@ pub struct ApplicationResource {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct BucketResource {
+  pub encrypted: bool,
+  pub name: String,
+  pub versioned: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DatabaseResource {
-  cpus: Numerical,
-  extensions: Vec<String>,
-  instances: Numerical,
-  mem: Numerical,
-  name: String,
+  pub cpus: Numerical,
+  pub extensions: Vec<String>,
+  pub instances: Numerical,
+  pub mem: Numerical,
+  pub name: String,
   #[serde(rename = "snapshotInterval")]
-  snapshot_interval: Numerical,
-  version: String,
+  pub snapshot_interval: Numerical,
+  pub version: String,
   #[serde(rename = "volumeSize")]
-  volume_size: Numerical,
+  pub volume_size: Numerical,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -362,11 +369,11 @@ impl Resource {
   }
 
   fn bucket(value: &Value) -> Result<Resource, serde_json::Error> {
-    String::deserialize(value).map(Resource::Bucket)
+    BucketResource::deserialize(value).map(|bucket_resource| Resource::Bucket(Box::new(bucket_resource)))
   }
 
   fn certificate(value: &Value) -> Result<Resource, serde_json::Error> {
-    String::deserialize(value).map(Resource::Certificate)
+    Ok(Resource::Certificate(value.to_string()))
   }
 
   fn database(value: &Value) -> Result<Resource, serde_json::Error> {
@@ -374,7 +381,7 @@ impl Resource {
   }
 
   fn secret(value: &Value) -> Result<Resource, serde_json::Error> {
-    String::deserialize(value).map(Resource::Secret)
+    Ok(Resource::Secret(value.to_string()))
   }
 
   fn topic(value: &Value) -> Result<Resource, serde_json::Error> {
@@ -382,7 +389,7 @@ impl Resource {
   }
 
   fn vhost(value: &Value) -> Result<Resource, serde_json::Error> {
-    String::deserialize(value).map(Resource::Vhost)
+    Ok(Resource::Vhost(value.to_string()))
   }
 
   fn volume(value: &Value) -> Result<Resource, serde_json::Error> {
