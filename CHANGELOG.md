@@ -4,6 +4,12 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-04-17
+
+### Changed
+
+* Removed dependency on `dsh_sdk`, embedded the token fetcher code.
+
 ## [0.6.1] - 2025-04-07
 
 ### Added

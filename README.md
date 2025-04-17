@@ -10,7 +10,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.6.1" 
+dsh_api = "0.7.0" 
 ```
 
 ### Minimal example
@@ -91,7 +91,7 @@ The generic methods requires the `generic` feature to be enabled:
 
 ```toml
 [dependencies]
-dsh_api = { version = "0.6.1", features = ["generic"] }
+dsh_api = { version = "0.7.0", features = ["generic"] }
 ```
 
 The example below will add a new secret to the tenant's secret store.
