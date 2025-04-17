@@ -1,7 +1,6 @@
 //! # Defines DSH platforms and their properties
 
-use crate::{DshApiError, DEFAULT_PLATFORMS, ENV_VAR_PLATFORM, ENV_VAR_PLATFORMS_FILE_NAME};
-use dsh_sdk::Platform as SdkPlatform;
+use crate::{DEFAULT_PLATFORMS, ENV_VAR_PLATFORM, ENV_VAR_PLATFORMS_FILE_NAME};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use log::{debug, error, info};
@@ -758,7 +757,7 @@ impl Display for CloudProvider {
 impl TryFrom<&str> for DshPlatform {
   type Error = String;
 
-  /// # Converts a platform name to a `&DshPlatform`
+  /// # Converts a platform name to a `DshPlatform`
   ///
   /// Both a full name and an alias are accepted.
   ///
@@ -786,26 +785,6 @@ impl TryFrom<&str> for DshPlatform {
           .collect::<Vec<_>>()
           .join(", ")
       )),
-    }
-  }
-}
-
-/// Converts to [`dsh_sdk::Platform`] in DSH rust SDK
-impl TryFrom<&DshPlatform> for SdkPlatform {
-  type Error = DshApiError;
-
-  fn try_from(dsh_platform: &DshPlatform) -> Result<Self, Self::Error> {
-    match dsh_platform.name() {
-      "np-aws-lz-dsh" => Ok(SdkPlatform::NpLz),
-      "poc-aws-dsh" => Ok(SdkPlatform::Poc),
-      "prod-aws-dsh" => Ok(SdkPlatform::Prod),
-      "prod-aws-lz-dsh" => Ok(SdkPlatform::ProdLz),
-      // "prod-aws-lz-laas" => Ok(SdkPlatform::ProdLz),
-      "prod-azure-dsh" => Ok(SdkPlatform::ProdAz),
-      unrecognized_dsh_platform => Err(DshApiError::Configuration(format!(
-        "platform {} is not recognized by the dsh sdk library",
-        unrecognized_dsh_platform
-      ))),
     }
   }
 }

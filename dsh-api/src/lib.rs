@@ -32,11 +32,6 @@
 //!
 //! You can now call the client's methods to interact with the DSH resource management API.
 //!
-//! The client will contain an embedded
-//! [`ManagementApiTokenFetcher`](dsh_sdk::ManagementApiTokenFetcher)
-//! (provided by the [`DSH SDK`](https://crates.io/crates/dsh_sdk)),
-//! which will make sure that you always use a valid token when calling the API functions.
-//!
 //! # [`types`]
 //!
 //! For their parameters and return values the methods and functions in the crate
@@ -142,9 +137,9 @@ pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/openapi.
 pub static DEFAULT_PLATFORMS: &str = include_str!("../default-platforms.json");
 
 use crate::platform::DshPlatform;
+use crate::token_fetcher::ManagementApiTokenError;
 use crate::types::error::ConversionError;
 use chrono::{TimeZone, Utc};
-use dsh_sdk::management_api::ManagementApiTokenError;
 use log::{debug, error};
 use progenitor_client::Error as ProgenitorError;
 use reqwest::Error as ReqwestError;
@@ -169,6 +164,7 @@ pub mod generic;
 pub mod platform;
 pub mod query_processor;
 pub mod secret;
+pub mod token_fetcher;
 pub mod topic;
 pub mod vhost;
 pub mod volume;
@@ -178,10 +174,10 @@ pub mod volume;
 /// ## Example
 ///
 /// ```
-/// assert_eq!(dsh_api::crate_version(), "0.6.1");
+/// assert_eq!(dsh_api::crate_version(), "0.7.0");
 /// ```
 pub fn crate_version() -> &'static str {
-  "0.6.1"
+  "0.7.0"
 }
 
 /// # Returns the version of the openapi spec
@@ -317,7 +313,6 @@ impl From<ManagementApiTokenError> for DshApiError {
           DshApiError::Unexpected(message, Some(error.to_string()))
         }
       }
-      _ => DshApiError::Unexpected(format!("unrecognized error ({})", error), None),
     }
   }
 }
