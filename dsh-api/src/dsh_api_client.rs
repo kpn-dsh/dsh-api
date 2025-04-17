@@ -45,9 +45,9 @@
 use crate::dsh_api_tenant::DshApiTenant;
 use crate::generated::Client as GeneratedClient;
 use crate::platform::DshPlatform;
+use crate::token_fetcher::ManagementApiTokenFetcher;
 use crate::{DshApiError, OPENAPI_SPEC};
 use bytes::Bytes;
-use dsh_sdk::ManagementApiTokenFetcher;
 use futures::TryStreamExt;
 use log::{debug, trace};
 use progenitor_client::{ByteStream, Error as ProgenitorError, ResponseValue as ProgenitorResponseValue};

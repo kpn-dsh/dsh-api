@@ -67,8 +67,8 @@ use crate::dsh_api_client::DshApiClient;
 use crate::dsh_api_tenant::DshApiTenant;
 use crate::generated::Client as GeneratedClient;
 use crate::platform::DshPlatform;
+use crate::token_fetcher::ManagementApiTokenFetcherBuilder;
 use crate::{password_environment_variable, password_file_environment_variable, DshApiError};
-use dsh_sdk::{ManagementApiTokenFetcherBuilder, Platform as SdkPlatform};
 use log::debug;
 use std::env;
 
@@ -203,7 +203,7 @@ impl DshApiClientFactory {
   /// # }
   /// ```
   pub async fn client(self) -> Result<DshApiClient, DshApiError> {
-    match ManagementApiTokenFetcherBuilder::new(SdkPlatform::try_from(self.tenant.platform())?)
+    match ManagementApiTokenFetcherBuilder::new(self.tenant.platform().clone())
       .tenant_name(self.tenant.name().clone())
       .client_secret(self.password.clone())
       .build()

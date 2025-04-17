@@ -2,7 +2,7 @@
 [package]
 name = "dsh_api"
 readme = "README.md"
-version = "0.6.1"
+version = "0.7.0"
 authors.workspace = true
 description.workspace = true
 edition.workspace = true
@@ -21,23 +21,24 @@ manage = []
 robot = []
 
 [dependencies]
-bytes = "1"
-chrono = { version = "0.4", features = ["serde"] }
-dsh_sdk = { version = "0.6.1", features = ["bootstrap", "management-api-token-fetcher"], default-features = false }
-erased-serde = { version = "0.4", optional = true }
-futures = "0.3"
-itertools = "0.13"
-lazy_static = "1"
-log = "0.4"
-progenitor-client = "0.7"
-regex = "1"
-regress = "0.10"
-reqwest = { version = "0.11" }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+bytes = { version = "1", default-features = false }
+chrono = { version = "0.4", features = ["serde"], default-features = false }
+erased-serde = { version = "0.4", optional = true, features = ["std"], default-features = false }
+futures = { version = "0.3", features = ["alloc", "async-await"], default-features = false }
+itertools = { version = "0.13", features = ["default"], default-features = false }
+lazy_static = { version = "1", default-features = false }
+log = { version = "0.4", default-features = false }
+progenitor-client = { version = "0.7", default-features = false }
+regex = { version = "1", default-features = false }
+regress = { version = "0.10", features = ["std"], default-features = false }
+reqwest = "0.11"
+serde = { version = "1", features = ["derive"], default-features = false }
+serde_json = { version = "1", default-features = false }
 
 [dev-dependencies]
 env_logger = "0.11"
+mockito = "1.7.0"
+reqwest = { version = "0.11", features = ["__rustls"] }
 serde_yaml = "0.9.33"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 toml = { version = "0.8", features = ["display"] }
