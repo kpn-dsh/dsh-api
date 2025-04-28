@@ -49,7 +49,7 @@ use crate::token_fetcher::ManagementApiTokenFetcher;
 use crate::{DshApiError, OPENAPI_SPEC};
 use bytes::Bytes;
 use futures::TryStreamExt;
-use log::{debug, trace};
+use log::{debug, log_enabled, trace, Level};
 use progenitor_client::{ByteStream, Error as ProgenitorError, ResponseValue as ProgenitorResponseValue};
 use reqwest::StatusCode as ReqwestStatusCode;
 use std::fmt::{Debug, Display, Formatter};
@@ -94,30 +94,45 @@ impl DshApiClient {
     T: Debug,
   {
     match progenitor_response {
-      Ok::<ProgenitorResponseValue<T>, ProgenitorError>(response) => {
-        let status = DshApiResponseStatus::from(response.status());
-        let response = response.into_inner();
-        debug!("response / {}", status);
-        trace!("{:#?}", response);
+      Ok(response_value) => {
+        let response_status = response_value.status();
+        let status = DshApiResponseStatus::from(response_status);
+        let response = response_value.into_inner();
+        if log_enabled!(Level::Trace) {
+          trace!("response / {} / {}\n{:#?}", response_status, status, response);
+        } else {
+          debug!("response / {} / {}", response_status, status);
+        }
         Ok((status, response))
       }
-      Err(progenitor_error) => Err(DshApiError::async_from_progenitor_error(progenitor_error).await),
+      Err(progenitor_error) => {
+        debug!("progenitor error / {}", progenitor_error);
+        Err(DshApiError::async_from_progenitor_error(progenitor_error).await)
+      }
     }
   }
 
   pub(crate) async fn process_string(&self, progenitor_response: Result<ProgenitorResponseValue<ByteStream>, ProgenitorError>) -> DshApiProcessResult<String> {
     match progenitor_response {
-      Ok(response) => {
-        let status = DshApiResponseStatus::from(response.status());
-        let mut inner = response.into_inner();
+      Ok(response_value) => {
+        let response_status = response_value.status();
+        let status = DshApiResponseStatus::from(response_status);
+        let mut inner = response_value.into_inner();
         let mut string = String::new();
-        debug!("string response / {} / {}", status, string);
         while let Some::<Bytes>(ref bytes) = inner.try_next().await? {
           string.push_str(std::str::from_utf8(bytes)?)
         }
+        if log_enabled!(Level::Trace) {
+          trace!("response / {} / {}\n{}", response_status, status, string);
+        } else {
+          debug!("response / {} / {}", response_status, status);
+        }
         Ok((status, string))
       }
-      Err(progenitor_error) => Err(DshApiError::async_from_progenitor_error(progenitor_error).await),
+      Err(progenitor_error) => {
+        debug!("progenitor error / {}", progenitor_error);
+        Err(DshApiError::async_from_progenitor_error(progenitor_error).await)
+      }
     }
   }
 
