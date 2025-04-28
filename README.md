@@ -10,7 +10,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.7.0" 
+dsh_api = "0.7.1" 
 ```
 
 ### Minimal example
@@ -91,7 +91,7 @@ The generic methods requires the `generic` feature to be enabled:
 
 ```toml
 [dependencies]
-dsh_api = { version = "0.7.0", features = ["generic"] }
+dsh_api = { version = "0.7.1", features = ["generic"] }
 ```
 
 The example below will add a new secret to the tenant's secret store.
@@ -316,7 +316,7 @@ Once this is ready, you must change the build dependency in `dsh_api` to the pub
 
 ```toml
 [build-dependencies]
-dsh_api_build_helpers = "0.6.1"
+dsh_api_build_helpers = "0.6.2"
 ```
 
 You can then normally test, build and publish the `dsh_api` crate to `crates.io`.

@@ -2,7 +2,7 @@
 [package]
 name = "dsh_api_build_helpers"
 readme = "README.md"
-version = "0.6.1"
+version = "0.6.2"
 edition.workspace = true
 authors.workspace = true
 description.workspace = true
@@ -21,3 +21,4 @@ progenitor = "0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 syn = "1"
+log = "0.4.26"
