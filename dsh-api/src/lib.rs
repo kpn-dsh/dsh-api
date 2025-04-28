@@ -140,10 +140,10 @@ use crate::platform::DshPlatform;
 use crate::token_fetcher::ManagementApiTokenError;
 use crate::types::error::ConversionError;
 use chrono::{TimeZone, Utc};
-use log::{debug, error};
+use log::{debug, error, trace};
 use progenitor_client::Error as ProgenitorError;
-use reqwest::Error as ReqwestError;
 use reqwest::StatusCode as ReqwestStatusCode;
+use reqwest::{Error as ReqwestError, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::Error as SerdeJsonError;
 use std::error::Error as StdError;
@@ -164,6 +164,8 @@ pub mod generic;
 pub mod platform;
 pub mod query_processor;
 pub mod secret;
+#[cfg(feature = "manage")]
+pub mod tenant;
 pub mod token_fetcher;
 pub mod topic;
 pub mod vhost;
@@ -174,10 +176,10 @@ pub mod volume;
 /// ## Example
 ///
 /// ```
-/// assert_eq!(dsh_api::crate_version(), "0.7.0");
+/// assert_eq!(dsh_api::crate_version(), "0.7.1");
 /// ```
 pub fn crate_version() -> &'static str {
-  "0.7.0"
+  "0.7.1"
 }
 
 /// # Returns the version of the openapi spec
@@ -233,10 +235,11 @@ pub enum UsedBy {
 pub enum DshApiError {
   BadRequest(String),
   Configuration(String),
-  NotAuthorized,
-  NotFound,
+  NotAuthorized(Option<String>),
+  NotFound(Option<String>),
   Parameter(String),
   Unexpected(String, Option<String>),
+  Unprocessable(Option<String>),
 }
 
 /// Generic result type
@@ -280,12 +283,22 @@ impl Display for DshApiError {
     match self {
       DshApiError::BadRequest(message) => write!(f, "{}", message),
       DshApiError::Configuration(message) => write!(f, "{}", message),
-      DshApiError::NotAuthorized => write!(f, "not authorized"),
-      DshApiError::NotFound => write!(f, "not found"),
+      DshApiError::NotAuthorized(cause) => match cause {
+        Some(cause_message) => write!(f, "not authorized ({})", cause_message),
+        None => write!(f, "not authorized"),
+      },
+      DshApiError::NotFound(cause) => match cause {
+        Some(cause_message) => write!(f, "not found ({})", cause_message),
+        None => write!(f, "not found"),
+      },
       DshApiError::Parameter(message) => write!(f, "{}", message),
       DshApiError::Unexpected(message, cause) => match cause {
         Some(cause) => write!(f, "unexpected error ({}, {})", message, cause),
         None => write!(f, "unexpected error ({})", message),
+      },
+      DshApiError::Unprocessable(message) => match message {
+        Some(message) => write!(f, "unprocessable entity ({})", message),
+        None => write!(f, "unprocessable entity"),
       },
     }
   }
@@ -305,7 +318,7 @@ impl From<ManagementApiTokenError> for DshApiError {
       ManagementApiTokenError::FailureTokenFetch(_) => DshApiError::Unexpected("could not fetch token".to_string(), Some(error.to_string())),
       ManagementApiTokenError::StatusCode { status_code, ref error_body } => {
         if status_code == 401 {
-          DshApiError::NotAuthorized
+          DshApiError::NotAuthorized(None)
         } else {
           let message = format!("unexpected error fetching token (status code {})", status_code);
           error!("{}", message);
@@ -374,17 +387,31 @@ impl DshApiError {
       ProgenitorError::InvalidResponsePayload(ref _bytes, ref json_error) => {
         Self::Unexpected(format!("invalid response payload (json error: {})", json_error), Some(progenitor_error.to_string()))
       }
-      ProgenitorError::UnexpectedResponse(reqwest_response) => match &reqwest_response.status().clone() {
-        &ReqwestStatusCode::BAD_REQUEST => match reqwest_response.text().await {
-          Ok(error_text) => Self::BadRequest(error_text),
-          Err(response_error) => Self::BadRequest(response_error.to_string()),
-        },
-        &ReqwestStatusCode::NOT_FOUND => Self::NotFound,
-        &ReqwestStatusCode::UNAUTHORIZED | &ReqwestStatusCode::FORBIDDEN | &ReqwestStatusCode::METHOD_NOT_ALLOWED => Self::NotAuthorized,
-        other_status_code => Self::Unexpected(format!("unexpected response (status: {}, reqwest response: )", other_status_code), None),
-      },
+      ProgenitorError::UnexpectedResponse(reqwest_response) => {
+        trace!("unexpected progenitor response\n{:#?}", &reqwest_response);
+        match &reqwest_response.status().clone() {
+          &ReqwestStatusCode::BAD_REQUEST => Self::BadRequest(Self::error_from_response(reqwest_response).await.unwrap_or_default()),
+          &ReqwestStatusCode::FORBIDDEN => Self::NotAuthorized(Self::error_from_response(reqwest_response).await),
+          &ReqwestStatusCode::METHOD_NOT_ALLOWED => Self::NotAuthorized(Self::error_from_response(reqwest_response).await),
+          &ReqwestStatusCode::NOT_FOUND => Self::NotFound(Self::error_from_response(reqwest_response).await),
+          &ReqwestStatusCode::UNAUTHORIZED => Self::NotAuthorized(Self::error_from_response(reqwest_response).await),
+          &ReqwestStatusCode::UNPROCESSABLE_ENTITY => Self::Unprocessable(Self::error_from_response(reqwest_response).await),
+          other_status_code => Self::Unexpected(
+            format!("unexpected response {}", other_status_code),
+            Self::error_from_response(reqwest_response).await,
+          ),
+        }
+      }
       ProgenitorError::PreHookError(string) => Self::Unexpected(format!("pre-hook error ({})", string), None),
     }
+  }
+
+  async fn error_from_response(reqwest_response: Response) -> Option<String> {
+    match reqwest_response.text().await {
+      Ok(error_text) => Some(error_text),
+      Err(response_error) => Some(response_error.to_string()),
+    }
+    .filter(|m| !m.is_empty())
   }
 }
 

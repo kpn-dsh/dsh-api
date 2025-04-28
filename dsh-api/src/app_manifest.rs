@@ -51,7 +51,7 @@ impl DshApiClient {
       .iter()
       .find(|manifest| manifest.id == manifest_id && manifest.version == version)
       .cloned()
-      .ok_or(DshApiError::NotFound)
+      .ok_or(DshApiError::NotFound(None))
   }
 
   /// # Return App Catalog manifests
@@ -74,7 +74,7 @@ impl DshApiClient {
       .map(|manifest| (manifest.version.clone(), manifest.clone()))
       .collect();
     if manifests.is_empty() {
-      Err(DshApiError::NotFound)
+      Err(DshApiError::NotFound(None))
     } else {
       manifests.sort_by(|(version_a, _), (version_b, _)| version_a.cmp(version_b));
       Ok(manifests)
@@ -100,7 +100,7 @@ impl DshApiClient {
         return Ok(serde_json::to_string_pretty(&payload)?);
       }
     }
-    Err(DshApiError::NotFound)
+    Err(DshApiError::NotFound(None))
   }
 
   /// # Return sorted list of all App Catalog manifest ids
