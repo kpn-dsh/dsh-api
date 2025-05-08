@@ -28,9 +28,12 @@
 //! * [`LimitValueRequestRate`]
 //! * [`LimitValueSecretCount`]
 //! * [`LimitValueTopicCount`]
+//! * [`ManagedStream`]
+//! * [`ManagedStreamId`]
 //! * [`ManagedTenant`]
 //! * [`Metrics`]
 //! * [`Notification`]
+//! * [`PathSpec`]
 //! * [`PortMapping`]
 //! * [`PublicManagedStream`]
 //! * [`Secret`]
@@ -45,11 +48,12 @@
 use crate::types::{
   ActualCertificate, AllocationStatus, AppCatalogApp, AppCatalogAppConfiguration, AppCatalogAppResourcesValue, AppCatalogManifest, Application, ApplicationSecret,
   ApplicationVolumes, Bucket, BucketStatus, Certificate, CertificateStatus, Empty, HealthCheck, LimitValue, LimitValueCertificateCount, LimitValueConsumerRate, LimitValueCpu,
-  LimitValueKafkaAclGroupCount, LimitValueMem, LimitValuePartitionCount, LimitValueProducerRate, LimitValueRequestRate, LimitValueSecretCount, LimitValueTopicCount, ManagedTenant,
-  Metrics, Notification, PathSpec, PortMapping, PublicManagedStream, Secret, Task, TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
+  LimitValueKafkaAclGroupCount, LimitValueMem, LimitValuePartitionCount, LimitValueProducerRate, LimitValueRequestRate, LimitValueSecretCount, LimitValueTopicCount, ManagedStream,
+  ManagedStreamId, ManagedTenant, Metrics, Notification, PathSpec, PortMapping, PublicManagedStream, Secret, Task, TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
 };
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::ops::Deref;
 
 impl Display for ActualCertificate {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -307,16 +311,17 @@ impl Display for LimitValueTopicCount {
   }
 }
 
-fn write_managed_stream(f: &mut Formatter<'_>, kind: Option<&str>, partitions: i64, replication_factor: i64, kafka_properties: &HashMap<String, String>) -> std::fmt::Result {
-  if let Some(kind) = kind {
-    write!(f, "kind: {}", kind)?;
+impl Display for ManagedStream {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write_topic(f, Some("internal"), self.partitions, self.replication_factor, &self.kafka_properties)?;
+    Ok(())
   }
-  write!(f, "partitions: {}", partitions)?;
-  write!(f, ", replication factor: {}", replication_factor)?;
-  for (key, value) in kafka_properties {
-    write!(f, ", {}: {}", key, value)?
+}
+
+impl Display for ManagedStreamId {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.deref())
   }
-  Ok(())
 }
 
 impl Display for ManagedTenant {
@@ -391,9 +396,9 @@ impl Display for PortMapping {
 
 impl Display for PublicManagedStream {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write_managed_stream(f, Some("public"), self.partitions, self.replication_factor, &self.kafka_properties)?;
+    write_topic(f, Some("public"), self.partitions, self.replication_factor, &self.kafka_properties)?;
     if self.contract.can_be_retained {
-      write!(f, ", retained")?
+      write!(f, ", retained")?;
     }
     Ok(())
   }
@@ -426,12 +431,7 @@ impl Display for TaskStatus {
 
 impl Display for Topic {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "partitions: {}", self.partitions)?;
-    write!(f, ", replication factor: {}", self.replication_factor)?;
-    for (key, value) in &self.kafka_properties {
-      write!(f, ", {}: {}", key, value)?
-    }
-    Ok(())
+    write_topic(f, None, self.partitions, self.replication_factor, &self.kafka_properties)
   }
 }
 
@@ -470,4 +470,16 @@ impl Display for VolumeStatus {
     }
     write!(f, "{}", self.status)
   }
+}
+
+fn write_topic(f: &mut Formatter<'_>, kind: Option<&str>, partitions: i64, replication_factor: i64, kafka_properties: &HashMap<String, String>) -> std::fmt::Result {
+  if let Some(kind) = kind {
+    write!(f, "managed: {}", kind)?;
+  }
+  write!(f, "partitions: {}", partitions)?;
+  write!(f, ", replication factor: {}", replication_factor)?;
+  for (key, value) in kafka_properties {
+    write!(f, ", {}: {}", key, value)?
+  }
+  Ok(())
 }

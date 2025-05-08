@@ -165,6 +165,8 @@ pub mod platform;
 pub mod query_processor;
 pub mod secret;
 #[cfg(feature = "manage")]
+pub mod stream;
+#[cfg(feature = "manage")]
 pub mod tenant;
 pub mod token_fetcher;
 pub mod topic;
@@ -376,10 +378,15 @@ impl DshApiError {
         Some(progenitor_error.to_string()),
       ),
       ProgenitorError::InvalidUpgrade(ref reqwest_error) => Self::Unexpected(format!("invalid upgrade (reqwest error: {})", reqwest_error), Some(progenitor_error.to_string())),
-      ProgenitorError::ErrorResponse(ref progenitor_response_value) => Self::Unexpected(
-        format!("error response (progenitor response value: {:?})", progenitor_response_value),
-        Some(progenitor_error.to_string()),
-      ),
+      ProgenitorError::ErrorResponse(progenitor_response_value) => match progenitor_response_value.status() {
+        ReqwestStatusCode::BAD_REQUEST => Self::BadRequest("".to_string()),
+        ReqwestStatusCode::FORBIDDEN => Self::NotAuthorized(None),
+        ReqwestStatusCode::METHOD_NOT_ALLOWED => Self::NotAuthorized(None),
+        ReqwestStatusCode::NOT_FOUND => Self::NotFound(None),
+        ReqwestStatusCode::UNAUTHORIZED => Self::NotAuthorized(None),
+        ReqwestStatusCode::UNPROCESSABLE_ENTITY => Self::Unprocessable(None),
+        other_status_code => Self::Unexpected(format!("unexpected response {}", other_status_code), None),
+      },
       ProgenitorError::ResponseBodyError(ref reqwest_error) => Self::Unexpected(
         format!("response body error (reqwest error: {})", reqwest_error),
         Some(progenitor_error.to_string()),
@@ -390,15 +397,15 @@ impl DshApiError {
       ProgenitorError::UnexpectedResponse(reqwest_response) => {
         trace!("unexpected progenitor response\n{:#?}", &reqwest_response);
         match &reqwest_response.status().clone() {
-          &ReqwestStatusCode::BAD_REQUEST => Self::BadRequest(Self::error_from_response(reqwest_response).await.unwrap_or_default()),
-          &ReqwestStatusCode::FORBIDDEN => Self::NotAuthorized(Self::error_from_response(reqwest_response).await),
-          &ReqwestStatusCode::METHOD_NOT_ALLOWED => Self::NotAuthorized(Self::error_from_response(reqwest_response).await),
-          &ReqwestStatusCode::NOT_FOUND => Self::NotFound(Self::error_from_response(reqwest_response).await),
-          &ReqwestStatusCode::UNAUTHORIZED => Self::NotAuthorized(Self::error_from_response(reqwest_response).await),
-          &ReqwestStatusCode::UNPROCESSABLE_ENTITY => Self::Unprocessable(Self::error_from_response(reqwest_response).await),
+          &ReqwestStatusCode::BAD_REQUEST => Self::BadRequest(Self::error_from_reqwest_response(reqwest_response).await.unwrap_or_default()),
+          &ReqwestStatusCode::FORBIDDEN => Self::NotAuthorized(Self::error_from_reqwest_response(reqwest_response).await),
+          &ReqwestStatusCode::METHOD_NOT_ALLOWED => Self::NotAuthorized(Self::error_from_reqwest_response(reqwest_response).await),
+          &ReqwestStatusCode::NOT_FOUND => Self::NotFound(Self::error_from_reqwest_response(reqwest_response).await),
+          &ReqwestStatusCode::UNAUTHORIZED => Self::NotAuthorized(Self::error_from_reqwest_response(reqwest_response).await),
+          &ReqwestStatusCode::UNPROCESSABLE_ENTITY => Self::Unprocessable(Self::error_from_reqwest_response(reqwest_response).await),
           other_status_code => Self::Unexpected(
             format!("unexpected response {}", other_status_code),
-            Self::error_from_response(reqwest_response).await,
+            Self::error_from_reqwest_response(reqwest_response).await,
           ),
         }
       }
@@ -406,7 +413,7 @@ impl DshApiError {
     }
   }
 
-  async fn error_from_response(reqwest_response: Response) -> Option<String> {
+  async fn error_from_reqwest_response(reqwest_response: Response) -> Option<String> {
     match reqwest_response.text().await {
       Ok(error_text) => Some(error_text),
       Err(response_error) => Some(response_error.to_string()),
