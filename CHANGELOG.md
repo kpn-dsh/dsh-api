@@ -8,8 +8,10 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ### Added
 
-* Tenant module, for managed tenants and limits.
-* Implementation for `Display` trait for `ManageTenant` and the `LimitValue` structs.
+* Module for managed tenants and limits.
+* Module for managed streams.
+* Implementation for `Display` trait for `LimitValue`, `ManagedStream`, `ManagedStreamId`,
+  `ManagedTenant` and `PathSpec` types.
 
 ### Changed
 
