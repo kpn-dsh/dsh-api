@@ -4,6 +4,26 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.7.1] - 2025-04-18
+
+### Added
+
+* Module for managed tenants and limits.
+* Module for managed streams.
+* Implementation for `Display` trait for `LimitValue`, `ManagedStream`, `ManagedStreamId`,
+  `ManagedTenant` and `PathSpec` types.
+
+### Changed
+
+* Improvements on embedded token fetcher.
+* Improved error logging.
+
+### Fixed
+
+* Patch for bug in open api specification version `1.9.0`.
+  Permanent resolution (dsh platform) pending.
+* `dsh-api-build` upgraded to version `0.6.2`.
+
 ## [0.7.0] - 2025-04-17
 
 ### Changed

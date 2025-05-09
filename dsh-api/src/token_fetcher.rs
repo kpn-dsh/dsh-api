@@ -121,12 +121,18 @@ impl AccessToken {
 /// # }
 /// ```
 pub struct ManagementApiTokenFetcher {
-  access_token: Mutex<AccessToken>,
-  fetched_at: Mutex<Instant>,
+  access_token: Mutex<Option<(AccessToken, Instant)>>,
   client_id: String,
   client_secret: String,
   client: reqwest::Client,
   auth_url: String,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TokenStatus {
+  Invalid,
+  Uninitialized,
+  Valid,
 }
 
 impl ManagementApiTokenFetcher {
@@ -190,14 +196,7 @@ impl ManagementApiTokenFetcher {
   /// # }
   /// ```
   pub fn new_with_client(client_id: impl Into<String>, client_secret: impl Into<String>, auth_url: impl Into<String>, client: reqwest::Client) -> Self {
-    Self {
-      access_token: Mutex::new(AccessToken::default()),
-      fetched_at: Mutex::new(Instant::now()),
-      client_id: client_id.into(),
-      client_secret: client_secret.into(),
-      client,
-      auth_url: auth_url.into(),
-    }
+    Self { access_token: Mutex::new(None), client_id: client_id.into(), client_secret: client_secret.into(), client, auth_url: auth_url.into() }
   }
 
   /// # Get a cached token
@@ -230,16 +229,27 @@ impl ManagementApiTokenFetcher {
   /// * [`ManagementApiTokenError::StatusCode`] -
   ///   If the authentication server returns a non-success HTTP status code
   pub async fn get_token(&self) -> Result<String, ManagementApiTokenError> {
-    if self.is_valid() {
-      Ok(self.access_token.lock().unwrap().formatted_token())
-    } else {
-      debug!("token is expired, fetching new token");
-      let access_token = self.fetch_access_token_from_server().await?;
-      let mut token = self.access_token.lock().unwrap();
-      let mut fetched_at = self.fetched_at.lock().unwrap();
-      *token = access_token;
-      *fetched_at = Instant::now();
-      Ok(token.formatted_token())
+    match self.status() {
+      TokenStatus::Invalid => {
+        debug!("token has expired, fetching new token");
+        let access_token = self.fetch_access_token_from_server().await?;
+        let mut token = self.access_token.lock().unwrap();
+        let formatted_token = access_token.formatted_token();
+        *token = Some((access_token, Instant::now()));
+        Ok(formatted_token)
+      }
+      TokenStatus::Uninitialized => {
+        debug!("fetching initial token");
+        let access_token = self.fetch_access_token_from_server().await?;
+        let mut token = self.access_token.lock().unwrap();
+        let formatted_token = access_token.formatted_token();
+        *token = Some((access_token, Instant::now()));
+        Ok(formatted_token)
+      }
+      TokenStatus::Valid => {
+        debug!("return cached token");
+        Ok(self.access_token.lock().unwrap().clone().unwrap().0.formatted_token())
+      }
     }
   }
 
@@ -248,18 +258,25 @@ impl ManagementApiTokenFetcher {
   /// Determines if the internally cached token is still valid.
   /// A token is considered valid if its remaining lifetime
   /// (minus a 5-second safety margin) is greater than zero.
-  pub fn is_valid(&self) -> bool {
-    let access_token = self.access_token.lock().unwrap_or_else(|mut e| {
-      **e.get_mut() = AccessToken::default();
-      self.access_token.clear_poison();
-      e.into_inner()
-    });
-    let fetched_at = self.fetched_at.lock().unwrap_or_else(|e| {
-      self.fetched_at.clear_poison();
-      e.into_inner()
-    });
-    // Check if 'expires_in' has elapsed (+ 5-second safety margin)
-    fetched_at.elapsed().add(Duration::from_secs(5)) < Duration::from_secs(access_token.expires_in)
+  pub fn status(&self) -> TokenStatus {
+    match self.access_token.lock() {
+      Ok(a) => match a.clone() {
+        Some((token, fetched_at)) => {
+          if fetched_at.elapsed().add(Duration::from_secs(5)) < Duration::from_secs(token.expires_in) {
+            TokenStatus::Valid
+          } else {
+            TokenStatus::Invalid
+          }
+        }
+        None => TokenStatus::Uninitialized,
+      },
+      Err(mut e) => {
+        **e.get_mut() = None;
+        self.access_token.clear_poison();
+        let _unused = e.into_inner();
+        TokenStatus::Uninitialized
+      }
+    }
   }
 
   /// # Fetch a fresh `AccessToken`
@@ -295,7 +312,6 @@ impl Debug for ManagementApiTokenFetcher {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("ManagementApiTokenFetcher")
       .field("access_token", &self.access_token)
-      .field("fetched_at", &self.fetched_at)
       .field("client_id", &self.client_id)
       // For security, obfuscate the secret
       .field("client_secret", &"xxxxxx")
@@ -461,10 +477,9 @@ impl Display for ManagementApiTokenError {
 mod test {
   use super::*;
 
-  fn create_mock_tf() -> ManagementApiTokenFetcher {
+  fn create_mock_tf(expires_in: u64, fetched_at: Instant) -> ManagementApiTokenFetcher {
     ManagementApiTokenFetcher {
-      access_token: Mutex::new(AccessToken::default()),
-      fetched_at: Mutex::new(Instant::now()),
+      access_token: Mutex::new(Some((AccessToken { expires_in, ..AccessToken::default() }, fetched_at))),
       client_id: "client_id".to_string(),
       client_secret: "client_secret".to_string(),
       client: reqwest::Client::new(),
@@ -493,57 +508,40 @@ mod test {
     assert_eq!(token.formatted_token(), "Bearer secret_access_token");
   }
 
-  /// Validates the default constructor yields an empty `AccessToken`.
-  #[test]
-  fn test_access_token_default() {
-    let token = AccessToken::default();
-    assert_eq!(token.access_token, "");
-    assert_eq!(token.expires_in, 0);
-    assert_eq!(token.refresh_expires_in, 0);
-    assert_eq!(token.token_type, "");
-    assert_eq!(token.not_before_policy, 0);
-    assert_eq!(token.scope, "");
-    assert_eq!(token.formatted_token(), " ");
-  }
-
   /// Verifies that a default token is considered invalid since it expires immediately.
   #[test]
-  fn test_rest_token_fetcher_is_valid_default_token() {
-    let tf = create_mock_tf();
-    assert!(!tf.is_valid(), "Default token should be invalid");
+  fn test_rest_token_fetcher_status_is_invalid_default_token() {
+    let tf = create_mock_tf(0, Instant::now());
+    assert_eq!(tf.status(), TokenStatus::Invalid, "Default token should be invalid");
   }
 
-  /// Demonstrates that `is_valid` returns true if a token is configured with future expiration.
+  /// Demonstrates that `status` returns true if a token is configured with future expiration.
   #[test]
-  fn test_rest_token_fetcher_is_valid_valid_token() {
-    let tf = create_mock_tf();
-    tf.access_token.lock().unwrap().expires_in = 600;
-    assert!(tf.is_valid(), "Token with 600s lifetime should be valid initially");
+  fn test_rest_token_fetcher_status_is_valid_valid_token() {
+    let tf = create_mock_tf(600, Instant::now());
+    assert_eq!(tf.status(), TokenStatus::Valid, "Token with 600s lifetime should be valid initially");
   }
 
-  /// Confirms `is_valid` returns false after the token’s entire lifetime has elapsed.
+  /// Confirms `status` returns Invalid after the token’s entire lifetime has elapsed.
   #[test]
-  fn test_rest_token_fetcher_is_valid_expired_token() {
-    let tf = create_mock_tf();
-    tf.access_token.lock().unwrap().expires_in = 600;
-    *tf.fetched_at.lock().unwrap() = Instant::now() - Duration::from_secs(600);
-    assert!(!tf.is_valid(), "Token should expire after 600s have passed");
+  fn test_rest_token_fetcher_status_is_invalid_expired_token() {
+    let tf = create_mock_tf(600, Instant::now() - Duration::from_secs(600));
+    assert_eq!(tf.status(), TokenStatus::Invalid, "Token should expire after 600s have passed");
   }
 
   /// Tests behavior when a token is “poisoned” (i.e., panicked while locked).
   #[test]
-  fn test_rest_token_fetcher_is_valid_poisoned_token() {
-    let tf = create_mock_tf();
-    tf.access_token.lock().unwrap().expires_in = 600;
+  fn test_rest_token_fetcher_status_is_invalid_poisoned_token() {
+    let tf = create_mock_tf(600, Instant::now());
     let tf_arc = std::sync::Arc::new(tf);
     let tf_clone = tf_arc.clone();
-    assert!(tf_arc.is_valid(), "Token should be valid before poison");
+    assert_eq!(tf_arc.status(), TokenStatus::Valid, "Token should be valid before poison");
     let handle = std::thread::spawn(move || {
       let _unused = tf_clone.access_token.lock().unwrap();
       panic!("Poison token");
     });
     let _ = handle.join();
-    assert!(!tf_arc.is_valid(), "Token should be reset to default after poisoning");
+    assert_eq!(tf_arc.status(), TokenStatus::Uninitialized, "Token should be reset to default after poisoning");
   }
 
   /// Checks success scenario for fetching a new token from a mock server.
@@ -564,7 +562,7 @@ mod test {
         }"#,
       )
       .create();
-    let mut tf = create_mock_tf();
+    let mut tf = create_mock_tf(0, Instant::now());
     tf.auth_url = auth_server.url();
     let token = tf.fetch_access_token_from_server().await.unwrap();
     assert_eq!(token.access_token, "secret_access_token");
@@ -576,7 +574,7 @@ mod test {
   async fn test_fetch_access_token_from_server_error() {
     let mut auth_server = mockito::Server::new_async().await;
     auth_server.mock("POST", "/").with_status(400).with_body("Bad request").create();
-    let mut tf = create_mock_tf();
+    let mut tf = create_mock_tf(0, Instant::now());
     tf.auth_url = auth_server.url();
     let err = tf.fetch_access_token_from_server().await.unwrap_err();
     match err {

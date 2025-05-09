@@ -17,8 +17,23 @@
 //! * [`CertificateStatus`]
 //! * [`Empty`]
 //! * [`HealthCheck`]
+//! * [`LimitValue`]
+//! * [`LimitValueCertificateCount`]
+//! * [`LimitValueConsumerRate`]
+//! * [`LimitValueCpu`]
+//! * [`LimitValueKafkaAclGroupCount`]
+//! * [`LimitValueMem`]
+//! * [`LimitValuePartitionCount`]
+//! * [`LimitValueProducerRate`]
+//! * [`LimitValueRequestRate`]
+//! * [`LimitValueSecretCount`]
+//! * [`LimitValueTopicCount`]
+//! * [`ManagedStream`]
+//! * [`ManagedStreamId`]
+//! * [`ManagedTenant`]
 //! * [`Metrics`]
 //! * [`Notification`]
+//! * [`PathSpec`]
 //! * [`PortMapping`]
 //! * [`PublicManagedStream`]
 //! * [`Secret`]
@@ -32,11 +47,13 @@
 
 use crate::types::{
   ActualCertificate, AllocationStatus, AppCatalogApp, AppCatalogAppConfiguration, AppCatalogAppResourcesValue, AppCatalogManifest, Application, ApplicationSecret,
-  ApplicationVolumes, Bucket, BucketStatus, Certificate, CertificateStatus, Empty, HealthCheck, Metrics, Notification, PathSpec, PortMapping, PublicManagedStream, Secret, Task,
-  TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
+  ApplicationVolumes, Bucket, BucketStatus, Certificate, CertificateStatus, Empty, HealthCheck, LimitValue, LimitValueCertificateCount, LimitValueConsumerRate, LimitValueCpu,
+  LimitValueKafkaAclGroupCount, LimitValueMem, LimitValuePartitionCount, LimitValueProducerRate, LimitValueRequestRate, LimitValueSecretCount, LimitValueTopicCount, ManagedStream,
+  ManagedStreamId, ManagedTenant, Metrics, Notification, PathSpec, PortMapping, PublicManagedStream, Secret, Task, TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
 };
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::ops::Deref;
 
 impl Display for ActualCertificate {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -217,16 +234,110 @@ impl Display for HealthCheck {
   }
 }
 
-fn write_managed_stream(f: &mut Formatter<'_>, kind: Option<&str>, partitions: i64, replication_factor: i64, kafka_properties: &HashMap<String, String>) -> std::fmt::Result {
-  if let Some(kind) = kind {
-    write!(f, "kind: {}", kind)?;
+impl Display for LimitValue {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      LimitValue::CertificateCount(count) => write!(f, "{}", count),
+      LimitValue::ConsumerRate(rate) => write!(f, "{}", rate),
+      LimitValue::Cpu(cpu) => write!(f, "{}", cpu),
+      LimitValue::KafkaAclGroupCount(count) => write!(f, "{}", count),
+      LimitValue::Mem(mem) => write!(f, "{}", mem),
+      LimitValue::PartitionCount(count) => write!(f, "{}", count),
+      LimitValue::ProducerRate(rate) => write!(f, "{}", rate),
+      LimitValue::RequestRate(rate) => write!(f, "{}", rate),
+      LimitValue::SecretCount(count) => write!(f, "{}", count),
+      LimitValue::TopicCount(count) => write!(f, "{}", count),
+    }
   }
-  write!(f, "partitions: {}", partitions)?;
-  write!(f, ", replication factor: {}", replication_factor)?;
-  for (key, value) in kafka_properties {
-    write!(f, ", {}: {}", key, value)?
+}
+
+impl Display for LimitValueCertificateCount {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "certificates: {}", self.value)
   }
-  Ok(())
+}
+
+impl Display for LimitValueConsumerRate {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "consumer rate: {}", self.value)
+  }
+}
+
+impl Display for LimitValueCpu {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "cpu: {}", self.value)
+  }
+}
+
+impl Display for LimitValueKafkaAclGroupCount {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "kafka acl groups: {}", self.value)
+  }
+}
+
+impl Display for LimitValueMem {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "mem: {}", self.value)
+  }
+}
+
+impl Display for LimitValuePartitionCount {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "partitions: {}", self.value)
+  }
+}
+
+impl Display for LimitValueProducerRate {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "producer rate: {}", self.value)
+  }
+}
+
+impl Display for LimitValueRequestRate {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "request rate: {}", self.value)
+  }
+}
+
+impl Display for LimitValueSecretCount {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "secrets: {}", self.value)
+  }
+}
+
+impl Display for LimitValueTopicCount {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "topics: {}", self.value)
+  }
+}
+
+impl Display for ManagedStream {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write_topic(f, Some("internal"), self.partitions, self.replication_factor, &self.kafka_properties)?;
+    Ok(())
+  }
+}
+
+impl Display for ManagedStreamId {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.deref())
+  }
+}
+
+impl Display for ManagedTenant {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "name: {}", self.name)?;
+    let enabled_services = self
+      .services
+      .iter()
+      .filter_map(|service| if service.enabled { Some(service.name.to_string()) } else { None })
+      .collect::<Vec<_>>();
+    if enabled_services.is_empty() {
+      Ok(())
+    } else {
+      write!(f, " ({})", enabled_services.join(", "))
+    }
+  }
 }
 
 impl Display for Metrics {
@@ -285,9 +396,9 @@ impl Display for PortMapping {
 
 impl Display for PublicManagedStream {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write_managed_stream(f, Some("public"), self.partitions, self.replication_factor, &self.kafka_properties)?;
+    write_topic(f, Some("public"), self.partitions, self.replication_factor, &self.kafka_properties)?;
     if self.contract.can_be_retained {
-      write!(f, ", retained")?
+      write!(f, ", retained")?;
     }
     Ok(())
   }
@@ -320,12 +431,7 @@ impl Display for TaskStatus {
 
 impl Display for Topic {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "partitions: {}", self.partitions)?;
-    write!(f, ", replication factor: {}", self.replication_factor)?;
-    for (key, value) in &self.kafka_properties {
-      write!(f, ", {}: {}", key, value)?
-    }
-    Ok(())
+    write_topic(f, None, self.partitions, self.replication_factor, &self.kafka_properties)
   }
 }
 
@@ -364,4 +470,16 @@ impl Display for VolumeStatus {
     }
     write!(f, "{}", self.status)
   }
+}
+
+fn write_topic(f: &mut Formatter<'_>, kind: Option<&str>, partitions: i64, replication_factor: i64, kafka_properties: &HashMap<String, String>) -> std::fmt::Result {
+  if let Some(kind) = kind {
+    write!(f, "managed: {}", kind)?;
+  }
+  write!(f, "partitions: {}", partitions)?;
+  write!(f, ", replication factor: {}", replication_factor)?;
+  for (key, value) in kafka_properties {
+    write!(f, ", {}: {}", key, value)?
+  }
+  Ok(())
 }

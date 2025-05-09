@@ -14,7 +14,6 @@ const TASK_ID: &str = "974cf8b68-smlmg-00000000";
 const SECRET: &str = "backend_password";
 
 #[tokio::main]
-
 async fn main() -> Result<(), String> {
   initialize_logger();
 
