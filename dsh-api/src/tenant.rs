@@ -12,18 +12,24 @@
 //! [`DshApiClient`] methods that add extra capabilities but do not directly call the
 //! DSH resource management API. These derived methods depend on the API methods for this.
 //!
-//! * [`get_tenantlimits(tenant) -> tenant limits`](DshApiClient::get_tenantlimits)
+//! * [`get_granted_managed_streams(tenant) ->
+//!   [(stream id, stream, rights)]`](DshApiClient::get_granted_managed_streams)
+//! * [`get_managed_tenant_limits(tenant) -> tenant limits`](DshApiClient::get_managed_tenant_limits)
 
 // This module contains some workarounds and tests for deserializing the LimitValue enum,
 // since this required a patch to the open api specification.
 
 use crate::dsh_api_client::DshApiClient;
+use crate::stream::Stream;
 use crate::types::{
   LimitValue, LimitValueCertificateCount, LimitValueCertificateCountName, LimitValueConsumerRate, LimitValueConsumerRateName, LimitValueCpu, LimitValueCpuName,
   LimitValueKafkaAclGroupCount, LimitValueKafkaAclGroupCountName, LimitValueMem, LimitValueMemName, LimitValuePartitionCount, LimitValuePartitionCountName, LimitValueProducerRate,
   LimitValueProducerRateName, LimitValueRequestRate, LimitValueRequestRateName, LimitValueSecretCount, LimitValueSecretCountName, LimitValueTopicCount, LimitValueTopicCountName,
+  ManagedStream, ManagedStreamId,
 };
-use crate::DshApiResult;
+use crate::{AccessRights, DshApiResult};
+use futures::future::{try_join, try_join_all};
+use itertools::izip;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// # Additional methods and functions to manage tenants
@@ -38,7 +44,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// [`DshApiClient`] methods that add extra capabilities but do not directly call the
 /// DSH resource management API. These derived methods depend on the API methods for this.
 ///
-/// * [`get_tenantlimits(tenant) -> tenant limits`](DshApiClient::get_tenantlimits)
+/// * [`get_granted_managed_streams(tenant) ->
+///   [(stream id, stream, rights)]`](DshApiClient::get_granted_managed_streams)
+/// * [`get_managed_tenant_limits(tenant) -> tenant limits`](DshApiClient::get_managed_tenant_limits)
 impl DshApiClient {
   /// # Get managed tenant limits struct
   ///
@@ -48,8 +56,76 @@ impl DshApiClient {
   /// # Returns
   /// * `Ok<`[`TenantLimits`]`>` - struct containing the limits of the managed tenant
   /// * `Err<DshApiError>` - when the request could not be processed by the DSH
-  pub async fn get_tenantlimits(&self, managed_tenant: &str) -> DshApiResult<TenantLimits> {
+  pub async fn get_managed_tenant_limits(&self, managed_tenant: &str) -> DshApiResult<TenantLimits> {
     Ok(TenantLimits::from(&self.get_tenant_limits(managed_tenant).await?))
+  }
+
+  /// # Get managed streams that the tenant has access to
+  ///
+  /// # Parameters
+  /// * `managed_tenant` - managed tenants id
+  ///
+  /// # Returns
+  /// * `Ok<Vec<(ManagedStreamId, `[`Stream`]`, `[`AccessRights`]`)>>` -
+  ///   list of tuples consisting of stream ids, streams and access rights
+  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
+  pub async fn get_granted_managed_streams(&self, managed_tenant: &str) -> DshApiResult<Vec<(ManagedStreamId, Stream, AccessRights)>> {
+    // TODO Replace implementation with client.head_stream_internal_access_read et cetera
+    let managed_tenant = managed_tenant.to_string();
+
+    let internal_streams: Vec<(ManagedStreamId, ManagedStream)> = self.get_internal_stream_configurations().await?;
+    let (internal_reads, internal_writes) = try_join(
+      try_join_all(internal_streams.iter().map(|(stream_id, _)| self.get_stream_internal_access_reads(stream_id))),
+      try_join_all(internal_streams.iter().map(|(stream_id, _)| self.get_stream_internal_access_writes(stream_id))),
+    )
+    .await?;
+    let internal_read_access: Vec<bool> = internal_streams
+      .iter()
+      .zip(internal_reads)
+      .map(|(_, tenants)| tenants.contains(&managed_tenant))
+      .collect::<Vec<_>>();
+    let internal_write_access: Vec<bool> = internal_streams
+      .iter()
+      .zip(internal_writes)
+      .map(|(_, tenants)| tenants.contains(&managed_tenant))
+      .collect::<Vec<_>>();
+    let mut granted_streams: Vec<(ManagedStreamId, Stream, AccessRights)> = izip!(internal_streams, internal_read_access, internal_write_access)
+      .filter_map(|((stream_id, stream), read_access, write_access)| match (read_access, write_access) {
+        (false, false) => None,
+        (true, false) => Some((stream_id, Stream::Internal(stream), AccessRights::Read)),
+        (false, true) => Some((stream_id, Stream::Internal(stream), AccessRights::Write)),
+        (true, true) => Some((stream_id, Stream::Internal(stream), AccessRights::ReadWrite)),
+      })
+      .collect::<Vec<_>>();
+
+    let public_streams = self.get_public_stream_configurations().await?;
+    let (public_reads, public_writes) = try_join(
+      try_join_all(public_streams.iter().map(|(stream_id, _)| self.get_stream_public_access_reads(stream_id))),
+      try_join_all(public_streams.iter().map(|(stream_id, _)| self.get_stream_public_access_writes(stream_id))),
+    )
+    .await?;
+    let public_read_access: Vec<bool> = public_streams
+      .iter()
+      .zip(public_reads)
+      .map(|(_, tenants)| tenants.contains(&managed_tenant))
+      .collect::<Vec<_>>();
+    let public_write_access: Vec<bool> = public_streams
+      .iter()
+      .zip(public_writes)
+      .map(|(_, tenants)| tenants.contains(&managed_tenant))
+      .collect::<Vec<_>>();
+    let mut public_granted_streams: Vec<(ManagedStreamId, Stream, AccessRights)> = izip!(public_streams, public_read_access, public_write_access)
+      .filter_map(|((stream_id, stream), read_access, write_access)| match (read_access, write_access) {
+        (false, false) => None,
+        (true, false) => Some((stream_id, Stream::Public(stream), AccessRights::Read)),
+        (false, true) => Some((stream_id, Stream::Public(stream), AccessRights::Write)),
+        (true, true) => Some((stream_id, Stream::Public(stream), AccessRights::ReadWrite)),
+      })
+      .collect::<Vec<_>>();
+
+    granted_streams.append(&mut public_granted_streams);
+    granted_streams.sort_by(|(stream_id_a, _, _), (stream_id_b, _, _)| stream_id_a.cmp(stream_id_b));
+    Ok(granted_streams)
   }
 }
 
