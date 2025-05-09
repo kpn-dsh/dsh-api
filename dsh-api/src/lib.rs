@@ -197,6 +197,17 @@ pub fn openapi_version() -> &'static str {
   generated::Client::new("").api_version()
 }
 
+/// # Indicates access rights
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub enum AccessRights {
+  /// Indicates read access to a resource
+  Read,
+  /// Indicates read and write access to a resource
+  ReadWrite,
+  /// Indicates write access to a resource
+  Write,
+}
+
 /// # Describes an injection of a resource
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Injection {
@@ -246,6 +257,37 @@ pub enum DshApiError {
 
 /// Generic result type
 pub type DshApiResult<T> = Result<T, DshApiError>;
+
+impl AccessRights {
+  /// Checks whether read access is granted
+  pub fn has_read_access(&self) -> bool {
+    self == &Self::Read || self == &Self::ReadWrite
+  }
+
+  /// Checks whether write access is granted
+  pub fn has_write_access(&self) -> bool {
+    self == &Self::Write || self == &Self::ReadWrite
+  }
+
+  pub fn from(read_access: bool, write_access: bool) -> Option<Self> {
+    match (read_access, write_access) {
+      (false, false) => None,
+      (false, true) => Some(AccessRights::Write),
+      (true, false) => Some(AccessRights::Read),
+      (true, true) => Some(AccessRights::ReadWrite),
+    }
+  }
+}
+
+impl Display for AccessRights {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Read => write!(f, "read"),
+      Self::ReadWrite => write!(f, "read/write"),
+      Self::Write => write!(f, "write"),
+    }
+  }
+}
 
 impl Display for Injection {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

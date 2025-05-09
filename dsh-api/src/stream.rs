@@ -12,6 +12,8 @@
 //! [`DshApiClient`] methods that add extra capabilities but do not directly call the
 //! DSH resource management API. These derived methods depend on the API methods for this.
 //!
+//! * [`get_tenants_with_access_rights(stream) ->
+//!   [(tenant, rights)]`](DshApiClient::get_tenants_with_access_rights)
 //! * [`get_internal_stream_configurations() ->
 //!   [(id, stream)]`](DshApiClient::get_internal_stream_configurations)
 //! * [`get_public_stream_configurations() ->
@@ -25,7 +27,7 @@
 
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{ManagedStream, ManagedStreamId, PublicManagedStream};
-use crate::{DshApiError, DshApiResult};
+use crate::{AccessRights, DshApiError, DshApiResult};
 use futures::future::try_join_all;
 use futures::{join, try_join};
 use serde::{Deserialize, Serialize};
@@ -47,27 +49,6 @@ impl Display for Stream {
   }
 }
 
-/// # Indicates access rights
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum AccessRights {
-  /// Indicated read access to a managed stream
-  Read,
-  /// Indicated read and write access to a managed stream
-  ReadWrite,
-  /// Indicated write access to a managed stream
-  Write,
-}
-
-impl Display for AccessRights {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::Read => write!(f, "read"),
-      Self::ReadWrite => write!(f, "read/write"),
-      Self::Write => write!(f, "write"),
-    }
-  }
-}
-
 /// # Additional methods and functions to manage streams
 ///
 /// _These functions are only available when the `manage` feature is enabled._
@@ -82,6 +63,8 @@ impl Display for AccessRights {
 /// [`DshApiClient`] methods that add extra capabilities but do not directly call the
 /// DSH resource management API. These derived methods depend on the API methods for this.
 ///
+/// * [`get_tenants_with_access_rights(stream) ->
+///   [(tenant, rights)]`](DshApiClient::get_tenants_with_access_rights)
 /// * [`get_internal_stream_configurations() ->
 ///   [(id, stream)]`](DshApiClient::get_internal_stream_configurations)
 /// * [`get_public_stream_configurations() ->
@@ -93,6 +76,45 @@ impl Display for AccessRights {
 /// * [`revoke_managed_stream_access_rights(stream, tenant, rights) ->
 ///   stream`](DshApiClient::revoke_managed_stream_access_rights)
 impl DshApiClient {
+  /// # Get tenants that have been granted access rights
+  ///
+  /// # Parameters
+  /// * `managed_stream_id` - internal or public managed stream to get granted rights for
+  ///
+  /// # Returns
+  /// * `Ok<Vec<(String, AccessRights)>` - tuples consisting of tenant ids and granted access rights
+  /// * `Err<DshApiError>` - when the managed stream does not exist or the request
+  ///   could not be processed by the DSH
+  pub async fn get_tenants_with_access_rights(&self, managed_stream_id: &ManagedStreamId) -> DshApiResult<Vec<(String, AccessRights)>> {
+    let (tenant_ids_reads, tenant_ids_writes) = match self.get_stream_configuration(managed_stream_id).await? {
+      Some(stream_configuration) => match stream_configuration {
+        Stream::Internal(_) => try_join!(
+          self.get_stream_internal_access_reads(managed_stream_id),
+          self.get_stream_internal_access_writes(managed_stream_id)
+        )?,
+        Stream::Public(_) => try_join!(
+          self.get_stream_public_access_reads(managed_stream_id),
+          self.get_stream_public_access_writes(managed_stream_id)
+        )?,
+      },
+      None => return Err(DshApiError::NotFound(Some(format!("managed stream '{}' does not exist", managed_stream_id)))),
+    };
+    let mut tenant_ids = tenant_ids_reads.iter().collect::<Vec<_>>();
+    for id in &tenant_ids_writes {
+      tenant_ids.push(id);
+    }
+    tenant_ids.sort();
+    tenant_ids.dedup();
+    Ok(
+      tenant_ids
+        .into_iter()
+        .filter_map(|tenant_id| {
+          AccessRights::from(tenant_ids_reads.contains(tenant_id), tenant_ids_writes.contains(tenant_id)).map(|acess_rights| (tenant_id.clone(), acess_rights))
+        })
+        .collect::<Vec<_>>(),
+    )
+  }
+
   /// # Get named internal managed stream configurations
   ///
   /// Returns a list of (stream id, stream)-tuples containing the ids and configurations
@@ -163,16 +185,6 @@ impl DshApiClient {
         format!("both internal and public managed stream '{}' exist", managed_stream_id),
         None,
       )),
-      // (Err(DshApiError::NotFound(_)), Err(DshApiError::NotFound(_))) => Ok(None),
-      // (Ok(internal_managed_stream), Err(DshApiError::NotFound(_))) => Ok(Some(Stream::Internal(internal_managed_stream))),
-      // (Err(DshApiError::NotFound(_)), Ok(public_managed_stream)) => Ok(Some(Stream::Public(public_managed_stream))),
-      // (Ok(_), Err(public_error)) => Err(public_error),
-      // (Err(internal_error), Ok(_)) => Err(internal_error),
-      // (Err(internal_error), Err(_)) => Err(internal_error),
-      // (Ok(_), Ok(_)) => Err(DshApiError::Unexpected(
-      //   format!("both internal and public managed stream '{}' exist", managed_stream_id),
-      //   None,
-      // )),
     }
   }
 
