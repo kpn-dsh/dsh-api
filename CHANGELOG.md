@@ -4,6 +4,23 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.7.2] - yyyy-mm-dd
+
+### Added
+
+* Platform methods:
+    * `tenant_private_domain`,
+    * `tenant_proxy_private_bootstrap_servers`,
+    * `tenant_proxy_private_schema_registry_host`,
+    * `tenant_proxy_public_bootstrap_servers`,
+    * `tenant_proxy_public_schema_registry_host`,
+    * `tenant_public_domain`.
+* Bucket methods.
+
+### Changed
+
+* Platform method `tenant_public_apps_domain` is deprecated.
+
 ## [0.7.1] - 2025-04-18
 
 ### Added

@@ -577,7 +577,30 @@ impl DshPlatform {
   /// # }
   /// ```
   pub fn tenant_monitoring_url<T: AsRef<str>>(&self, tenant: T) -> String {
-    format!("https://monitoring-{}.{}", tenant.as_ref(), self.public_domain())
+    format!("https://monitoring-{}", self.tenant_public_domain(tenant))
+  }
+
+  /// # Returns the private domain for a tenant
+  ///
+  /// The private domain for a tenant can only be constructed if the optional private domain
+  /// for the platform is defined. If it is not, an `Err` will be returned.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_private_domain("my-tenant")?,
+  ///   "my-tenant.dsh-dev.dsh.np.aws.kpn.org".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_private_domain<T: AsRef<str>>(&self, tenant: T) -> Result<String, String> {
+    match self.private_domain() {
+      Some(private_domain) => Ok(format!("{}.{}", tenant.as_ref(), private_domain)),
+      None => Err(format!("private domain is not set for platform {}", self.name())),
+    }
   }
 
   /// # Returns the private domain for a vhost
@@ -597,10 +620,100 @@ impl DshPlatform {
   /// # }
   /// ```
   pub fn tenant_private_vhost_domain<T: AsRef<str>, V: AsRef<str>>(&self, tenant: T, vhost: V) -> Result<String, String> {
-    match self.private_domain() {
-      Some(private_domain) => Ok(format!("{}.{}.{}", vhost.as_ref(), tenant.as_ref(), private_domain)),
-      None => Err(format!("private domain is not set for platform {}", self.name())),
-    }
+    self
+      .tenant_private_domain(tenant)
+      .map(|tenant_private_domain| format!("{}.{}", vhost.as_ref(), tenant_private_domain))
+  }
+
+  /// # Returns the private bootstrap servers for a configured proxy
+  ///
+  /// The private bootstrap server can only be constructed if the optional private domain
+  /// for the platform is defined. If it is not, an `Err` will be returned.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?
+  ///     .tenant_proxy_private_bootstrap_servers("my-tenant", "my-proxy")?
+  ///     .first()
+  ///     .unwrap(),
+  ///   "my-proxy-0.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org:9091"
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_proxy_private_bootstrap_servers<T: AsRef<str>, P: AsRef<str>>(&self, tenant: T, proxy: P) -> Result<Vec<String>, String> {
+    self.tenant_private_domain(tenant).map(|tenant_private_domain| {
+      [0, 1, 2]
+        .iter()
+        .map(|n| format!("{}-{}.kafka.{}:9091", proxy.as_ref(), n, tenant_private_domain))
+        .collect::<Vec<_>>()
+    })
+  }
+
+  /// # Returns the private schema store host for a configured proxy
+  ///
+  /// The private schema store host can only be constructed if the optional private domain
+  /// for the platform is defined. If it is not, an `Err` will be returned.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?
+  ///     .tenant_proxy_private_schema_store_host("my-tenant", "my-proxy")?,
+  ///   "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org:9091"
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_proxy_private_schema_store_host<T: AsRef<str>, P: AsRef<str>>(&self, tenant: T, proxy: P) -> Result<String, String> {
+    self
+      .tenant_private_domain(tenant)
+      .map(|tenant_private_domain| format!("{}-schema-store.kafka.{}:9091", proxy.as_ref(), tenant_private_domain))
+  }
+
+  /// # Returns the public bootstrap servers for a configured proxy
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?
+  ///     .tenant_proxy_public_bootstrap_servers("my-tenant", "my-proxy")
+  ///     .first()
+  ///     .unwrap(),
+  ///   "my-proxy-0.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com:9091"
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_proxy_public_bootstrap_servers<T: AsRef<str>, P: AsRef<str>>(&self, tenant: T, proxy: P) -> Vec<String> {
+    [0, 1, 2]
+      .iter()
+      .map(|n| format!("{}-{}.kafka.{}:9091", proxy.as_ref(), n, self.tenant_public_domain(tenant.as_ref())))
+      .collect::<Vec<_>>()
+  }
+
+  /// # Returns the public schema store host for a configured proxy
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_proxy_public_schema_store_host("my-tenant", "my-proxy"),
+  ///   "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com:9091"
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_proxy_public_schema_store_host<T: AsRef<str>, P: AsRef<str>>(&self, tenant: T, proxy: P) -> String {
+    format!("{}-schema-store.kafka.{}:9091", proxy.as_ref(), self.tenant_public_domain(tenant.as_ref()))
   }
 
   /// # Returns the public domain for an app
@@ -617,7 +730,7 @@ impl DshPlatform {
   /// # }
   /// ```
   pub fn tenant_public_app_domain<T: AsRef<str>, A: AsRef<str>>(&self, tenant: T, app: A) -> String {
-    format!("{}.{}", app.as_ref(), self.tenant_public_apps_domain(tenant))
+    format!("{}.{}", app.as_ref(), self.tenant_public_domain(tenant))
   }
 
   /// # Returns the public domain for apps
@@ -626,6 +739,7 @@ impl DshPlatform {
   /// ```rust
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// # use dsh_api::platform::DshPlatform;
+  /// #[allow(deprecated)]
   /// assert_eq!(
   ///   DshPlatform::try_from("nplz")?.tenant_public_apps_domain("my-tenant"),
   ///   "my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
@@ -633,8 +747,27 @@ impl DshPlatform {
   /// # Ok(())
   /// # }
   /// ```
+  /// This method is deprecated. Use [`tenant_public_domain`](self.tenant_public_domain) instead.
+  #[deprecated]
   pub fn tenant_public_apps_domain<T: AsRef<str>>(&self, tenant: T) -> String {
-    format!("{}.{}", tenant.as_ref(), self.public_domain())
+    self.tenant_public_domain(tenant)
+  }
+
+  /// # Returns the public domain for a tenant
+  ///
+  /// # Examples
+  /// ```rust
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::try_from("nplz")?.tenant_public_domain("my-tenant"),
+  ///   "my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_public_domain<T: AsRef<str>>(&self, tenant: T) -> String {
+    format!("{}.{}", tenant.as_ref(), self.public_domain)
   }
 
   /// # Returns the url of the platform console for a tenant and service
