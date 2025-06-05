@@ -735,18 +735,6 @@ impl DshPlatform {
 
   /// # Returns the public domain for apps
   ///
-  /// # Examples
-  /// ```rust
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// # use dsh_api::platform::DshPlatform;
-  /// #[allow(deprecated)]
-  /// assert_eq!(
-  ///   DshPlatform::try_from("nplz")?.tenant_public_apps_domain("my-tenant"),
-  ///   "my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
   /// This method is deprecated. Use [`tenant_public_domain`](self.tenant_public_domain) instead.
   #[deprecated]
   pub fn tenant_public_apps_domain<T: AsRef<str>>(&self, tenant: T) -> String {
