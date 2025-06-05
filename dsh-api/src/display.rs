@@ -94,8 +94,8 @@ impl Display for AllocationStatus {
 impl Display for AppCatalogApp {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     write!(f, "name: {}", self.name)?;
-    if let Some(ref configuraton) = self.configuration {
-      write!(f, ", configuration: {}", configuraton)?;
+    if let Some(ref configuration) = self.configuration {
+      write!(f, ", configuration: {}", configuration)?;
     }
     write!(f, ", manifest urn: {}", self.manifest_urn)
   }
@@ -474,7 +474,7 @@ impl Display for VolumeStatus {
 
 fn write_topic(f: &mut Formatter<'_>, kind: Option<&str>, partitions: i64, replication_factor: i64, kafka_properties: &HashMap<String, String>) -> std::fmt::Result {
   if let Some(kind) = kind {
-    write!(f, "managed: {}", kind)?;
+    write!(f, "{} managed stream, ", kind)?;
   }
   write!(f, "partitions: {}", partitions)?;
   write!(f, ", replication factor: {}", replication_factor)?;

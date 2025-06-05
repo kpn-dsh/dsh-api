@@ -13,17 +13,29 @@
 //! DSH resource management API. These derived methods depend on the API methods for this.
 //!
 //! * [`get_tenants_with_access_rights(stream) ->
-//!   [(tenant, rights)]`](DshApiClient::get_tenants_with_access_rights)
+//!     [(tenant, rights)]`](DshApiClient::get_tenants_with_access_rights)
 //! * [`get_internal_stream_configurations() ->
-//!   [(id, stream)]`](DshApiClient::get_internal_stream_configurations)
+//!     [(id, stream)]`](DshApiClient::get_internal_stream_configurations)
 //! * [`get_public_stream_configurations() ->
-//!   [(id, stream)]`](DshApiClient::get_public_stream_configurations)
-//! * [`get_stream_configuration(stream) -> stream`](DshApiClient::get_stream_configuration)
-//! * [`get_stream_configurations() -> [(id, stream)]`](DshApiClient::get_stream_configurations)
+//!     [(id, stream)]`](DshApiClient::get_public_stream_configurations)
+//! * [`get_stream_configuration(stream) ->
+//!     stream`](DshApiClient::get_stream_configuration)
+//! * [`get_stream_configurations() ->
+//!     [(id, stream)]`](DshApiClient::get_stream_configurations)
 //! * [`grant_managed_stream_access_rights(stream, tenant, rights) ->
-//!   stream`](DshApiClient::grant_managed_stream_access_rights)
+//!     stream`](DshApiClient::grant_managed_stream_access_rights)
+//! * [`has_internal_read_access(stream, tenant) ->
+//!     bool`](DshApiClient::has_internal_read_access)
+//! * [`has_internal_write_access(stream, tenant) ->
+//!     bool`](DshApiClient::has_internal_write_access)
+//! * [`has_public_read_access(stream, tenant) ->
+//!     bool`](DshApiClient::has_public_read_access)
+//! * [`has_public_write_access(stream, tenant) ->
+//!     bool`](DshApiClient::has_public_write_access)
+//! * [`managed_stream_access_rights(stream, tenant) ->
+//!     rights`](DshApiClient::managed_stream_access_rights)
 //! * [`revoke_managed_stream_access_rights(stream, tenant, rights) ->
-//!   stream`](DshApiClient::revoke_managed_stream_access_rights)
+//!     stream`](DshApiClient::revoke_managed_stream_access_rights)
 
 use crate::dsh_api_client::DshApiClient;
 use crate::types::{ManagedStream, ManagedStreamId, PublicManagedStream};
@@ -64,17 +76,29 @@ impl Display for Stream {
 /// DSH resource management API. These derived methods depend on the API methods for this.
 ///
 /// * [`get_tenants_with_access_rights(stream) ->
-///   [(tenant, rights)]`](DshApiClient::get_tenants_with_access_rights)
+///     [(tenant, rights)]`](DshApiClient::get_tenants_with_access_rights)
 /// * [`get_internal_stream_configurations() ->
-///   [(id, stream)]`](DshApiClient::get_internal_stream_configurations)
+///     [(id, stream)]`](DshApiClient::get_internal_stream_configurations)
 /// * [`get_public_stream_configurations() ->
-///   [(id, stream)]`](DshApiClient::get_public_stream_configurations)
-/// * [`get_stream_configuration(stream) -> stream`](DshApiClient::get_stream_configuration)
-/// * [`get_stream_configurations() -> [(id, stream)]`](DshApiClient::get_stream_configurations)
+///     [(id, stream)]`](DshApiClient::get_public_stream_configurations)
+/// * [`get_stream_configuration(stream) ->
+///     stream`](DshApiClient::get_stream_configuration)
+/// * [`get_stream_configurations() ->
+///     [(id, stream)]`](DshApiClient::get_stream_configurations)
 /// * [`grant_managed_stream_access_rights(stream, tenant, rights) ->
-///   stream`](DshApiClient::grant_managed_stream_access_rights)
+///     stream`](DshApiClient::grant_managed_stream_access_rights)
+/// * [`has_internal_read_access(stream, tenant) ->
+///     bool`](DshApiClient::has_internal_read_access)
+/// * [`has_internal_write_access(stream, tenant) ->
+///     bool`](DshApiClient::has_internal_write_access)
+/// * [`has_public_read_access(stream, tenant) ->
+///     bool`](DshApiClient::has_public_read_access)
+/// * [`has_public_write_access(stream, tenant) ->
+///     bool`](DshApiClient::has_public_write_access)
+/// * [`managed_stream_access_rights(stream, tenant) ->
+///     rights`](DshApiClient::managed_stream_access_rights)
 /// * [`revoke_managed_stream_access_rights(stream, tenant, rights) ->
-///   stream`](DshApiClient::revoke_managed_stream_access_rights)
+///     stream`](DshApiClient::revoke_managed_stream_access_rights)
 impl DshApiClient {
   /// # Get tenants that have been granted access rights
   ///
@@ -115,7 +139,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get named internal managed stream configurations
+  /// # Get internal managed stream configurations
   ///
   /// Returns a list of (stream id, stream)-tuples containing the ids and configurations
   /// of the available internal managed streams.
@@ -133,7 +157,7 @@ impl DshApiClient {
     Ok(tuples)
   }
 
-  /// # Get named public managed stream configurations
+  /// # Get public managed stream configurations
   ///
   /// Returns a list of (stream id, stream)-tuples containing the ids and configurations
   /// of the available public managed streams.
@@ -188,7 +212,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Get named managed stream configurations
+  /// # Get managed stream configurations
   ///
   /// Returns a list of (stream id, stream)-tuples containing the ids and configurations
   /// of the available internal or public managed streams.
@@ -263,6 +287,130 @@ impl DshApiClient {
         Ok(Stream::Public(public))
       }
       None => Err(DshApiError::NotFound(Some(format!("managed stream '{}' does not exist", managed_stream_id)))),
+    }
+  }
+
+  /// # Check whether a managed tenant has read access to an internal managed stream
+  ///
+  /// Note that this method will return `Ok(false)` when either the managed tenant
+  /// or the internal managed stream does not exist.
+  ///
+  /// # Parameters
+  /// * `stream_id` - internal managed stream id
+  /// * `tenant_id` - managed tenant id
+  ///
+  /// # Returns
+  /// * `Ok(true)` - when the managed tenant has read access to the internal managed stream
+  /// * `Ok(false)` - when the managed tenant does not have read access to the internal managed
+  ///   stream, or when the internal managed stream or the managed tenant does not exist
+  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
+  pub async fn has_internal_read_access(&self, stream_id: &ManagedStreamId, tenant_id: &str) -> DshApiResult<bool> {
+    match self.head_stream_internal_access_read(stream_id, tenant_id).await {
+      Ok(()) => Ok(true),
+      Err(DshApiError::NotFound(_)) => Ok(false),
+      Err(other_error) => Err(other_error),
+    }
+  }
+
+  /// # Check whether a managed tenant has write access to an internal managed stream
+  ///
+  /// Note that this method will return `Ok(false)` when either the managed tenant
+  /// or the internal managed stream does not exist.
+  ///
+  /// # Parameters
+  /// * `stream_id` - internal managed stream id
+  /// * `tenant_id` - managed tenant id
+  ///
+  /// # Returns
+  /// * `Ok(true)` - when the managed tenant has write access to the internal managed stream
+  /// * `Ok(false)` - when the managed tenant does not have write access to the internal managed
+  ///   stream, or when the internal managed stream or the managed tenant does not exist
+  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
+  pub async fn has_internal_write_access(&self, stream_id: &ManagedStreamId, tenant_id: &str) -> DshApiResult<bool> {
+    match self.head_stream_internal_access_write(stream_id, tenant_id).await {
+      Ok(()) => Ok(true),
+      Err(DshApiError::NotFound(_)) => Ok(false),
+      Err(other_error) => Err(other_error),
+    }
+  }
+
+  /// # Check whether a managed tenant has read access to a public managed stream
+  ///
+  /// Note that this method will return `Ok(false)` when either the managed tenant
+  /// or the public managed stream does not exist.
+  ///
+  /// # Parameters
+  /// * `stream_id` - public managed stream id
+  /// * `tenant_id` - managed tenant id
+  ///
+  /// # Returns
+  /// * `Ok(true)` - when the managed tenant has read access to the public managed stream
+  /// * `Ok(false)` - when the managed tenant does not have read access to the public managed
+  ///   stream, or when the public managed stream or the managed tenant does not exist
+  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
+  pub async fn has_public_read_access(&self, stream_id: &ManagedStreamId, tenant_id: &str) -> DshApiResult<bool> {
+    match self.head_stream_public_access_read(stream_id, tenant_id).await {
+      Ok(()) => Ok(true),
+      Err(DshApiError::NotFound(_)) => Ok(false),
+      Err(other_error) => Err(other_error),
+    }
+  }
+
+  /// # Check whether a managed tenant has write access to a public managed stream
+  ///
+  /// Note that this method will return `Ok(false)` when either the managed tenant
+  /// or the public managed stream does not exist.
+  ///
+  /// # Parameters
+  /// * `stream_id` - public managed stream id
+  /// * `tenant_id` - managed tenant id
+  ///
+  /// # Returns
+  /// * `Ok(true)` - when the managed tenant has write access to the public managed stream
+  /// * `Ok(false)` - when the managed tenant does not have write access to the public managed
+  ///   stream, or when the public managed stream or the managed tenant does not exist
+  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
+  pub async fn has_public_write_access(&self, stream_id: &ManagedStreamId, tenant_id: &str) -> DshApiResult<bool> {
+    match self.head_stream_public_access_write(stream_id, tenant_id).await {
+      Ok(()) => Ok(true),
+      Err(DshApiError::NotFound(_)) => Ok(false),
+      Err(other_error) => Err(other_error),
+    }
+  }
+
+  /// # Check whether a managed tenant has access to a managed stream
+  ///
+  /// Note that this method will return `Ok(None)` when either the managed tenant
+  /// or the managed stream does not exist.
+  ///
+  /// # Parameters
+  /// * `stream_id` - managed stream id
+  /// * `tenant_id` - managed tenant id
+  ///
+  /// # Returns
+  /// * `Ok(Some(AccessRights::Read))` - when the managed tenant has read access to the managed stream
+  /// * `Ok(Some(AccessRights::ReadWrite))` - when the managed tenant has both read and write access to the managed stream
+  /// * `Ok(Some(AccessRights::Write))` - when the managed tenant has write access to the managed stream
+  /// * `Ok(None)` - when the managed tenant does not have access to the managed stream,
+  ///   or when the managed stream or the managed tenant does not exist
+  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
+  pub async fn managed_stream_access_rights(&self, stream_id: &ManagedStreamId, tenant_id: &str) -> DshApiResult<Option<AccessRights>> {
+    let (internal_read_access, internal_write_access, public_read_access, public_write_access) = try_join!(
+      self.has_internal_read_access(stream_id, tenant_id),
+      self.has_internal_write_access(stream_id, tenant_id),
+      self.has_public_read_access(stream_id, tenant_id),
+      self.has_public_write_access(stream_id, tenant_id)
+    )?;
+    match (internal_read_access, internal_write_access) {
+      (false, false) => match (public_read_access, public_write_access) {
+        (false, false) => Ok(None),
+        (false, true) => Ok(Some(AccessRights::Write)),
+        (true, false) => Ok(Some(AccessRights::Read)),
+        (true, true) => Ok(Some(AccessRights::ReadWrite)),
+      },
+      (false, true) => Ok(Some(AccessRights::Write)),
+      (true, false) => Ok(Some(AccessRights::Read)),
+      (true, true) => Ok(Some(AccessRights::ReadWrite)),
     }
   }
 
