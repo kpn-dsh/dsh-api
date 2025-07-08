@@ -51,6 +51,7 @@ use crate::types::{
   LimitValueKafkaAclGroupCount, LimitValueMem, LimitValuePartitionCount, LimitValueProducerRate, LimitValueRequestRate, LimitValueSecretCount, LimitValueTopicCount, ManagedStream,
   ManagedStreamId, ManagedTenant, Metrics, Notification, PathSpec, PortMapping, PublicManagedStream, Secret, Task, TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
 };
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
@@ -79,12 +80,7 @@ impl Display for AllocationStatus {
       write!(
         f,
         ", notifications: [{}]",
-        self
-          .notifications
-          .iter()
-          .map(|notification| notification.to_string())
-          .collect::<Vec<_>>()
-          .join(", ")
+        self.notifications.iter().map(|notification| notification.to_string()).collect_vec().join(", ")
       )?;
     };
     Ok(())
@@ -159,8 +155,8 @@ impl Display for ApplicationSecret {
       self
         .injections
         .iter()
-        .map(|injection| { format!("[{}]", injection.iter().map(|kv| { format!("{}->{}", kv.0, kv.1) }).collect::<Vec<_>>().join(", ")) })
-        .collect::<Vec<_>>()
+        .map(|injection| { format!("[{}]", injection.iter().map(|kv| { format!("{}->{}", kv.0, kv.1) }).collect_vec().join(", ")) })
+        .collect_vec()
         .join("")
     )
   }
@@ -227,10 +223,10 @@ impl Display for Empty {
 
 impl Display for HealthCheck {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    if let Some(protocol) = self.protocol {
-      write!(f, "{}::", protocol.to_string())?
+    match self.protocol {
+      Some(protocol) => write!(f, "{}:{}{}", protocol.to_string(), self.port, self.path),
+      None => write!(f, "{}{}", self.port, self.path),
     }
-    write!(f, "{}:{}", self.path, self.port)
   }
 }
 
@@ -331,7 +327,7 @@ impl Display for ManagedTenant {
       .services
       .iter()
       .filter_map(|service| if service.enabled { Some(service.name.to_string()) } else { None })
-      .collect::<Vec<_>>();
+      .collect_vec();
     if enabled_services.is_empty() {
       Ok(())
     } else {
@@ -353,7 +349,7 @@ impl Display for Notification {
       write!(
         f,
         ", args: {}",
-        self.args.iter().map(|(key, value)| format!("{}->{}", key, value)).collect::<Vec<_>>().join(", ")
+        self.args.iter().map(|(key, value)| format!("{}->{}", key, value)).collect_vec().join(", ")
       )?;
     }
     write!(f, ", message: {}", self.message)
@@ -388,7 +384,7 @@ impl Display for PortMapping {
       fields.push(format!("whitelist: {}", whitelist))
     }
     if !self.paths.is_empty() {
-      fields.push(format!("paths: {}", self.paths.iter().map(|p| p.prefix.to_string()).collect::<Vec<_>>().join(", ")))
+      fields.push(format!("paths: {}", self.paths.iter().map(|p| p.prefix.to_string()).collect_vec().join(", ")))
     }
     write!(f, "{}", fields.join(", "))
   }

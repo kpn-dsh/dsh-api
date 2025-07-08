@@ -153,33 +153,28 @@ impl DshApiClient {
       .await?
       .into_iter()
       .map(|manifest| (manifest.id.clone(), manifest))
-      .collect::<Vec<_>>()
+      .collect_vec()
       .into_iter()
       .into_group_map()
       .into_iter()
-      .collect::<Vec<_>>();
+      .collect_vec();
     manifests_grouped_vec.sort_by(|(manifest_id_a, _), (manifest_id_b, _)| manifest_id_a.cmp(manifest_id_b));
     let manifests_with_available_versions: Vec<(String, Vec<(String, Manifest)>)> = manifests_grouped_vec
       .into_iter()
       .map(|(manifest_id, manifests)| {
         (manifest_id, {
-          let mut version_manifest = manifests.into_iter().map(|manifest| (manifest.version.clone(), manifest)).collect::<Vec<_>>();
+          let mut version_manifest = manifests.into_iter().map(|manifest| (manifest.version.clone(), manifest)).collect_vec();
           version_manifest.sort_by(|(version_a, _), (version_b, _)| version_a.cmp(version_b)); // TODO Sort as semver instead of lexicographically
           version_manifest
         })
       })
-      .collect::<Vec<_>>();
+      .collect_vec();
     Ok(manifests_with_available_versions)
   }
 
   // Get the manifest specification and parse it into a list of Manifest objects
   async fn get_manifests(&self) -> DshApiResult<Vec<Manifest>> {
-    self
-      .get_appcatalog_manifests()
-      .await?
-      .iter()
-      .map(Manifest::try_from)
-      .collect::<Result<Vec<Manifest>, _>>()
+    self.get_appcatalog_manifests().await?.iter().map(Manifest::try_from).try_collect()
   }
 }
 
@@ -341,7 +336,7 @@ where
     deserialized_map
       .iter()
       .map(|(key, value)| {
-        let key_parts = key.split("/").collect::<Vec<_>>();
+        let key_parts = key.split("/").collect_vec();
         match key_parts.get(2) {
           Some(resource_type) => match *resource_type {
             "application" => Resource::application(value),
@@ -358,7 +353,7 @@ where
           None => Err(serde_json::Error::custom(format!("illegal resource allocation ({})", key))),
         }
       })
-      .collect::<Result<HashMap<_, _>, _>>()
+      .try_collect()
       .map_err(D::Error::custom)
   })
 }

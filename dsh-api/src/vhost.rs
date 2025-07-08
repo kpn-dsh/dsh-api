@@ -23,6 +23,7 @@ use crate::dsh_api_client::DshApiClient;
 use crate::DshApiError;
 use crate::{DshApiResult, Injection, UsedBy};
 use futures::try_join;
+use itertools::Itertools;
 use std::collections::HashMap;
 
 impl DshApiClient {
@@ -49,7 +50,7 @@ impl DshApiClient {
         }
       }
     }
-    let mut app_ids = apps.keys().collect::<Vec<_>>();
+    let mut app_ids = apps.keys().collect_vec();
     app_ids.sort();
     for app_id in app_ids {
       let app = apps.get(app_id).unwrap();

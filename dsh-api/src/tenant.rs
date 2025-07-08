@@ -38,6 +38,7 @@ use crate::types::{
 };
 use crate::{AccessRights, DshApiError, DshApiResult};
 use futures::future::{try_join, try_join_all};
+use itertools::Itertools;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 
@@ -85,7 +86,7 @@ impl DshApiClient {
         .into_iter()
         .zip(streams)
         .map(|((stream_id, access_rights), internal_stream)| (stream_id, internal_stream, access_rights))
-        .collect::<Vec<_>>(),
+        .collect_vec(),
     )
   }
 
@@ -100,8 +101,8 @@ impl DshApiClient {
   /// * `Err<DshApiError>` - when the request could not be processed by the DSH
   pub async fn get_granted_managed_streams(&self, managed_tenant: &str) -> DshApiResult<Vec<(ManagedStreamId, Stream, AccessRights)>> {
     let (internal_streams, public_streams) = try_join(self.get_granted_internal_streams(managed_tenant), self.get_granted_public_streams(managed_tenant)).await?;
-    let mut internal_streams = internal_streams.into_iter().map(|(a, b, c)| (a, Stream::Internal(b), c)).collect::<Vec<_>>();
-    let mut public_streams = public_streams.into_iter().map(|(a, b, c)| (a, Stream::Public(b), c)).collect::<Vec<_>>();
+    let mut internal_streams = internal_streams.into_iter().map(|(a, b, c)| (a, Stream::Internal(b), c)).collect_vec();
+    let mut public_streams = public_streams.into_iter().map(|(a, b, c)| (a, Stream::Public(b), c)).collect_vec();
     internal_streams.append(&mut public_streams);
     internal_streams.sort_by(|(stream_id_a, _, _), (stream_id_b, _, _)| stream_id_a.cmp(stream_id_b));
     Ok(internal_streams)
@@ -124,7 +125,7 @@ impl DshApiClient {
         .into_iter()
         .zip(streams)
         .map(|((stream_id, access_rights), public_stream)| (stream_id, public_stream, access_rights))
-        .collect::<Vec<_>>(),
+        .collect_vec(),
     )
   }
 
@@ -155,7 +156,7 @@ impl DshApiClient {
         (true, false) => Some((stream_id, AccessRights::Read)),
         (true, true) => Some((stream_id, AccessRights::ReadWrite)),
       })
-      .collect::<Vec<_>>();
+      .collect_vec();
     internal_access_rights.sort_by(|(stream_id_a, _), (stream_id_b, _)| stream_id_a.cmp(stream_id_b));
     Ok(internal_access_rights)
   }
@@ -269,7 +270,7 @@ impl DshApiClient {
         (true, false) => Some((stream_id, AccessRights::Read)),
         (true, true) => Some((stream_id, AccessRights::ReadWrite)),
       })
-      .collect::<Vec<_>>();
+      .collect_vec();
     public_access_rights.sort_by(|(stream_id_a, _), (stream_id_b, _)| stream_id_a.cmp(stream_id_b));
     Ok(public_access_rights)
   }
@@ -596,7 +597,7 @@ mod test {
   }
 
   #[test]
-  fn test_parse_limit_value_certificate_count() {
+  fn test_deserialize_limit_value_certificate_count() {
     const CERTIFICATE_COUNT_JSON: &str = r#"{ "name": "certificateCount", "value": 5 }"#;
     let certificate_count: LimitValueCertificateCount = serde_json::from_str::<LimitValueCertificateCount>(CERTIFICATE_COUNT_JSON).unwrap();
     assert_eq!(certificate_count.value, 5_i64);
@@ -604,7 +605,7 @@ mod test {
   }
 
   #[test]
-  fn test_parse_limit_value_consumer_rate() {
+  fn test_deserialize_limit_value_consumer_rate() {
     const CONSUMER_RATE_JSON: &str = r#"{ "name": "consumerRate", "value": 1048576 }"#;
     let consumer_rate: LimitValueConsumerRate = serde_json::from_str::<LimitValueConsumerRate>(CONSUMER_RATE_JSON).unwrap();
     assert_eq!(consumer_rate.value, 1048576_i64);
@@ -612,7 +613,7 @@ mod test {
   }
 
   #[test]
-  fn test_parse_limit_value_cpu() {
+  fn test_deserialize_limit_value_cpu() {
     const CPU_JSON: &str = r#"{ "name": "cpu", "value": 0.5 }"#;
     let cpu: LimitValueCpu = serde_json::from_str::<LimitValueCpu>(CPU_JSON).unwrap();
     assert_eq!(cpu.value, 0.5_f64);
@@ -620,7 +621,7 @@ mod test {
   }
 
   #[test]
-  fn test_parse_limit_value_kafka_acl_group_count() {
+  fn test_deserialize_limit_value_kafka_acl_group_count() {
     const KAFKA_ACL_GROUP_COUNT_JSON: &str = r#"{ "name": "kafkaAclGroupCount", "value": 5 }"#;
     let kafka_acl_group_count: LimitValueKafkaAclGroupCount = serde_json::from_str::<LimitValueKafkaAclGroupCount>(KAFKA_ACL_GROUP_COUNT_JSON).unwrap();
     assert_eq!(kafka_acl_group_count.value, 5_i64);
@@ -628,7 +629,7 @@ mod test {
   }
 
   #[test]
-  fn test_parse_limit_value_mem() {
+  fn test_deserialize_limit_value_mem() {
     const MEM_JSON: &str = r#"{ "name": "mem", "value": 2048 }"#;
     let mem: LimitValueMem = serde_json::from_str::<LimitValueMem>(MEM_JSON).unwrap();
     assert_eq!(mem.value, 2048_i64);
@@ -636,7 +637,7 @@ mod test {
   }
 
   #[test]
-  fn test_parse_limit_value_partition_count() {
+  fn test_deserialize_limit_value_partition_count() {
     const PARTITION_COUNT_JSON: &str = r#"{ "name": "partitionCount", "value": 5 }"#;
     let partition_count: LimitValuePartitionCount = serde_json::from_str::<LimitValuePartitionCount>(PARTITION_COUNT_JSON).unwrap();
     assert_eq!(partition_count.value, 5_i64);
@@ -644,7 +645,7 @@ mod test {
   }
 
   #[test]
-  fn test_parse_limit_value_producer_rate() {
+  fn test_deserialize_limit_value_producer_rate() {
     const PRODUCER_RATE_JSON: &str = r#"{ "name": "producerRate", "value": 1048576 }"#;
     let producer_rate: LimitValueProducerRate = serde_json::from_str::<LimitValueProducerRate>(PRODUCER_RATE_JSON).unwrap();
     assert_eq!(producer_rate.value, 1048576_i64);
@@ -652,7 +653,7 @@ mod test {
   }
 
   #[test]
-  fn test_parse_limit_value_request_rate() {
+  fn test_deserialize_limit_value_request_rate() {
     const REQUEST_RATE_JSON: &str = r#"{ "name": "requestRate", "value": 5  }"#;
     let request_rate: LimitValueRequestRate = serde_json::from_str::<LimitValueRequestRate>(REQUEST_RATE_JSON).unwrap();
     assert_eq!(request_rate.value, 5_i64);
@@ -660,7 +661,7 @@ mod test {
   }
 
   #[test]
-  fn test_parse_limit_value_secret_count() {
+  fn test_deserialize_limit_value_secret_count() {
     const SECRET_COUNT_JSON: &str = r#"{ "name": "secretCount", "value": 5 }"#;
     let secret_count: LimitValueSecretCount = serde_json::from_str::<LimitValueSecretCount>(SECRET_COUNT_JSON).unwrap();
     assert_eq!(secret_count.value, 5_i64);
@@ -668,7 +669,7 @@ mod test {
   }
 
   #[test]
-  fn test_parse_limit_value_topic_count() {
+  fn test_deserialize_limit_value_topic_count() {
     const TOPIC_COUNT_JSON: &str = r#"{ "name": "topicCount", "value": 5 }"#;
     let topic_count: LimitValueTopicCount = serde_json::from_str::<LimitValueTopicCount>(TOPIC_COUNT_JSON).unwrap();
     assert_eq!(topic_count.value, 5_i64);
@@ -676,27 +677,27 @@ mod test {
   }
 
   #[test]
-  fn test_parse_vec_limit_values() {
+  fn test_deserialize_vec_limit_values() {
     let deserialized_limit_values = serde_json::from_str::<Vec<LimitValue>>(LIMIT_VALUES_JSON).unwrap();
     let tenant_limits = TenantLimits::from(&deserialized_limit_values);
     assert_eq!(tenant_limits, mock_tenant_limits());
   }
 
   #[test]
-  fn test_parse_vec_limit_values_partial() {
+  fn test_deserialize_vec_limit_values_partial() {
     let deserialized_limit_values_partial = serde_json::from_str::<Vec<LimitValue>>(LIMIT_VALUES_JSON_PARTIAL).unwrap();
     let tenant_limits_partial = TenantLimits::from(&deserialized_limit_values_partial);
     assert_eq!(tenant_limits_partial, mock_tenant_limits_partial());
   }
 
   #[test]
-  fn test_parse_tenant_limits() {
+  fn test_deserialize_tenant_limits() {
     let deserialized_tenant_limits = serde_json::from_str::<TenantLimits>(LIMIT_VALUES_JSON).unwrap();
     assert_eq!(deserialized_tenant_limits, mock_tenant_limits());
   }
 
   #[test]
-  fn test_parse_tenant_limits_partial() {
+  fn test_deserialize_tenant_limits_partial() {
     let deserialized_tenant_limits_partial = serde_json::from_str::<TenantLimits>(LIMIT_VALUES_JSON_PARTIAL).unwrap();
     assert_eq!(deserialized_tenant_limits_partial, mock_tenant_limits_partial());
   }

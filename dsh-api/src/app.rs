@@ -17,6 +17,7 @@ use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application, Buck
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::{DshApiResult, Injection};
+use itertools::Itertools;
 use std::collections::HashMap;
 
 /// # Additional methods and functions to manage apps in the app catalog
@@ -47,7 +48,7 @@ impl DshApiClient {
       app_ids
         .iter()
         .map(|app_id| (app_id.clone(), app_configurations_map.remove(app_id).unwrap()))
-        .collect::<Vec<(_, _)>>()
+        .collect_vec()
     })
   }
 

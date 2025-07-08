@@ -42,6 +42,7 @@ use crate::types::{ManagedStream, ManagedStreamId, PublicManagedStream};
 use crate::{AccessRights, DshApiError, DshApiResult};
 use futures::future::try_join_all;
 use futures::{join, try_join};
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
 
@@ -123,7 +124,7 @@ impl DshApiClient {
       },
       None => return Err(DshApiError::NotFound(Some(format!("managed stream '{}' does not exist", managed_stream_id)))),
     };
-    let mut tenant_ids = tenant_ids_reads.iter().collect::<Vec<_>>();
+    let mut tenant_ids = tenant_ids_reads.iter().collect_vec();
     for id in &tenant_ids_writes {
       tenant_ids.push(id);
     }
@@ -135,7 +136,7 @@ impl DshApiClient {
         .filter_map(|tenant_id| {
           AccessRights::from(tenant_ids_reads.contains(tenant_id), tenant_ids_writes.contains(tenant_id)).map(|acess_rights| (tenant_id.clone(), acess_rights))
         })
-        .collect::<Vec<_>>(),
+        .collect_vec(),
     )
   }
 
@@ -152,7 +153,7 @@ impl DshApiClient {
   pub async fn get_internal_stream_configurations(&self) -> DshApiResult<Vec<(ManagedStreamId, ManagedStream)>> {
     let internal_stream_ids = self.get_stream_internals().await?;
     let internal_streams = try_join_all(internal_stream_ids.iter().map(|stream_id| self.get_stream_internal_configuration(stream_id))).await?;
-    let mut tuples = internal_stream_ids.into_iter().zip(internal_streams).collect::<Vec<_>>();
+    let mut tuples = internal_stream_ids.into_iter().zip(internal_streams).collect_vec();
     tuples.sort_by(|(stream_id_a, _), (stream_id_b, _)| stream_id_a.cmp(stream_id_b));
     Ok(tuples)
   }
@@ -170,7 +171,7 @@ impl DshApiClient {
   pub async fn get_public_stream_configurations(&self) -> DshApiResult<Vec<(ManagedStreamId, PublicManagedStream)>> {
     let public_stream_ids = self.get_stream_publics().await?;
     let public_streams = try_join_all(public_stream_ids.iter().map(|stream_id| self.get_stream_public_configuration(stream_id))).await?;
-    let mut tuples = public_stream_ids.into_iter().zip(public_streams).collect::<Vec<_>>();
+    let mut tuples = public_stream_ids.into_iter().zip(public_streams).collect_vec();
     tuples.sort_by(|(stream_id_a, _), (stream_id_b, _)| stream_id_a.cmp(stream_id_b));
     Ok(tuples)
   }
@@ -234,13 +235,13 @@ impl DshApiClient {
     )?;
     let mut tuples: Vec<(ManagedStreamId, Stream)> = internal_ids
       .into_iter()
-      .zip(internal_streams.into_iter().map(Stream::Internal).collect::<Vec<_>>())
-      .collect::<Vec<_>>();
+      .zip(internal_streams.into_iter().map(Stream::Internal).collect_vec())
+      .collect_vec();
     tuples.append(
       &mut public_ids
         .into_iter()
-        .zip(public_streams.into_iter().map(Stream::Public).collect::<Vec<_>>())
-        .collect::<Vec<_>>(),
+        .zip(public_streams.into_iter().map(Stream::Public).collect_vec())
+        .collect_vec(),
     );
     tuples.sort_by(|(stream_id_a, _), (stream_id_b, _)| stream_id_a.cmp(stream_id_b));
     Ok(tuples)

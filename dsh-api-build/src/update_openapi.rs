@@ -29,7 +29,7 @@ pub fn update_openapi(original_openapi_spec: &mut OpenAPI, prune_manage: bool, p
 }
 
 fn prune_paths(openapi: &mut OpenAPI, predicate: fn(&str) -> bool) -> Result<(), String> {
-  let paths = openapi.paths.paths.keys().map(|path| path.to_string()).collect::<Vec<_>>();
+  let paths = openapi.paths.paths.keys().map(|path| path.to_string()).collect_vec();
   for path in paths {
     if predicate(path.as_str()) {
       openapi.paths.paths.shift_remove(path.as_str());
@@ -154,14 +154,14 @@ impl OpenApiOperation {
         PathElement::Literal(subject) => Some(subject.to_lowercase().replace('-', "_").to_string()),
         PathElement::Variable(_) => None,
       })
-      .collect::<Vec<_>>();
+      .collect_vec();
     let by_parameters = path_elements
       .iter()
       .filter_map(|element| match element {
         PathElement::Literal(_) => None,
         PathElement::Variable(variable) => Some(variable.to_lowercase().replace('-', "_").to_string()),
       })
-      .collect::<Vec<_>>();
+      .collect_vec();
     OpenApiOperation { method: method.to_string(), kind, subjects, by_parameters }
   }
 

@@ -1,9 +1,9 @@
 //! # Enums, traits and structs used by the various find methods
-use std::fmt::{Display, Formatter};
-
 use crate::query_processor::Part::{Matching, NonMatching};
 use crate::DshApiError;
+use itertools::Itertools;
 use regex::Regex;
+use std::fmt::{Display, Formatter};
 
 /// # Represents a part of a matched query.
 #[derive(Debug, PartialEq)]
@@ -119,7 +119,7 @@ pub fn part_to_ansi_formatted_string(part: &Part) -> String {
 /// on a terminal that supports ANSI escape sequences,
 /// will be shown as `"parts are prefix`<code><b>MATCH</b></code>`postfix"`.
 pub fn parts_to_ansi_formatted_string(parts: &[Part]) -> String {
-  parts.iter().map(part_to_ansi_formatted_string).collect::<Vec<_>>().join("")
+  parts.iter().map(part_to_ansi_formatted_string).collect_vec().join("")
 }
 
 /// # Query processor implementation for exact matches

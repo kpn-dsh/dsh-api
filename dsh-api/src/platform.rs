@@ -109,7 +109,7 @@ fn check_for_duplicate_names_or_aliases(platforms: &Vec<DshPlatform>) -> Result<
   names_and_aliases.sort();
   let mut duplicates = Vec::new();
   for (name_or_alias, chunk) in &names_and_aliases.into_iter().chunk_by(|b| b.clone()) {
-    if chunk.collect::<Vec<_>>().len() > 1 {
+    if chunk.collect_vec().len() > 1 {
       duplicates.push(name_or_alias);
     }
   }
@@ -649,7 +649,7 @@ impl DshPlatform {
       [0, 1, 2]
         .iter()
         .map(|n| format!("{}-{}.kafka.{}:9091", proxy.as_ref(), n, tenant_private_domain))
-        .collect::<Vec<_>>()
+        .collect_vec()
     })
   }
 
@@ -696,7 +696,7 @@ impl DshPlatform {
     [0, 1, 2]
       .iter()
       .map(|n| format!("{}-{}.kafka.{}:9091", proxy.as_ref(), n, self.tenant_public_domain(tenant.as_ref())))
-      .collect::<Vec<_>>()
+      .collect_vec()
   }
 
   /// # Returns the public schema store host for a configured proxy
@@ -824,7 +824,7 @@ impl DshPlatform {
           DSH_PLATFORMS
             .iter()
             .map(|dsh_platform| format!("{}/{}", dsh_platform.name(), dsh_platform.alias()))
-            .collect::<Vec<_>>()
+            .collect_vec()
             .join(", ")
         )),
       },
@@ -903,7 +903,7 @@ impl TryFrom<&str> for DshPlatform {
         DSH_PLATFORMS
           .iter()
           .map(|dsh_platform| format!("{}/{}", dsh_platform.name(), dsh_platform.alias()))
-          .collect::<Vec<_>>()
+          .collect_vec()
           .join(", ")
       )),
     }
