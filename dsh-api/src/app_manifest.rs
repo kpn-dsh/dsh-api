@@ -4,13 +4,18 @@
 //!
 //! # Derived methods
 //! * [`get_app_catalog_manifest(id, version) -> [manifest]`](DshApiClient::get_app_catalog_manifest)
-//! * [`get_app_catalog_manifests(id) -> [(version, manifest)]`](DshApiClient::get_app_catalog_manifests)
-//! * [`get_raw_manifest(id, version) -> [json]`](DshApiClient::get_raw_manifest)
+//! * [`get_app_catalog_manifest_latest(id, draft) -> [manifest]`](DshApiClient::get_app_catalog_manifest_latest)
+//! * [`get_app_catalog_manifests(id) -> [manifest]`](DshApiClient::get_app_catalog_manifests)
+//! * [`get_manifests() -> [manifest]`](DshApiClient::get_manifests)
+//! * [`get_raw_manifest(id, version) -> [(json, draft)]`](DshApiClient::get_raw_manifest)
+//! * [`get_raw_manifest_latest(id, allow_draft) -> [(version, json, draft)]`](DshApiClient::get_raw_manifest_latest)
 //! * [`list_app_catalog_manifest_ids() -> [id]`](DshApiClient::list_app_catalog_manifest_ids)
-//! * [`list_app_catalog_manifest_versions() -> [id, [version]]`](DshApiClient::list_app_catalog_manifest_versions)
-//! * [`list_app_catalog_manifests() -> [id, [(version, manifest)]]`](DshApiClient::list_app_catalog_manifests)
+//! * [`list_app_catalog_manifest_versions() -> [id, [(version, draft)]]`](DshApiClient::list_app_catalog_manifest_versions)
+//! * [`list_app_catalog_manifests() -> [id, [manifest]]`](DshApiClient::list_app_catalog_manifests)
+//! * [`list_app_catalog_manifests_latest(draft) -> [(id, manifest)]`](DshApiClient::list_app_catalog_manifests_latest)
 use crate::dsh_api_client::DshApiClient;
 use crate::types::AppCatalogManifest;
+use crate::version::Version;
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::{epoch_milliseconds_to_string, DshApiResult};
@@ -19,6 +24,7 @@ use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{from_str, Value};
 use std::collections::{HashMap, HashSet};
+use std::str::FromStr;
 
 /// # Additional methods to manage the app catalog manifests
 ///
@@ -26,32 +32,58 @@ use std::collections::{HashMap, HashSet};
 ///
 /// # Derived methods
 /// * [`get_app_catalog_manifest(id, version) -> [manifest]`](DshApiClient::get_app_catalog_manifest)
-/// * [`get_app_catalog_manifests(id) -> [(version, manifest)]`](DshApiClient::get_app_catalog_manifests)
-/// * [`get_raw_manifest(id, version) -> [json]`](DshApiClient::get_raw_manifest)
+/// * [`get_app_catalog_manifest_latest(id, draft) -> [manifest]`](DshApiClient::get_app_catalog_manifest_latest)
+/// * [`get_app_catalog_manifests(id) -> [manifest]`](DshApiClient::get_app_catalog_manifests)
+/// * [`get_manifests() -> [manifest]`](DshApiClient::get_manifests)
+/// * [`get_raw_manifest(id, version) -> [(json, draft)]`](DshApiClient::get_raw_manifest)
+/// * [`get_raw_manifest_latest(id, allow_draft) -> [(version, json, draft)]`](DshApiClient::get_raw_manifest_latest)
 /// * [`list_app_catalog_manifest_ids() -> [id]`](DshApiClient::list_app_catalog_manifest_ids)
-/// * [`list_app_catalog_manifest_versions() -> [id, [version]]`](DshApiClient::list_app_catalog_manifest_versions)
-/// * [`list_app_catalog_manifests() -> [id, [(version, manifest)]]`](DshApiClient::list_app_catalog_manifests)
+/// * [`list_app_catalog_manifest_versions() -> [id, [(version, draft)]]`](DshApiClient::list_app_catalog_manifest_versions)
+/// * [`list_app_catalog_manifests() -> [id, [manifest]]`](DshApiClient::list_app_catalog_manifests)
+/// * [`list_app_catalog_manifests_latest(draft) -> [(id, manifest)]`](DshApiClient::list_app_catalog_manifests_latest)
 impl DshApiClient {
-  /// # Return raw manifest
+  /// # Return manifest by id and version
   ///
-  /// Returns the raw manifest as a json formatted string.
+  /// Returns the manifest with the specified id and version.
   ///
   /// # Parameters
-  /// * manifest_id - manifest id of the requested manifest
+  /// * id - manifest id of the requested manifest
   /// * version - version of the requested manifest
   ///
   /// # Returns
-  /// * `Ok<String>` - manifest as a json formatted string
+  /// * `Ok<Manifest>` - manifest
   /// * `Err<`[`DshApiError::NotFound`]`>` - when the manifest could not be found
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_app_catalog_manifest(&self, manifest_id: &str, version: &str) -> DshApiResult<Manifest> {
+  pub async fn get_app_catalog_manifest(&self, id: &str, version: &Version) -> DshApiResult<Manifest> {
     self
       .get_manifests()
       .await?
       .iter()
-      .find(|manifest| manifest.id == manifest_id && manifest.version == version)
+      .find(|manifest| manifest.id == id && manifest.version == *version)
       .cloned()
       .ok_or(DshApiError::NotFound(None))
+  }
+
+  /// # Return latest version of a manifest by id
+  ///
+  /// Returns the latest version of the manifest with the specified id.
+  ///
+  /// # Parameters
+  /// * id - manifest id of the requested manifest
+  /// * allow_draft - whether the returned manifest can be a draft manifest or not
+  ///
+  /// # Returns
+  /// * `Ok<Manifest>` - manifest
+  /// * `Err<`[`DshApiError::NotFound`]`>` - when no manifest could be found
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn get_app_catalog_manifest_latest(&self, id: &str, allow_draft: bool) -> DshApiResult<Manifest> {
+    match self.get_app_catalog_manifests(id).await {
+      Ok(manifests) => match manifests.into_iter().filter(|manifest| !manifest.draft || allow_draft).next_back() {
+        Some(latest_manifest) => Ok(latest_manifest),
+        None => Err(DshApiError::NotFound(None)),
+      },
+      Err(_) => Err(DshApiError::NotFound(None)),
+    }
   }
 
   /// # Return App Catalog manifests
@@ -59,26 +91,29 @@ impl DshApiClient {
   /// Returns a list of all versions of an app catalog manifest with the provided manifest_id.
   ///
   /// # Parameters
-  /// * manifest_id - manifest id of the requested manifest
+  /// * id - manifest id of the requested manifest
   ///
   /// # Returns
-  /// * `Ok<Vec<(String, Manifest)>>` - list of version manifest pairs
+  /// * `Ok<Vec<manifest>>` - list of version/manifest pairs sorted by version
   /// * `Err<`[`DshApiError::NotFound`]`>` - when the manifest could not be found
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_app_catalog_manifests(&self, manifest_id: &str) -> DshApiResult<Vec<(String, Manifest)>> {
-    let mut manifests: Vec<(String, Manifest)> = self
-      .get_manifests()
-      .await?
-      .iter()
-      .filter(|manifest| manifest.id == manifest_id)
-      .map(|manifest| (manifest.version.clone(), manifest.clone()))
-      .collect();
+  pub async fn get_app_catalog_manifests(&self, id: &str) -> DshApiResult<Vec<Manifest>> {
+    let mut manifests: Vec<Manifest> = self.get_manifests().await?.into_iter().filter(|manifest| manifest.id == id).collect_vec();
     if manifests.is_empty() {
       Err(DshApiError::NotFound(None))
     } else {
-      manifests.sort_by(|(version_a, _), (version_b, _)| version_a.cmp(version_b));
+      manifests.sort_by(|manifest_a, manifest_b| manifest_a.version.cmp(&manifest_b.version));
       Ok(manifests)
     }
+  }
+
+  /// # Return list of all Manifest objects
+  ///
+  /// # Returns
+  /// * `Ok<Vec<Manifest>>` - vector containing Manifest objects in unspecified order
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn get_manifests(&self) -> DshApiResult<Vec<Manifest>> {
+    self.get_appcatalog_manifests().await?.iter().map(Manifest::try_from).try_collect()
   }
 
   /// # Return raw manifest
@@ -86,27 +121,70 @@ impl DshApiClient {
   /// Returns the raw manifest as a json formatted string.
   ///
   /// # Parameters
-  /// * manifest_id - manifest id of the requested manifest
-  /// * manifest_version - version of the requested manifest
+  /// * id - manifest id of the requested manifest
+  /// * version - version of the requested manifest
   ///
   /// # Returns
-  /// * `Ok<String>` - manifest as a json formatted string
+  /// * `Ok<(manifest, draft)>` - manifest as a json formatted string
   /// * `Err<`[`DshApiError::NotFound`]`>` - when the manifest could not be found
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn get_raw_manifest(&self, manifest_id: &str, manifest_version: &str) -> DshApiResult<String> {
+  pub async fn get_raw_manifest(&self, id: &str, version: &Version) -> DshApiResult<(String, bool)> {
     for app_catalog_manifest in self.get_appcatalog_manifests().await?.iter() {
       let payload = from_str::<HashMap<String, Value>>(app_catalog_manifest.payload.as_str())?;
-      if payload.get("id").is_some_and(|id| id.as_str().unwrap() == manifest_id) && payload.get("version").is_some_and(|version| version.as_str().unwrap() == manifest_version) {
-        return Ok(serde_json::to_string_pretty(&payload)?);
+      if payload.get("id").is_some_and(|payload_id| payload_id.as_str().unwrap() == id)
+        && payload
+          .get("version")
+          .is_some_and(|version_value| Version::from_str(version_value.as_str().unwrap()).unwrap() == *version)
+      {
+        return Ok((serde_json::to_string_pretty(&payload)?, app_catalog_manifest.draft));
       }
     }
     Err(DshApiError::NotFound(None))
   }
 
+  /// # Return raw manifest latest version
+  ///
+  /// Returns the latest version of raw manifest as a json formatted string.
+  ///
+  /// # Parameters
+  /// * id - manifest id of the requested manifest
+  /// * allow_draft - whether the returned raw manifest can be a draft manifest or not
+  ///
+  /// # Returns
+  /// * `Ok<(version, manifest, draft)>` - version, draft and manifest as a json formatted string
+  /// * `Err<`[`DshApiError::NotFound`]`>` - when the manifest could not be found
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn get_raw_manifest_latest(&self, id: &str, allow_draft: bool) -> DshApiResult<(Version, String, bool)> {
+    let mut raw_manifests: Vec<(Version, bool, HashMap<String, Value>)> = self
+      .get_appcatalog_manifests()
+      .await?
+      .iter()
+      .filter(|manifest| !manifest.draft || allow_draft)
+      .filter_map(|manifest| match from_str::<HashMap<String, Value>>(manifest.payload.as_str()) {
+        Ok(payload) => {
+          if payload.get("id").is_some_and(|payload_id| payload_id.as_str().unwrap() == id) {
+            match payload.get("version").map(|version_value| Version::from_str(version_value.as_str().unwrap())) {
+              Some(Ok(version)) => Some((version, manifest.draft, payload)),
+              _ => None,
+            }
+          } else {
+            None
+          }
+        }
+        Err(_) => None,
+      })
+      .collect_vec();
+    raw_manifests.sort_by(|(version_a, _, _), (version_b, _, _)| version_a.cmp(version_b));
+    match raw_manifests.last() {
+      Some((last_version, draft, last_payload)) => Ok((last_version.clone(), serde_json::to_string_pretty(&last_payload)?, *draft)),
+      None => Err(DshApiError::NotFound(None)),
+    }
+  }
+
   /// # Return sorted list of all App Catalog manifest ids
   ///
   /// # Returns
-  /// * `Ok<Vec<String>>` - vector containing all manifest ids
+  /// * `Ok<Vec<String>>` - vector containing all manifest ids sorted
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn list_app_catalog_manifest_ids(&self) -> DshApiResult<Vec<String>> {
     let mut ids: Vec<String> = self
@@ -121,23 +199,24 @@ impl DshApiClient {
     Ok(ids)
   }
 
-  /// # Return list of all App Catalog manifest ids with available version numbers
+  /// # Return list of all available versions of all manifests
   ///
   /// # Returns
-  /// * `Ok<Vec<(String, Vec<String>)>>` - vector containing pairs of ids and versions
+  /// * `Ok<Vec<(id, Vec<(version, draft)>)>>` - vector containing pairs of ids and versions,
+  ///   sorted by id and version
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn list_app_catalog_manifest_versions(&self) -> DshApiResult<Vec<(String, Vec<String>)>> {
-    let mut id_versions: HashMap<String, Vec<String>> = HashMap::new();
+  pub async fn list_app_catalog_manifest_versions(&self) -> DshApiResult<Vec<(String, Vec<(Version, bool)>)>> {
+    let mut id_versions_map: HashMap<String, Vec<(Version, bool)>> = HashMap::new();
     for manifest in self.get_manifests().await? {
-      id_versions
+      id_versions_map
         .entry(manifest.id)
-        .and_modify(|versions| versions.push(manifest.version.clone()))
-        .or_insert(vec![manifest.version]);
+        .and_modify(|versions| versions.push((manifest.version.clone(), manifest.draft)))
+        .or_insert(vec![(manifest.version, manifest.draft)]);
     }
-    let mut id_versions_pairs: Vec<(String, Vec<String>)> = id_versions.iter().map(|(id, versions)| (id.to_string(), versions.clone())).collect();
+    let mut id_versions_pairs: Vec<(String, Vec<(Version, bool)>)> = id_versions_map.iter().map(|(id, versions)| (id.to_string(), versions.clone())).collect();
     id_versions_pairs.sort_by(|(id_a, _), (id_b, _)| id_a.cmp(id_b));
     for (_, versions) in id_versions_pairs.iter_mut() {
-      versions.sort(); // TODO Sort as semver instead of lexicographically
+      versions.sort();
     }
     Ok(id_versions_pairs)
   }
@@ -145,10 +224,39 @@ impl DshApiClient {
   /// # Return list of all App Catalog manifests with available manifest versions
   ///
   /// # Returns
-  /// * `Ok<Vec<(String, Vec<(String, Manifest)>)>>` - vector containing pairs of ids and versions
+  /// * `Ok<Vec<(id, Vec<manifest>)>>` - vector containing pairs of ids and versions,
+  ///   sorted by id and manifest version
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn list_app_catalog_manifests(&self) -> DshApiResult<Vec<(String, Vec<(String, Manifest)>)>> {
-    let mut manifests_grouped_vec: Vec<(String, Vec<Manifest>)> = self
+  pub async fn list_app_catalog_manifests(&self) -> DshApiResult<Vec<(String, Vec<Manifest>)>> {
+    let mut id_manifests: Vec<(String, Vec<Manifest>)> = self
+      .get_manifests()
+      .await?
+      .into_iter()
+      .map(|manifest| (manifest.id.clone(), manifest))
+      .into_group_map()
+      .into_iter()
+      .collect_vec()
+      .into_iter()
+      .map(|(manifest_id, mut manifests)| {
+        manifests.sort_by(|manifest_a, manifest_b| manifest_a.version.cmp(&manifest_b.version));
+        (manifest_id, manifests)
+      })
+      .collect_vec();
+    id_manifests.sort_by(|(id_a, _), (id_b, _)| id_a.cmp(id_b));
+    Ok(id_manifests)
+  }
+
+  /// # Return list of all latest versions of App Catalog manifests
+  ///
+  /// # Parameters
+  /// * allow_draft - whether the returned latest manifests can be a draft manifests or not
+  ///
+  /// # Returns
+  /// * `Ok<Vec<(id, manifest)>>` - vector containing tuples of ids, versions and
+  ///   manifests, sorted by id
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn list_app_catalog_manifests_latest(&self, allow_draft: bool) -> DshApiResult<Vec<(String, Manifest)>> {
+    let manifests_grouped_by_id: Vec<(String, Vec<Manifest>)> = self
       .get_manifests()
       .await?
       .into_iter()
@@ -158,23 +266,18 @@ impl DshApiClient {
       .into_group_map()
       .into_iter()
       .collect_vec();
-    manifests_grouped_vec.sort_by(|(manifest_id_a, _), (manifest_id_b, _)| manifest_id_a.cmp(manifest_id_b));
-    let manifests_with_available_versions: Vec<(String, Vec<(String, Manifest)>)> = manifests_grouped_vec
+    let mut latest_manifests: Vec<(String, Manifest)> = manifests_grouped_by_id
       .into_iter()
-      .map(|(manifest_id, manifests)| {
-        (manifest_id, {
-          let mut version_manifest = manifests.into_iter().map(|manifest| (manifest.version.clone(), manifest)).collect_vec();
-          version_manifest.sort_by(|(version_a, _), (version_b, _)| version_a.cmp(version_b)); // TODO Sort as semver instead of lexicographically
-          version_manifest
-        })
+      .filter_map(|(id, manifests)| {
+        manifests
+          .into_iter()
+          .filter(|manifest| !manifest.draft || allow_draft)
+          .max_by_key(|manifest| manifest.version.clone())
+          .map(|manifest| (id, manifest))
       })
       .collect_vec();
-    Ok(manifests_with_available_versions)
-  }
-
-  // Get the manifest specification and parse it into a list of Manifest objects
-  async fn get_manifests(&self) -> DshApiResult<Vec<Manifest>> {
-    self.get_appcatalog_manifests().await?.iter().map(Manifest::try_from).try_collect()
+    latest_manifests.sort_by(|(id_a, _), (id_b, _)| id_a.cmp(id_b));
+    Ok(latest_manifests)
   }
 }
 
@@ -186,7 +289,7 @@ pub struct Manifest {
   pub last_modified: String,
   pub id: String,
   pub name: String,
-  pub version: String,
+  pub version: Version,
   pub vendor: String,
   pub kind: Option<String>,
   #[serde(rename = "apiVersion")]
