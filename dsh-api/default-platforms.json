@@ -1,5 +1,16 @@
 [
   {
+    "name": "k8s-dev-aws-lz-dsh",
+    "description": "Development platform for Klarrio",
+    "alias": "devlz",
+    "is-production": false,
+    "cloud-provider": "aws",
+    "access-token-endpoint": "https://auth.staging.dev-aws-cp.kpn-dsh.com/auth/realms/k8s-dev-aws-lz-dsh/protocol/openid-connect/token",
+    "realm": "k8s-dev-aws-lz-dsh",
+    "public-domain": "dev.dsh-k8s.np.aws.kpn.com",
+    "private-domain": "dev.dsh-k8s.np.aws.kpn.org"
+  },
+  {
     "name": "np-aws-lz-dsh",
     "description": "Staging platform for KPN internal tenants",
     "alias": "nplz",

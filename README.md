@@ -10,7 +10,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.7.2" 
+dsh_api = "0.8.0" 
 ```
 
 ### Minimal example
@@ -91,7 +91,7 @@ The generic methods requires the `generic` feature to be enabled:
 
 ```toml
 [dependencies]
-dsh_api = { version = "0.7.2", features = ["generic"] }
+dsh_api = { version = "0.8.0", features = ["generic"] }
 ```
 
 The example below will add a new secret to the tenant's secret store.
@@ -161,6 +161,10 @@ gets the default value from the environment variables described below.
             Target platform on which the tenant's environment lives. 
             The default list of platforms is:
             <ul>
+                <li>
+                    <code>k8s-dev-aws-lz-dsh / devlz</code> 
+                    - Development platform for Klarrio.
+                </li>
                 <li>
                     <code>np-aws-lz-dsh / nplz</code> 
                     - Staging platform for KPN internal tenants.

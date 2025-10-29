@@ -42,6 +42,7 @@
 //!
 //! ## `DSH_API_PLATFORM`
 //! Platform on which the tenant's environment lives. The default platforms are:
+//! * `k8s-dev-aws-lz-dsh / devlz` - Development platform for Klarrio.
 //! * `np-aws-lz-dsh / nplz` - Staging platform for KPN internal tenants.
 //! * `poc-aws-dsh / poc` - Staging platform for non KPN tenants.
 //! * `prod-aws-dsh / prod` - Production platform for non KPN tenants.
@@ -99,6 +100,7 @@ impl DshApiClientFactory {
   /// # Panics
   /// This function will panic if it cannot create a new `DshApiClientFactory` from the default
   /// environment variables. If you want to capture such a failure, use the
+  /// [`try_default()`](DshApiClientFactory::try_default) or the
   /// [`create()`](DshApiClientFactory::create) function.
   pub fn new() -> DshApiClientFactory {
     DshApiClientFactory::default()
@@ -229,6 +231,7 @@ impl Default for DshApiClientFactory {
   /// # Panics
   /// This function will panic if it cannot create a new `DshApiClientFactory` from the default
   /// environment variables. If you want to capture such a failure, use the
+  /// [`try_default()`](DshApiClientFactory::try_default) or the
   /// [`create()`](DshApiClientFactory::create) function.
   fn default() -> Self {
     match Self::try_default() {
