@@ -15,10 +15,10 @@ async fn main() -> Result<(), String> {
   let client = client_factory.client().await?;
 
   print_header("list_vhosts_with_usage");
-  for (vhost, used_bys) in client.list_vhosts_with_usage().await? {
+  for (vhost, dependants) in client.vhosts_with_dependants().await? {
     println!("{}", vhost);
-    for used_by in used_bys {
-      println!("  {}", used_by);
+    for dependant in dependants {
+      println!("  {}", dependant);
     }
   }
   Ok(())

@@ -1,49 +1,52 @@
 //! # `Display` implementations for selected types
 //!
 //! This module provides implementations of the [`Display`] trait for selected types.
+//! Note that if these implementations might change in a future version, this will not be
+//! considered a breaking change. Use these methods for documentation purposes only,
+//! not for business logic.
 //!
-//! * [`ActualCertificate`]
-//! * [`AllocationStatus`]
-//! * [`AppCatalogApp`]
-//! * [`AppCatalogAppConfiguration`]
-//! * [`AppCatalogAppResourcesValue`]
-//! * [`AppCatalogManifest`]
-//! * [`Application`]
-//! * [`ApplicationSecret`]
-//! * [`ApplicationVolumes`]
-//! * [`Bucket`]
-//! * [`BucketStatus`]
-//! * [`Certificate`]
-//! * [`CertificateStatus`]
-//! * [`Empty`]
-//! * [`HealthCheck`]
-//! * [`LimitValue`]
-//! * [`LimitValueCertificateCount`]
-//! * [`LimitValueConsumerRate`]
-//! * [`LimitValueCpu`]
-//! * [`LimitValueKafkaAclGroupCount`]
-//! * [`LimitValueMem`]
-//! * [`LimitValuePartitionCount`]
-//! * [`LimitValueProducerRate`]
-//! * [`LimitValueRequestRate`]
-//! * [`LimitValueSecretCount`]
-//! * [`LimitValueTopicCount`]
-//! * [`ManagedStream`]
-//! * [`ManagedStreamId`]
-//! * [`ManagedTenant`]
-//! * [`Metrics`]
-//! * [`Notification`]
-//! * [`PathSpec`]
-//! * [`PortMapping`]
-//! * [`PublicManagedStream`]
-//! * [`Secret`]
-//! * [`Task`]
-//! * [`TaskStatus`]
-//! * [`Topic`]
-//! * [`TopicStatus`]
-//! * [`Vhost`]
-//! * [`Volume`]
-//! * [`VolumeStatus`]
+//! * [`ActualCertificate::fmt()`](ActualCertificate::fmt)
+//! * [`AllocationStatus::fmt()`](AllocationStatus::fmt)
+//! * [`AppCatalogApp::fmt()`](AppCatalogApp::fmt)
+//! * [`AppCatalogAppConfiguration::fmt()`](AppCatalogAppConfiguration::fmt)
+//! * [`AppCatalogAppResourcesValue::fmt()`](AppCatalogAppResourcesValue::fmt)
+//! * [`AppCatalogManifest::fmt()`](AppCatalogManifest::fmt)
+//! * [`Application::fmt()`](Application::fmt)
+//! * [`ApplicationSecret::fmt()`](ApplicationSecret::fmt)
+//! * [`ApplicationVolumes::fmt()`](ApplicationVolumes::fmt)
+//! * [`Bucket::fmt()`](Bucket::fmt)
+//! * [`BucketStatus::fmt()`](BucketStatus::fmt)
+//! * [`Certificate::fmt()`](Certificate::fmt)
+//! * [`CertificateStatus::fmt()`](CertificateStatus::fmt)
+//! * [`Empty::fmt()`](Empty::fmt)
+//! * [`HealthCheck::fmt()`](HealthCheck::fmt)
+//! * [`LimitValue::fmt()`](LimitValue::fmt)
+//! * [`LimitValueCertificateCount::fmt()`](LimitValueCertificateCount::fmt)
+//! * [`LimitValueConsumerRate::fmt()`](LimitValueConsumerRate::fmt)
+//! * [`LimitValueCpu::fmt()`](LimitValueCpu::fmt)
+//! * [`LimitValueKafkaAclGroupCount::fmt()`](LimitValueKafkaAclGroupCount::fmt)
+//! * [`LimitValueMem::fmt()`](LimitValueMem::fmt)
+//! * [`LimitValuePartitionCount::fmt()`](LimitValuePartitionCount::fmt)
+//! * [`LimitValueProducerRate::fmt()`](LimitValueProducerRate::fmt)
+//! * [`LimitValueRequestRate::fmt()`](LimitValueRequestRate::fmt)
+//! * [`LimitValueSecretCount::fmt()`](LimitValueSecretCount::fmt)
+//! * [`LimitValueTopicCount::fmt()`](LimitValueTopicCount::fmt)
+//! * [`ManagedStream::fmt()`](ManagedStream::fmt)
+//! * [`ManagedStreamId::fmt()`](ManagedStreamId::fmt)
+//! * [`ManagedTenant::fmt()`](ManagedTenant::fmt)
+//! * [`Metrics::fmt()`](Metrics::fmt)
+//! * [`Notification::fmt()`](Notification::fmt)
+//! * [`PathSpec::fmt()`](PathSpec::fmt)
+//! * [`PortMapping::fmt()`](PortMapping::fmt)
+//! * [`PublicManagedStream::fmt()`](PublicManagedStream::fmt)
+//! * [`Secret::fmt()`](Secret::fmt)
+//! * [`Task::fmt()`](Task::fmt)
+//! * [`TaskStatus::fmt()`](TaskStatus::fmt)
+//! * [`Topic::fmt()`](Topic::fmt)
+//! * [`TopicStatus::fmt()`](TopicStatus::fmt)
+//! * [`Vhost::fmt()`](Vhost::fmt)
+//! * [`Volume::fmt()`](Volume::fmt)
+//! * [`VolumeStatus::fmt()`](VolumeStatus::fmt)
 
 use crate::types::{
   ActualCertificate, AllocationStatus, AppCatalogApp, AppCatalogAppConfiguration, AppCatalogAppResourcesValue, AppCatalogManifest, Application, ApplicationSecret,
@@ -155,7 +158,12 @@ impl Display for ApplicationSecret {
       self
         .injections
         .iter()
-        .map(|injection| { format!("[{}]", injection.iter().map(|kv| { format!("{}->{}", kv.0, kv.1) }).collect_vec().join(", ")) })
+        .map(|injection| {
+          format!(
+            "[{}]",
+            injection.iter().map(|(key, value)| { format!("{}->{}", key, value) }).collect_vec().join(", ")
+          )
+        })
         .collect_vec()
         .join("")
     )

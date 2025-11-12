@@ -6,7 +6,7 @@ use crate::common::{initialize_logger, print_header};
 use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::types::AllocationStatus;
 use dsh_api::types::{Certificate, CertificateStatus};
-use dsh_api::UsedBy;
+use dsh_api::DependantApp;
 
 static CERTIFICATE_ID: &str = "broker-kafka-proxy-certificate";
 
@@ -33,12 +33,12 @@ async fn main() -> Result<(), String> {
   println!("{:#?}", certificate_ids);
 
   print_header("get_certificate_with_usage");
-  let certificate_with_usage: (CertificateStatus, Vec<UsedBy>) = client.get_certificate_with_usage(CERTIFICATE_ID).await.unwrap();
-  println!("{:#?}", certificate_with_usage);
+  let certificate_with_dependants: (CertificateStatus, Vec<DependantApp>) = client.certificate_with_dependant_apps(CERTIFICATE_ID).await.unwrap();
+  println!("{:#?}", certificate_with_dependants);
 
   print_header("list_certificates_with_usage");
-  let certificates_with_usage: Vec<(String, CertificateStatus, Vec<UsedBy>)> = client.list_certificates_with_usage().await.unwrap();
-  println!("{:#?}", certificates_with_usage);
+  let certificates_with_dependants = client.certificates_with_dependant_apps().await.unwrap();
+  println!("{:#?}", certificates_with_dependants);
 
   Ok(())
 }

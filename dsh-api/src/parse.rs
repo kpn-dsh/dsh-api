@@ -1,3 +1,7 @@
+//! # Parsers for formatted strings
+//!
+//! Module that contains parse functions for selected formatted strings as used in the DSH and
+//! the DSH resource management API.
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -296,127 +300,71 @@ impl Display for ImageString {
   }
 }
 
-/// Structure that describes a vhost string. Vhost strings are used in the `exposedPorts` section
-/// of a service definition file and are deserialized into the `vhost` field of the
-/// [`PortMapping`](crate::types::PortMapping) data structure.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct VhostString {
-  /// Domain name of the vhost
-  pub vhost_name: String,
-  /// Indicates whether the vhost name contains the substring `.kafka`
-  pub kafka: bool,
-  /// Optional tenant name
-  pub tenant_name: Option<String>,
-  /// Optional zone (`public` or `private`)
-  pub zone: Option<String>,
+pub enum TopicString<'a> {
+  Internal(&'a str, &'a str),
+  Scratch(&'a str, &'a str),
+  Stream(&'a str, &'a str),
 }
 
-impl VhostString {
-  /// # Create a `VhostString`
-  ///
-  /// # Parameters
-  /// * `vhost_name` - mandatory identifier of the vhost
-  /// * `kafka` - whether the vhost name contains the substring `.kafka`
-  /// * `tenant_name` - optional tenant name
-  /// * `zone` - optional zone, typically `private` or `public`
-  pub fn new<T, U, V>(vhost_name: T, kafka: bool, tenant_name: Option<U>, zone: Option<V>) -> Self
-  where
-    T: Into<String>,
-    U: Into<String>,
-    V: Into<String>,
-  {
-    Self { vhost_name: vhost_name.into(), kafka, tenant_name: tenant_name.map(Into::<String>::into), zone: zone.map(Into::<String>::into) }
+impl<'a> TopicString<'a> {
+  pub fn internal(name: &'a str, tenant: &'a str) -> Self {
+    Self::Internal(name, tenant)
   }
-}
 
-impl FromStr for VhostString {
-  type Err = String;
+  pub fn scratch(name: &'a str, tenant: &'a str) -> Self {
+    Self::Scratch(name, tenant)
+  }
 
-  /// # Parse vhost string
-  ///
-  /// Multiple vhosts using the `join` function are not supported.
-  ///
-  /// # Example
-  ///
-  /// ```
-  /// # use std::str::FromStr;
-  /// # use dsh_api::parse::VhostString;
-  /// assert_eq!(
-  ///   VhostString::from_str("{ vhost('my-vhost-name') }"),
-  ///   Ok(VhostString::new("my-vhost-name".to_string(), false, None::<String>, None::<String>))
-  /// );
-  /// assert_eq!(
-  ///   VhostString::from_str("{ vhost('my-vhost-name.kafka.my-tenant','public') }"),
-  ///   Ok(VhostString::new(
-  ///     "my-vhost-name".to_string(),
-  ///     true,
-  ///     Some("my-tenant".to_string()),
-  ///     Some("public".to_string())
-  ///   ))
-  /// );
-  /// ```
-  ///
-  /// # Parameters
-  /// * `vhost_string` - the vhost string to be parsed
-  ///
-  /// # Returns
-  /// When the provided string is valid, the method returns an instance of the `VhostString`
-  /// struct, describing the auth string.
-  fn from_str(vhost_string: &str) -> Result<Self, Self::Err> {
-    lazy_static! {
-      static ref VALUE_REGEX: Regex = Regex::new(r"([a-zA-Z0-9_-]+)(\.kafka)?(?:\.([a-zA-Z0-9_-]+))?").unwrap();
+  pub fn stream(name: &'a str, tenant: &'a str) -> Self {
+    Self::Stream(name, tenant)
+  }
+
+  pub fn name(&self) -> &str {
+    match self {
+      TopicString::Internal(name, _) => name,
+      TopicString::Scratch(name, _) => name,
+      TopicString::Stream(name, _) => name,
     }
-    let (value_string, zone) = match parse_function(vhost_string, "vhost") {
-      Ok(value_string) => (value_string, None),
-      Err(_) => parse_function2(vhost_string, "vhost").map(|(value_string, zone_string)| (value_string, Some(zone_string.to_string())))?,
-    };
-    VALUE_REGEX
-      .captures(value_string)
-      .map(|captures| {
-        VhostString::new(
-          captures.get(1).map(|vhost_match| vhost_match.as_str()).unwrap_or_default(),
-          captures.get(2).is_some(),
-          captures.get(3).map(|tenant_match| tenant_match.as_str()),
-          zone,
-        )
-      })
-      .ok_or(format!("invalid value in vhost string (\"{}\")", vhost_string))
+  }
+
+  pub fn tenant(&self) -> &str {
+    match self {
+      TopicString::Internal(_, tenant) => tenant,
+      TopicString::Scratch(_, tenant) => tenant,
+      TopicString::Stream(_, tenant) => tenant,
+    }
   }
 }
 
-impl Display for VhostString {
+impl<'a> TryFrom<&'a str> for TopicString<'a> {
+  type Error = String;
+
+  fn try_from(topic_string: &'a str) -> Result<Self, Self::Error> {
+    parse_topic_string(topic_string)
+  }
+}
+
+impl Display for TopicString<'_> {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.vhost_name)?;
-    if self.kafka {
-      write!(f, ".kafka")?;
+    match self {
+      TopicString::Internal(name, tenant) => write!(f, "internal.{}.{}", name, tenant),
+      TopicString::Scratch(name, tenant) => write!(f, "scratch.{}.{}", name, tenant),
+      TopicString::Stream(name, tenant) => write!(f, "stream.{}.{}", name, tenant),
     }
-    if let Some(tenant_name) = &self.tenant_name {
-      write!(f, ".{}", tenant_name)?;
-    }
-    if let Some(zone) = &self.zone {
-      write!(f, ".{}", zone)?;
-    }
-    Ok(())
   }
 }
 
-/// # Parse bucket string
-///
-/// # Example
-///
-/// ```
-/// # use std::str::FromStr;
-/// # use dsh_api::parse::parse_bucket_string;
-/// assert_eq!(parse_bucket_string("{ bucket_name('my_bucket_name') }"), Ok("my_bucket_name"));
-/// ```
-///
-/// # Parameters
-/// * `bucket_string` - the bucket string to be parsed
-///
-/// # Returns
-/// When the provided string is valid, the method returns the bucket name
-pub fn parse_bucket_string(bucket_string: &str) -> Result<&str, String> {
-  parse_function(bucket_string, "bucket_name")
+// Parse basic authentication string
+pub fn parse_basic_authentication_string(basic_authentication_string: &str) -> Result<AuthString, String> {
+  let parts = basic_authentication_string.split(":").collect_vec();
+  if parts.len() == 2 {
+    Ok(AuthString::basic(None::<String>, *parts.first().unwrap()))
+  } else if parts.len() == 3 {
+    Ok(AuthString::basic(Some(*parts.first().unwrap()), *parts.get(1).unwrap()))
+  } else {
+    Err(format!("invalid basic authentication string (\"{}\")", basic_authentication_string))
+  }
 }
 
 /// # Parse function string
@@ -424,8 +372,8 @@ pub fn parse_bucket_string(bucket_string: &str) -> Result<&str, String> {
 /// # Example
 ///
 /// ```
-/// # use dsh_api::parse::parse_function;
-/// assert_eq!(parse_function("{ function('parameter') }", "function"), Ok("parameter"));
+/// # use dsh_api::parse::parse_function1;
+/// assert_eq!(parse_function1("{ function('parameter') }", "function"), Ok("parameter"));
 /// ```
 ///
 /// # Parameters
@@ -434,7 +382,7 @@ pub fn parse_bucket_string(bucket_string: &str) -> Result<&str, String> {
 ///
 /// # Returns
 /// When the provided string is valid, the method returns the function parameter value
-pub fn parse_function<'a>(string: &'a str, f_name: &str) -> Result<&'a str, String> {
+pub fn parse_function1<'a>(string: &'a str, f_name: &str) -> Result<&'a str, String> {
   lazy_static! {
     static ref REGEX: Regex = Regex::new(r"\{\s*([a-z][a-z0-9_]*)\(\s*'([a-zA-Z0-9_\.-]*)'\s*\)\s*\}").unwrap();
   }
@@ -483,6 +431,36 @@ pub fn parse_function2<'a>(string: &'a str, f_name: &str) -> Result<(&'a str, &'
   }
 }
 
+/// # Parse function string with one or two parameters
+///
+/// # Example
+///
+/// ```
+/// # use dsh_api::parse::parse_function;
+/// assert_eq!(parse_function("{ function1('parameter') }", "function1"), Ok(("parameter", None)));
+/// assert_eq!(
+///   parse_function("{ function2('parameter1', 'parameter2') }", "function2"),
+///   Ok(("parameter1", Some("parameter2")))
+/// );
+/// ```
+///
+/// # Parameters
+/// * `string` - the function string to be parsed
+/// * `f_name` - the name of the function to match
+///
+/// # Returns
+/// When the provided string is valid, the method returns the two function parameter values,
+/// the second of which can be `None`
+pub fn parse_function<'a>(string: &'a str, f_name: &str) -> Result<(&'a str, Option<&'a str>), String> {
+  match parse_function2(string, f_name) {
+    Ok((first_parameter, second_parameter)) => Ok((first_parameter, Some(second_parameter))),
+    Err(_) => match parse_function1(string, f_name) {
+      Ok(parameter) => Ok((parameter, None)),
+      Err(_) => Err(format!("invalid {} string (\"{}\")", f_name, string)),
+    },
+  }
+}
+
 /// # Parse volume string
 ///
 /// # Example
@@ -499,211 +477,42 @@ pub fn parse_function2<'a>(string: &'a str, f_name: &str) -> Result<(&'a str, &'
 /// # Returns
 /// When the provided string is valid, the method returns the volume name
 pub fn parse_volume_string(volume_string: &str) -> Result<&str, String> {
-  parse_function(volume_string, "volume")
+  parse_function1(volume_string, "volume")
 }
 
-// Parse basic authentication string
-fn parse_basic_authentication_string(basic_authentication_string: &str) -> Result<AuthString, String> {
-  let parts = basic_authentication_string.split(":").collect_vec();
-  if parts.len() == 2 {
-    Ok(AuthString::basic(None::<String>, *parts.first().unwrap()))
-  } else if parts.len() == 3 {
-    Ok(AuthString::basic(Some(*parts.first().unwrap()), *parts.get(1).unwrap()))
-  } else {
-    Err(format!("invalid basic authentication string (\"{}\")", basic_authentication_string))
+/// # Parse topic string
+///
+/// # Example
+///
+/// ```
+/// # use std::str::FromStr;
+/// # use dsh_api::parse::{parse_topic_string, TopicString};
+/// assert_eq!(
+///   parse_topic_string("scratch.topic-name.my-tenant"),
+///   Ok(TopicString::scratch("topic-name", "my-tenant"))
+/// );
+/// ```
+///
+/// # Parameters
+/// * `volume_string` - the volume string to be parsed
+///
+/// # Returns
+/// When the provided string is valid, the method returns the volume name
+pub fn parse_topic_string<'a>(topic_string: &'a str) -> Result<TopicString<'a>, String> {
+  lazy_static! {
+    static ref TOPIC_REGEX: Regex = Regex::new(r"(internal|stream|scratch)\.([a-z][a-z0-9-]*)\.([a-z][a-z0-9-]*)").unwrap();
   }
-}
-
-#[test]
-fn test_display_auth_string() {
-  assert_eq!(
-    AuthString::basic(Some("my-realm"), "my-username").to_string(),
-    "basic@my-realm:my-username".to_string()
-  );
-  assert_eq!(AuthString::basic(None::<String>, "my-username").to_string(), "basic@my-username".to_string());
-  assert_eq!(
-    AuthString::fwd("https://my-authentication-service.com", Some("my-headers")).to_string(),
-    "fwd@https://my-authentication-service.com@my-headers".to_string()
-  );
-  assert_eq!(
-    AuthString::fwd("https://my-authentication-service.com", None::<String>).to_string(),
-    "fwd@https://my-authentication-service.com".to_string()
-  );
-  assert_eq!(AuthString::system_fwd("view,manage").to_string(), "sys-fwd@view,manage".to_string());
-}
-
-#[test]
-fn test_parse_auth_string() {
-  assert_eq!(
-    AuthString::from_str("basic-auth@my-realm:my-username:$password-hash/"),
-    Ok(AuthString::basic(Some("my-realm"), "my-username"))
-  );
-  assert_eq!(
-    AuthString::from_str("basic-auth@my-username:$password-hash/"),
-    Ok(AuthString::basic(None::<String>, "my-username"))
-  );
-  assert_eq!(
-    AuthString::from_str("my-realm:my-username:$password-hash/"),
-    Ok(AuthString::basic(Some("my-realm"), "my-username"))
-  );
-  assert_eq!(
-    AuthString::from_str("my-username:$password-hash/"),
-    Ok(AuthString::basic(None::<String>, "my-username"))
-  );
-  assert_eq!(
-    AuthString::from_str("fwd-auth@https://my-authentication-service.com@my-headers"),
-    Ok(AuthString::fwd("https://my-authentication-service.com", Some("my-headers".to_string())))
-  );
-  assert_eq!(AuthString::from_str("system-fwd-auth@view,manage"), Ok(AuthString::system_fwd("view,manage")));
-}
-
-#[test]
-fn test_parse_bucket_string() {
-  assert_eq!(parse_bucket_string("{ bucket_name('my_bucket_name') }"), Ok("my_bucket_name"));
-}
-
-#[test]
-fn test_image_string() {
-  let registry_image = ImageString::registry("my-tenant".to_string(), "my-image".to_string(), "0.0.1".to_string());
-  assert_eq!(registry_image.id(), "my-image".to_string());
-  assert_eq!(registry_image.source(), "harbor");
-  assert_eq!(registry_image.tenant(), "my-tenant".to_string());
-  assert_eq!(registry_image.version(), "0.0.1".to_string());
-  let app_image = ImageString::app(
-    "draft".to_string(),
-    "kpn".to_string(),
-    "my-tenant".to_string(),
-    "my-image".to_string(),
-    "0.0.1".to_string(),
-  );
-  assert_eq!(app_image.id(), "my-image".to_string());
-  assert_eq!(app_image.source(), "app-catalog");
-  assert_eq!(app_image.tenant(), "my-tenant".to_string());
-  assert_eq!(app_image.version(), "0.0.1".to_string());
-}
-
-#[test]
-fn test_display_image_string() {
-  let registry_image = ImageString::registry("my-tenant".to_string(), "my-image".to_string(), "0.0.1".to_string());
-  assert_eq!(registry_image.to_string(), "registry:my-tenant:my-image:0.0.1".to_string());
-  let app_image = ImageString::app(
-    "draft".to_string(),
-    "kpn".to_string(),
-    "my-tenant".to_string(),
-    "my-image".to_string(),
-    "0.0.1".to_string(),
-  );
-  assert_eq!(app_image.to_string(), "app:draft:kpn:my-tenant:my-image:0.0.1".to_string());
-}
-
-#[test]
-fn test_parse_image_string() {
-  assert_eq!(
-    ImageString::from("registry.cp.kpn-dsh.com/my-tenant/my-image:0.0.1"),
-    ImageString::registry("my-tenant".to_string(), "my-image".to_string(), "0.0.1".to_string())
-  );
-  assert_eq!(
-    ImageString::from("APPCATALOG_REGISTRY/dsh-appcatalog/tenant/my-tenant/1234/1234/draft/kpn/my-image:0.0.1"),
-    ImageString::app(
-      "draft".to_string(),
-      "kpn".to_string(),
-      "my-tenant".to_string(),
-      "my-image".to_string(),
-      "0.0.1".to_string()
-    )
-  );
-  assert_eq!(
-    ImageString::from("APPCATALOG_REGISTRY/dsh-appcatalog/tenant/my-tenant/1234/1234/release/klarrio/whoami:1.6.1"),
-    ImageString::app(
-      "release".to_string(),
-      "klarrio".to_string(),
-      "my-tenant".to_string(),
-      "whoami".to_string(),
-      "1.6.1".to_string()
-    )
-  );
-  assert_eq!(
-    ImageString::from("registry.cp.kpn-dsh.com/greenbox-dev/postgres:pooria.20241211.1"),
-    ImageString::registry("greenbox-dev".to_string(), "postgres".to_string(), "pooria.20241211.1".to_string())
-  );
-  assert_eq!(
-    ImageString::from("registry/greenbox-dev/postgres:pooria.20241211.1"),
-    ImageString::Unrecognized("registry/greenbox-dev/postgres:pooria.20241211.1".to_string())
-  );
-}
-
-#[test]
-fn test_parse_vhost_string() {
-  assert_eq!(
-    VhostString::from_str("{ vhost('my-vhost-name') }"),
-    Ok(VhostString::new("my-vhost-name", false, None::<String>, None::<String>))
-  );
-  assert_eq!(
-    VhostString::from_str("{ vhost('my-vhost-name.kafka.my-tenant','public') }"),
-    Ok(VhostString::new("my-vhost-name", true, Some("my-tenant"), Some("public")))
-  );
-}
-
-#[test]
-fn test_parse_function() {
-  let valids_under_test = vec![
-    ("{function('par')}", "function", "par"),
-    ("{function('p.a_r-1')}", "function", "p.a_r-1"),
-    ("{ function( 'par' ) }", "function", "par"),
-    ("{function('')}", "function", ""),
-  ];
-  for (valid_string, function, parameter) in valids_under_test {
-    assert_eq!(parse_function(valid_string, function), Ok(parameter));
+  match TOPIC_REGEX.captures(topic_string) {
+    Some(registry_captures) => {
+      let name = registry_captures.get(2).map(|name| name.as_str()).unwrap();
+      let tenant = registry_captures.get(3).map(|tenant| tenant.as_str()).unwrap();
+      match registry_captures.get(1).map(|kind| kind.as_str()) {
+        Some("internal") => Ok(TopicString::internal(name, tenant)),
+        Some("stream") => Ok(TopicString::stream(name, tenant)),
+        Some("scratch") => Ok(TopicString::scratch(name, tenant)),
+        _ => unreachable!(),
+      }
+    }
+    None => Err(format!("illegal topic name {}", topic_string)),
   }
-  let invalids_under_test = vec![
-    ("{function('par')}", "other"),
-    ("{('par')}", ""),
-    ("{function(par)}", "function"),
-    ("{function('p$ar')}", "function"),
-    ("{function()}", "function"),
-    ("{function('par1','par2')}", "function"),
-  ];
-  for (invalid_string, function) in invalids_under_test {
-    assert!(parse_function(invalid_string, function).is_err_and(|error| error == format!("invalid {} string (\"{}\")", function, invalid_string)));
-  }
-}
-
-#[test]
-fn test_parse_function2() {
-  let valids_under_test = vec![
-    ("{function('par1','par2')}", "function", ("par1", "par2")),
-    ("{function('p.a_r-1','p.a_r-2')}", "function", ("p.a_r-1", "p.a_r-2")),
-    ("{ function( 'par1' , 'par2' ) }", "function", ("par1", "par2")),
-    ("{function('','')}", "function", ("", "")),
-  ];
-  for (valid_string, function, parameter) in valids_under_test {
-    assert_eq!(parse_function2(valid_string, function), Ok(parameter));
-  }
-  let invalids_under_test = vec![
-    ("{function('par1','par2')}", "other"),
-    ("{('par1','par2')}", ""),
-    ("{function(par1,par2)}", "function"),
-    ("{function('par1',par2)}", "function"),
-    ("{function(par1,'par2')}", "function"),
-    ("{function('p$ar1','p$ar2')}", "function"),
-    ("{function('par1','p$ar2')}", "function"),
-    ("{function('p$ar1','par2')}", "function"),
-    ("{function()}", "function"),
-    ("{function('par')}", "function"),
-  ];
-  for (invalid_string, function) in invalids_under_test {
-    assert!(parse_function2(invalid_string, function).is_err_and(|error| error == format!("invalid {} string (\"{}\")", function, invalid_string)));
-  }
-}
-
-#[test]
-fn test_parse_basic_authentication_string() {
-  assert_eq!(
-    parse_basic_authentication_string("my-realm:my-username:$password-hash/"),
-    Ok(AuthString::basic(Some("my-realm"), "my-username"))
-  );
-  assert_eq!(
-    parse_basic_authentication_string("my-username:$password-hash/"),
-    Ok(AuthString::basic(None::<String>, "my-username"))
-  );
 }

@@ -2,33 +2,33 @@
 //!
 //! This module provides some `new` constructor/factory functions for selected types.
 //!
-//! * [`AllocationStatus`](AllocationStatus::new)
-//! * [`AppCatalogApp`](AppCatalogApp::new)
-//! * [`AppCatalogAppConfiguration`](AppCatalogAppConfiguration::new)
-//! * [`Application`](Application::new)
-//! * [`ApplicationSecret`](ApplicationSecret::new)
-//! * [`ApplicationVolumes`](ApplicationVolumes::new)
-//! * [`Bucket`](Bucket::new)
-//! * [`Empty`](Empty::new)
-//! * [`HealthCheck`](HealthCheck::new)
-//! * [`LimitValueCertificateCount`](LimitValueCertificateCount::new)
-//! * [`LimitValueConsumerRate`](LimitValueConsumerRate::new)
-//! * [`LimitValueCpu`](LimitValueCpu::new)
-//! * [`LimitValueKafkaAclGroupCount`](LimitValueKafkaAclGroupCount::new)
-//! * [`LimitValueMem`](LimitValueMem::new)
-//! * [`LimitValuePartitionCount`](LimitValuePartitionCount::new)
-//! * [`LimitValueProducerRate`](LimitValueProducerRate::new)
-//! * [`LimitValueRequestRate`](LimitValueRequestRate::new)
-//! * [`LimitValueSecretCount`](LimitValueSecretCount::new)
-//! * [`LimitValueTopicCount`](LimitValueTopicCount::new)
-//! * [`ManagedStreamId`](ManagedStreamId::new)
-//! * [`ManagedTenant`](ManagedTenant::new)
-//! * [`Metrics`](Metrics::new)
-//! * [`Notification`](Notification::new)
-//! * [`PathSpec`](PathSpec::new)
-//! * [`Secret`](Secret::new)
-//! * [`Vhost`](Vhost::new)
-//! * [`Volume`](Volume::new)
+//! * [`AllocationStatus::new(derived from, provisioned)`](AllocationStatus::new)
+//! * [`AppCatalogApp::new(name, manifest urn)`](AppCatalogApp::new)
+//! * [`AppCatalogAppConfiguration::new(name, manifest urn, stopped)`](AppCatalogAppConfiguration::new)
+//! * [`Application::new(image, cpus, mem, instances)`](Application::new)
+//! * [`ApplicationSecret::new(name, injections)`](ApplicationSecret::new)
+//! * [`ApplicationVolumes::new(name)`](ApplicationVolumes::new)
+//! * [`Bucket::new(encrypted, versioned)`](Bucket::new)
+//! * [`Empty::new()`](Empty::new)
+//! * [`HealthCheck::new(path, port)`](HealthCheck::new)
+//! * [`LimitValueCertificateCount::new(certificate count)`](LimitValueCertificateCount::new)
+//! * [`LimitValueConsumerRate::new(consumer rate)`](LimitValueConsumerRate::new)
+//! * [`LimitValueCpu::new(cpus)`](LimitValueCpu::new)
+//! * [`LimitValueKafkaAclGroupCount::new(kafka acl group count)`](LimitValueKafkaAclGroupCount::new)
+//! * [`LimitValueMem::new(mem)`](LimitValueMem::new)
+//! * [`LimitValuePartitionCount::new(partition count)`](LimitValuePartitionCount::new)
+//! * [`LimitValueProducerRate::new(producer rate)`](LimitValueProducerRate::new)
+//! * [`LimitValueRequestRate::new(request rate)`](LimitValueRequestRate::new)
+//! * [`LimitValueSecretCount::new(secret count)`](LimitValueSecretCount::new)
+//! * [`LimitValueTopicCount::new(topic count)`](LimitValueTopicCount::new)
+//! * [`ManagedStreamId::new(manager, stream id)`](ManagedStreamId::new)
+//! * [`ManagedTenant::new(manager, tenant name)`](ManagedTenant::new)
+//! * [`Metrics::new(path, port)`](Metrics::new)
+//! * [`Notification::new(message, remove)`](Notification::new)
+//! * [`PathSpec::new(prefix)`](PathSpec::new)
+//! * [`Secret::new(name, value)`](Secret::new)
+//! * [`Vhost::new(value)`](Vhost::new)
+//! * [`Volume::new(size)`](Volume::new)
 
 use crate::types::{
   AllocationStatus, AppCatalogApp, AppCatalogAppConfiguration, Application, ApplicationSecret, ApplicationVolumes, Bucket, Empty, HealthCheck, HealthCheckProtocol,
@@ -815,53 +815,5 @@ impl Volume {
   /// ```
   pub fn new(size_gi_b: i64) -> Self {
     Self { size_gi_b }
-  }
-}
-
-#[cfg(test)]
-mod test {
-  use super::*;
-
-  #[test]
-  fn test_application_secret_new() {
-    let secret = ApplicationSecret::new("secret_name", &["KEY1", "KEY2"]);
-    assert_eq!(secret.name, "secret_name");
-    assert_eq!(secret.injections.len(), 2);
-    assert_eq!(secret.injections.first().unwrap().get("env").unwrap(), "KEY1");
-    assert_eq!(secret.injections.get(1).unwrap().get("env").unwrap(), "KEY2");
-  }
-
-  #[test]
-  fn test_managed_stream_id_new() {
-    let managed_stream_id = ManagedStreamId::new("manager", "stream-id");
-    assert_eq!(*managed_stream_id, "manager---stream-id");
-  }
-
-  #[test]
-  #[should_panic]
-  fn test_managed_stream_id_new_panic_on_empty_manager() {
-    ManagedStreamId::new("", "stream-id");
-  }
-
-  #[test]
-  #[should_panic(expected = "manager---stream_id is not a valid managed stream id")]
-  fn test_managed_stream_id_new_panic_on_underscore() {
-    ManagedStreamId::new("manager", "stream_id");
-  }
-
-  #[test]
-  fn test_managed_tenant_new() {
-    let managed_tenant = ManagedTenant::new("manager", "tenant");
-    assert_eq!(managed_tenant.manager, "manager");
-    assert_eq!(managed_tenant.name, "tenant");
-    assert_eq!(managed_tenant.services.len(), 3);
-    assert_eq!(
-      managed_tenant.services,
-      vec![
-        ManagedTenantServices { enabled: true, name: ManagedTenantServicesName::Monitoring },
-        ManagedTenantServices { enabled: false, name: ManagedTenantServicesName::Tracing },
-        ManagedTenantServices { enabled: false, name: ManagedTenantServicesName::Vpn },
-      ]
-    );
   }
 }
