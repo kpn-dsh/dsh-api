@@ -1,0 +1,3384 @@
+[
+  [
+    "kpn/aep-sink-connect",
+    {
+      "draft": false,
+      "last_modified": "2023-11-29 15:03:20 UTC",
+      "id": "kpn/aep-sink-connect",
+      "name": "Aep-Sink-Connect",
+      "version": {
+        "major": 0,
+        "minor": 1,
+        "patch": 1,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "The application will read events from a stream and push it to the Adobe Experience Platform (AEP) to update customer profiles",
+      "moreInfo": "The application needs a simple configuration file to set up the proper topic and data endpoint for AEP.\n### More context\n The Adobe Experience Platform contains customer profiles and can be used to personalize customer experience. The customer profiles can be updated real time by streaming customer events to the platform. The container we developed will take events from a stream in the DSH and push it to AEP.\n### Use case\n The Advanced Analytics department has built models which scores customer profiles and/or actions. An action of a customer can trigger a model to score that action and publish it on a kafka stream. The container will take the score from the stream and send it to Adobe. In the future more models will be developed. To prevent that analists need to rebuild this step to get data from a stream to AEP we want to turn it into a re-useable component.",
+      "contact": "dsh-appcatalog@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "AEP_CLIENT_SECRET": {
+            "description": "aep-client-secret",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "CONNECT_STATUS_STORAGE_TOPIC": {
+            "description": "scratch.kafka-connect-aep-status-storage.<tenant_name>",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "ENV": {
+            "description": "platform",
+            "type": "string",
+            "enum": [
+              "np",
+              "prod"
+            ],
+            "default": "prod"
+          },
+          "AEP_PRIVATE_KEY": {
+            "description": "aep-private-key",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "CONNECT_REST_ADVERTISED_HOST_NAME": {
+            "description": "<service_name>.<tenant_name>.marathon.mesos",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "CONNECT_CONFIG_STORAGE_TOPIC": {
+            "description": "scratch.kafka-connect-aep-config-storage.<tenant_name>",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "VOL_KAFKA_CONNECT_JARS": {
+            "description": "kafka-connect-jars",
+            "type": "string",
+            "enum": null,
+            "default": "kafka-connect-jars"
+          },
+          "VOL_KAFKA_CONNECT_SECRETS": {
+            "description": "kafka-connect-secrets",
+            "type": "string",
+            "enum": null,
+            "default": "kafka-connect-secrets"
+          },
+          "AEP_CLIENT_ID": {
+            "description": "aep-client-id",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "AEP_TECHNICAL_ACCOUNT_ID": {
+            "description": "aep-technical-account-id",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "CONNECT_OFFSET_STORAGE_TOPIC": {
+            "description": "scratch.kafka-connect-aep-offset-storage.<tenant_name>",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": 1,
+            "env": {
+              "CONNECT_KEY_CONVERTER": "org.apache.kafka.connect.storage.StringConverter",
+              "CONNECT_LOG4J_LOGGERS": "org.reflections=ERROR,org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,com.adobe.platform.streaming.sink=DEBUG",
+              "CONNECT_STATUS_STORAGE_TOPIC": "${CONNECT_STATUS_STORAGE_TOPIC}",
+              "AEP_IMS_ORG": "BCC6148954F6271F0A4C98BC@AdobeOrg",
+              "CONNECT_KEY_IGNORE": "true",
+              "CONNECT_SECURITY_PROTOCOL": "SSL",
+              "CONNECT_VALUE_CONVERTER": "org.apache.kafka.connect.json.JsonConverter",
+              "CONNECT_CONFIG_STORAGE_TOPIC": "${CONNECT_CONFIG_STORAGE_TOPIC}",
+              "CONNECT_REST_ADVERTISED_HOST_NAME": "${CONNECT_REST_ADVERTISED_HOST_NAME}",
+              "ENV": "${ENV}",
+              "LOGGING_ENABLED": "false",
+              "MANAGE_JOB_INTERVAL": "60",
+              "CONNECT_REST_PORT": "8080",
+              "PKI_CONFIG_DIR": "/home/appuser/config",
+              "CONNECT_VALUE_CONVERTER.SCHEMAS.ENABLE": "false",
+              "CONNECT_OFFSET_STORAGE_TOPIC": "${CONNECT_OFFSET_STORAGE_TOPIC}"
+            },
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/aep-sink-connect:0.1.0",
+            "imageConsole": null,
+            "instances": 1,
+            "mem": 2048,
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "AEP_CLIENT_ID"
+                  }
+                ],
+                "name": "${AEP_CLIENT_ID}"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "AEP_CLIENT_SECRET"
+                  }
+                ],
+                "name": "${AEP_CLIENT_SECRET}"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "AEP_PRIVATE_KEY"
+                  }
+                ],
+                "name": "${AEP_PRIVATE_KEY}"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "AEP_TECHNICAL_ACCOUNT_ID"
+                  }
+                ],
+                "name": "${AEP_TECHNICAL_ACCOUNT_ID}"
+              }
+            ],
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@public": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@public\""
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/airflow-ephemeral",
+    {
+      "draft": false,
+      "last_modified": "2025-07-29 10:31:26 UTC",
+      "id": "kpn/airflow-ephemeral",
+      "name": "Airflow ephemeral",
+      "version": {
+        "major": 3,
+        "minor": 0,
+        "patch": 3,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Airflow ephemeral instance to test airflow dags. When the instance is down, all state, such as logs and dags will dissappear",
+      "moreInfo": "## Airflow ephemeral\n\nThe airflow ephemeral instance provides a sandbox environment to experiment with Airflow. The python code (DAGs) is pulled in using a gitsync.\n\nVersion: 3.0.3\n\n- Airflow:  3.0.3\n- Python:   3.12\n- Gitsync:  4.4.2\n- Statsd exporter: 0.28.0\n\n### Before you start\n\nAdd the following secrets to the DSH secret store:\n\n1. airflow admin user password (create a password that you will use for the airflow ui)\n2. git sync password (can also be a personal access token)\n\nThese secrets will be used for the container configuration.\n\n### Airflow\n\nThe airflow app is an ephemeral app. When it stops or restarts, all state and logs are deleted.\n\nTo login to the airflow instance, the default user is `admin` the password is provided by the tenant using the `TENANT_AIRFLOW_ADMIN_USER_PASSWORD_FIELD_IN_SECRET_STORE` environment variable. Which takes the secret you have created earlier from the DSH secrets store and injects it into the container.\n\n#### DAGs\n\nThe core concept of airflow is a DAG (Directed Acyclic Graph), collecting Tasks together, organized with dependencies and relationships to say how they should run. [airflow dags](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dags.html)\n\nAll of the code specified in airflow is being wrapped around in tasks and orchestrated by the DAGs. To understand how they work, have a look at the following [Fundamental concepts](https://airflow.apache.org/docs/apache-airflow/stable/tutorial/fundamentals.html). The page also provides a turorial with example DAGs that you can try out.\n\n#### Importing packages\n\nAt the moment the airflow setup from the app catalog is limited to the pip dependencies that came pre-installed with it. In the future we will provide the option for tenants to install packages to the airflow app. For now you can make use of the [PythonVirtualenvOperator](https://airflow.apache.org/docs/apache-airflow/stable/howto/operator/python.html#pythonvirtualenvoperator)\n\nWith the PythonVirtualenvOperator you can pull-in any public package.\n\n**Caution: Tenants are responsible for the python packages they import into their airflow container. Please follow the KPN Security Policy ([KSP](https://ciso-ksp.kpnnet.org/welcome/KSP)) as a guideline.**\n\n### Gitsync\n\nThe gitsync will pull in a git branch and put the code in the specified directory. For the gitsync configuration see all variables with the prefix `GIT_SYNC`. You can put all of your DAGs and python code in this git repository, here the python project structure applies.\n\nFor the configuration, make sure to set the following variables to the right values:\n\n- GIT_SYNC_DEST: the destination on the container where you would like to have the dags pushed to.  e.g. `/opt/airflow/dags/dex`\n- GITSYNC_REPO: url of the git repo to sync.\n- GITSYNC_REF: git branch to pull in.\n- GITSYNC_PERIOD: number of seconds between syncs.\n- GITSYNC_ROOT: where on the root should you do the git operations. the default is sufficient.\n- GITSYNC_ONE_TIME: specifies if the gitsync should continuously pull or exit after the first pull. Default is false.\n- GITSYNC_USERNAME: username of the user to pull in the git repo.\n- GITSYNC_PASSWORD_FIELD_IN_SECRET_STORE: the field in the secret store that contains the password of your git account.\n\nFor some more background have a look at the [gitsync](https://github.com/kubernetes/git-sync/tree/v3.6.5?tab=readme-ov-file#primary-flags) repo.\n\n### More Information\n\nThe _DEX Team_ can be reached at **<dex@kpn.com>** for more information.",
+      "contact": "dex@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "GITSYNC_ONE_TIME": {
+            "description": "specify to only pull on startup or continuously, if true the gitsync exits after the first sync.",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "GITSYNC_PASSWORD_FIELD_IN_SECRET_STORE": {
+            "description": "Name of the field in the DSH secrets store that contains the Git Sync password.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "GITSYNC_PERIOD": {
+            "description": "the number of seconds between syncs.",
+            "type": "string",
+            "enum": null,
+            "default": "60s"
+          },
+          "GITSYNC_REPO": {
+            "description": "url of the git repo to sync.",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "AIRFLOW_MEMORY": {
+            "description": "Amount of memory per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "4096"
+          },
+          "GITSYNC_LINK": {
+            "description": "Folder destination on the host machine where to pull git repo towards.",
+            "type": "string",
+            "enum": null,
+            "default": "/opt/airflow/dags/repo_name"
+          },
+          "GITSYNC_USERNAME": {
+            "description": "username of the user to pull in the git repo. In github the PAT indicates the username, so username will be oauth2.",
+            "type": "string",
+            "enum": null,
+            "default": "oauth2"
+          },
+          "TENANT_AIRFLOW_ADMIN_USER_PASSWORD_FIELD_IN_SECRET_STORE": {
+            "description": "Name of the field in the DSH secrets store that contains the airflow admin user password.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "GITSYNC_REF": {
+            "description": "git branch to pull in.",
+            "type": "string",
+            "enum": null,
+            "default": "main"
+          },
+          "AIRFLOW_CPU": {
+            "description": "Amount of CPU cores per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "1"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@private": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@private\""
+          }
+        },
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": "${AIRFLOW_CPU | number}",
+            "env": {
+              "GITSYNC_PASSWORD_FILE": "/home/dsh/git-pat-sdp",
+              "GITSYNC_PERIOD": "${GITSYNC_PERIOD}",
+              "GITSYNC_REF": "${GITSYNC_REF}",
+              "DSH_GIT_SYNC_ENABLED": "true",
+              "GITSYNC_ROOT": "/tmp/git",
+              "GITSYNC_ONE_TIME": "${GITSYNC_ONE_TIME}",
+              "AIRFLOW__SCHEDULER__SCHEDULER_ZOMBIE_TASK_THRESHOLD": "600",
+              "GITSYNC_USERNAME": "${GITSYNC_USERNAME}",
+              "APPLICATION_NAME": "${@name}",
+              "AIRFLOW__CORE__LOAD_EXAMPLES": "false",
+              "GITSYNC_LINK": "${GITSYNC_LINK}",
+              "GITSYNC_REPO": "${GITSYNC_REPO}"
+            },
+            "exposedPorts": {
+              "8080": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": null,
+                "vhost": "{ vhost('${@name}.${@tenant}','private') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/airflow-ephemeral:3.0.3",
+            "imageConsole": "registry.cp.kpn-dsh.com/dex-dev/airflow-ephemeral:3.0.3",
+            "instances": 1,
+            "mem": "${AIRFLOW_MEMORY | number}",
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "GH_PAT_TOKEN"
+                  }
+                ],
+                "name": "${GITSYNC_PASSWORD_FIELD_IN_SECRET_STORE}"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "TENANT_AIRFLOW_ADMIN_USER_PASSWORD"
+                  }
+                ],
+                "name": "${TENANT_AIRFLOW_ADMIN_USER_PASSWORD_FIELD_IN_SECRET_STORE}"
+              }
+            ],
+            "singleInstance": true,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/airflow-persistent",
+    {
+      "draft": false,
+      "last_modified": "2025-07-15 14:03:26 UTC",
+      "id": "kpn/airflow-persistent",
+      "name": "Airflow persistent",
+      "version": {
+        "major": 3,
+        "minor": 0,
+        "patch": 2,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Airflow stack with a persistent database to run your pipelines.",
+      "moreInfo": "## Airflow persistent\n\nThe airflow persistent instance provides an environment to run Airflow DAGs.\nThe python code (DAGs) is pulled in using a gitsync.\nAll state of the airflow instance is stored in a separate postgres database and the logs are stored in an S3 bucket.\n\nVersion: 3.0.2\n\n- Airflow:  3.0.2\n- Python:   3.12\n- Gitsync:  4.4.0\n- Postgres: 16\n- Statsd exporter: 0.28.0\n\n### Before you start\n\nAdd the following secrets to the DSH secret store:\n\n1. airflow admin user password (create a password that you will use for the airflow ui)\n2. git sync password (can also be a personal access token)\n3. aws access key id for remote logging (might also use the system/objectstore/access_key_id)\n4. aws secret key for remote logging (might also use the system/objectstore/secret_access_key)\n5. postgres airflow user password\n\nThese secrets will be used for the container configuration.\n\n### Airflow\n\nThe airflow app will persist all logs and state. The logs are stored in an S3 bucket and the state is stored in a postgres database.\n\nTo login to the airflow instance, the default user is `admin` the password is provided by the tenant using the `TENANT_AIRFLOW_ADMIN_USER_PASSWORD_FIELD_IN_SECRET_STORE` environment variable. Which takes the secret you have created earlier from the DSH secrets store and injects it into the container.\n\n#### DAGs\n\nThe core concept of airflow is a DAG (Directed Acyclic Graph), collecting Tasks together, organized with dependencies and relationships to say how they should run. [airflow dags](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dags.html)\n\nAll of the code specified in airflow is being wrapped around in tasks and orchestrated by the DAGs. To understand how they work, have a look at the following [Fundamental concepts](https://airflow.apache.org/docs/apache-airflow/stable/tutorial/fundamentals.html). The page also provides a turorial with example DAGs that you can try out.\n\n#### Logging\n\nAll logs are stored in an S3 bucket, to make sure that all logs are persisted. Airflow is able to show these logs in the Airflow UI. It is also possible to retrieve these logs from the S3 bucket without Airflow, by usinge an s3 client.\n\nFor the configuration of the remote logging make sure to set the following variables:\n\n- DSH_LOGGING_REMOTE_CONN_ID: connection id used by airflow to connect and configure remote logging.\n- DSH_LOGGING_REMOTE_BASE_LOG_FOLDER: S3 address to write the logs to.\n- DSH_LOGGING_AWS_REGION: region where the bucket is located.\n- DSH_LOGGING_AWS_ACCESS_KEY_ID_FIELD_IN_SECRET_STORE: field in the secret store that contains the aws access key id to connect to the S3 bucket.\n- DSH_LOGGING_AWS_SECRET_KEY_FIELD_IN_SECRET_STORE: field in the secret store that contains the aws secret key to connect to the S3 bucket.\n- DSH_LOGGING_REMOTE_ENCRYPT_S3_LOGS: encrypt the airflow logs in the S3 bucket.\n\n#### Importing packages\n\nAt the moment the airflow setup from the app catalog is limited to the pip dependencies that came pre-installed with it. In the future we will provide the option for tenants to install packages to the airflow app. For now you can make use of the [PythonVirtualenvOperator](https://airflow.apache.org/docs/apache-airflow/stable/howto/operator/python.html#pythonvirtualenvoperator)\n\nWith the PythonVirtualenvOperator you can pull-in any public package.\n\n**Caution: Tenants are responsible for the python packages they import into their airflow container. Please follow the KPN Security Policy ([KSP](https://ciso-ksp.kpnnet.org/welcome/KSP)) as a guideline.**\n\n### Gitsync\n\nThe gitsync will pull in a git branch and put the code in the specified directory. For the gitsync configuration see all variables with the prefix `GIT_SYNC`. You can put all of your DAGs and python code in this git repository, here the python project structure applies.\n\nFor the configuration, make sure to set the following variables to the right values:\n\n- GIT_SYNC_DEST: the destination on the container where you would like to have the dags pushed to.  e.g. `/opt/airflow/dags/dex`\n- GITSYNC_REPO: url of the git repo to sync.\n- GITSYNC_REF: git branch to pull in.\n- GITSYNC_PERIOD: number of seconds between syncs.\n- GITSYNC_ROOT: where on the root should you do the git operations. the default is sufficient.\n- GITSYNC_ONE_TIME: specifies if the gitsync should continuously pull or exit after the first pull. Default is false.\n- GITSYNC_USERNAME: username of the user to pull in the git repo.\n- GITSYNC_PASSWORD_FIELD_IN_SECRET_STORE: the field in the secret store that contains the password of your git account.\n\nFor some more background have a look at the [gitsync](https://github.com/kubernetes/git-sync/tree/v3.6.5?tab=readme-ov-file#primary-flags) repo.\n\n### Database\n\nFor all of the state we make use of a Postgres database. It is the Postgresql database 15.6.\n\nThe configuration for the database can be found in the following environment variables:\n\n- POSTGRESQL_DATABASE The database to use for airflow\n- POSTGRESQL_USERNAME The username of the airflow user.\n- POSTGRESQL_PASSWORD_FIELD_IN_SECRET_STORE the field in the secret store that contains the password for the default postgres user.\n\n### More Information\n\nThe _DEX Team_ can be reached at **<dex@kpn.com>** for more information.",
+      "contact": "dex@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "GITSYNC_REF": {
+            "description": "git branch to pull in.",
+            "type": "string",
+            "enum": null,
+            "default": "main"
+          },
+          "DSH_LOGGING_AWS_SECRET_KEY_FIELD_IN_SECRET_STORE": {
+            "description": "Field in the secret store that contains the aws secret key to connect to the S3 bucket.",
+            "type": "string",
+            "enum": null,
+            "default": "system/objectstore/secret_access_key"
+          },
+          "DSH_LOGGING_REMOTE_BASE_LOG_FOLDER": {
+            "description": "S3 address to write the logs to.",
+            "type": "string",
+            "enum": null,
+            "default": "s3://BUCKET_NAME/airflow-persistent/logs"
+          },
+          "GITSYNC_PERIOD": {
+            "description": "the number of seconds between syncs.",
+            "type": "string",
+            "enum": null,
+            "default": "60s"
+          },
+          "AIRFLOW_CPU": {
+            "description": "Amount of CPU cores per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "1"
+          },
+          "GITSYNC_PASSWORD_FIELD_IN_SECRET_STORE": {
+            "description": "Name of the field in the DSH secrets store that contains the Git Sync password.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "GITSYNC_REPO": {
+            "description": "url of the git repo to sync.",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "POSTGRESQL_USERNAME": {
+            "description": "The username of the airflow user.",
+            "type": "string",
+            "enum": null,
+            "default": "airflow"
+          },
+          "AIRFLOW_MEMORY": {
+            "description": "Amount of memory per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "4096"
+          },
+          "TENANT_AIRFLOW_ADMIN_USER_PASSWORD_FIELD_IN_SECRET_STORE": {
+            "description": "Name of the field in the DSH secrets store that contains the airflow admin user password.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "DSH_LOGGING_AWS_ACCESS_KEY_ID_FIELD_IN_SECRET_STORE": {
+            "description": "Field in the secret store that contains the aws access key id to connect to the S3 bucket.",
+            "type": "string",
+            "enum": null,
+            "default": "system/objectstore/access_key_id"
+          },
+          "POSTGRESQL_DATABASE": {
+            "description": "name of the database to be used in postgresql for airflow",
+            "type": "string",
+            "enum": null,
+            "default": "airflow"
+          },
+          "GITSYNC_LINK": {
+            "description": "Folder destination on the host machine where to pull git repo towards.",
+            "type": "string",
+            "enum": null,
+            "default": "/opt/airflow/dags/repo_name"
+          },
+          "DSH_LOGGING_AWS_REGION": {
+            "description": "region where the bucket is located.",
+            "type": "string",
+            "enum": null,
+            "default": "eu-west-1"
+          },
+          "POSTGRESQL_PASSWORD_FIELD_IN_SECRET_STORE": {
+            "description": "the field in the secret store that contains the password for the default postgres user.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "GITSYNC_ONE_TIME": {
+            "description": "specify to only pull on startup or continuously, if true the gitsync exits after the first sync.",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "POSTGRES_MEMORY": {
+            "description": "Amount of memory per instance. For the postgres database.",
+            "type": "string",
+            "enum": null,
+            "default": "2048"
+          },
+          "DSH_LOGGING_REMOTE_ENCRYPT_S3_LOGS": {
+            "description": "encrypt the airflow logs in the S3 bucket.",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "POSTGRES_VOLUME_SIZE": {
+            "description": "The amount of disk space in GB, for the postgres database.",
+            "type": "string",
+            "enum": null,
+            "default": "5"
+          },
+          "POSTGRES_CPU": {
+            "description": "Amount of CPU cores per instance. For the postgres database.",
+            "type": "string",
+            "enum": null,
+            "default": "1"
+          },
+          "GITSYNC_USERNAME": {
+            "description": "username of the user to pull in the git repo. In github the PAT indicates the username, so username will be oauth2.",
+            "type": "string",
+            "enum": null,
+            "default": "oauth2"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": "${AIRFLOW_CPU | number}",
+            "env": {
+              "GITSYNC_LINK": "${GITSYNC_LINK}",
+              "DSH_GIT_SYNC_ENABLED": "true",
+              "GITSYNC_PERIOD": "${GITSYNC_PERIOD}",
+              "AIRFLOW__SCHEDULER__SCHEDULER_ZOMBIE_TASK_THRESHOLD": "600",
+              "DSH_LOGGING_REMOTE_BASE_LOG_FOLDER": "${DSH_LOGGING_REMOTE_BASE_LOG_FOLDER}",
+              "GITSYNC_ROOT": "/tmp/git",
+              "DSH_LOGGING_AWS_REGION": "${DSH_LOGGING_AWS_REGION}",
+              "POSTGRESQL_DATABASE": "${POSTGRESQL_DATABASE}",
+              "APPLICATION_NAME": "${@name}",
+              "GITSYNC_REF": "${GITSYNC_REF}",
+              "AIRFLOW__CORE__LOAD_EXAMPLES": "false",
+              "GITSYNC_USERNAME": "${GITSYNC_USERNAME}",
+              "POSTGRESQL_HOSTNAME": "${@name}-postgres",
+              "GITSYNC_REPO": "${GITSYNC_REPO}",
+              "POSTGRESQL_USERNAME": "${POSTGRESQL_USERNAME}",
+              "GITSYNC_PASSWORD_FILE": "/home/dsh/git-pat-sdp",
+              "GITSYNC_ONE_TIME": "${GITSYNC_ONE_TIME}",
+              "DSH_LOGGING_REMOTE_ENCRYPT_S3_LOGS": "${DSH_LOGGING_REMOTE_ENCRYPT_S3_LOGS}",
+              "DSH_LOGGING_REMOTE_CONN_ID": "s3_logging_conn"
+            },
+            "exposedPorts": {
+              "8080": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": null,
+                "vhost": "{ vhost('${@name}.${@tenant}','private') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/airflow-persistent:3.0.2",
+            "imageConsole": "registry.cp.kpn-dsh.com/dex-dev/airflow-persistent:3.0.2",
+            "instances": 1,
+            "mem": "${AIRFLOW_MEMORY | number}",
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "GH_PAT_TOKEN"
+                  }
+                ],
+                "name": "${GITSYNC_PASSWORD_FIELD_IN_SECRET_STORE}"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "TENANT_AIRFLOW_ADMIN_USER_PASSWORD"
+                  }
+                ],
+                "name": "${TENANT_AIRFLOW_ADMIN_USER_PASSWORD_FIELD_IN_SECRET_STORE}"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "DSH_LOGGING_AWS_ACCESS_KEY_ID"
+                  }
+                ],
+                "name": "${DSH_LOGGING_AWS_ACCESS_KEY_ID_FIELD_IN_SECRET_STORE}"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "DSH_LOGGING_AWS_SECRET_KEY"
+                  }
+                ],
+                "name": "${DSH_LOGGING_AWS_SECRET_KEY_FIELD_IN_SECRET_STORE}"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "POSTGRESQL_PASSWORD"
+                  }
+                ],
+                "name": "${POSTGRESQL_PASSWORD_FIELD_IN_SECRET_STORE}"
+              }
+            ],
+            "singleInstance": true,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/volume/${@name}-postgres": {
+          "Volume": {
+            "name": "${@name}-postgres",
+            "size": "${POSTGRES_VOLUME_SIZE | number}"
+          }
+        },
+        "allocation/${@tenant}/application/${@name}-postgres": {
+          "Application": {
+            "cpus": "${POSTGRES_CPU | number}",
+            "env": {
+              "POSTGRESQL_DATABASE": "${POSTGRESQL_DATABASE}",
+              "POSTGRESQL_USERNAME": "${POSTGRESQL_USERNAME}"
+            },
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/postgresql:16",
+            "imageConsole": "registry.cp.kpn-dsh.com/dex-dev/bitnami/postgresql:16",
+            "instances": 1,
+            "mem": "${POSTGRES_MEMORY | number}",
+            "metrics": null,
+            "name": "${@name}-postgres",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "POSTGRESQL_PASSWORD"
+                  }
+                ],
+                "name": "${POSTGRESQL_PASSWORD_FIELD_IN_SECRET_STORE}"
+              }
+            ],
+            "singleInstance": true,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@private": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@private\""
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/cmdline",
+    {
+      "draft": false,
+      "last_modified": "2024-02-23 13:02:09 UTC",
+      "id": "kpn/cmdline",
+      "name": "Cmd Line",
+      "version": {
+        "major": 1,
+        "minor": 1,
+        "patch": 6,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "A browser based terminal with kafka command line utilities",
+      "moreInfo": "Access a command line terminal on DSH through your browser. Includes the following tools:\n  - openssl\n  - curl\n  - jq\n  - kcl\n  - dshkcl\n  - nc\n  - get_signed_certificate.sh\n\nkcl is an open source, 'one-stop shop' to do anything with Kafka. - https://github.com/twmb/kcl\ndshkcl is a wrapper for kcl to deserialize consumed messages from DSH's custom envelope into JSON.\njq is available for JSON data manipulation - https://stedolan.github.io/jq/\n",
+      "contact": "dsh-appcatalog@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "DNS_ZONE": {
+            "description": "DNS zone name for the vhost",
+            "type": "dns-zone",
+            "enum": null,
+            "default": null
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": 0.25,
+            "env": {},
+            "exposedPorts": {
+              "8080": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": "auto",
+                "vhost": "{ vhost('${@name}.${@tenant}', '${DNS_ZONE}') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/cmdline:1.1.4",
+            "imageConsole": null,
+            "instances": 1,
+            "mem": 256,
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": null,
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@${DNS_ZONE}": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@${DNS_ZONE}\""
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/dsh-database-ingester",
+    {
+      "draft": false,
+      "last_modified": "2024-09-20 12:48:42 UTC",
+      "id": "kpn/dsh-database-ingester",
+      "name": "DSH Database Ingester",
+      "version": {
+        "major": 0,
+        "minor": 4,
+        "patch": 6,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Application to stream events from a Kafka topic to a relational database.",
+      "moreInfo": "## Database Ingester for DSH \nAn application to stream structured data from a Kafka topic in DSH to any relational database with a JDBC driver by extending the [Kafka Connect JDBC Sink Connector](https://docs.confluent.io/current/connect/kafka-connect-jdbc/sink-connector/index.html). \n\n**1. Data Source:** The source topic is configured via `DATABASE_SOURCE_TOPIC` and the `SCHEMA_TYPE` can be Avro, JSON or Protobuf and the schema should be registered in DSH Schema Store. A flat schema is recommended for the source topic so that the data can be easily mapped to the database table. If not, it will be flattened. Dynamic arrays are not supported. \n\n**2. Kafka JDBC Database Ingester Application:** The application can be deployed with single or multiple workers. Cluster mode ensures fault tolerancy and HA. Furthermore, vertical scalability can also be achieved by increasing the number of tasks (`TASK_COUNT`). \n\n**3. Data Sink:** Currently, we support SQL Server, Postgres, MySQL, Oracle, SQLite, Sybase and DB2 for `DATABASE_SINK_TABLE`. The application expects the table to be created beforehand with matching columns to that of the schema. Table auto creation and evolution is disabled by default but can be enabled via the UI provided. A `DEAD_LETTER_QUEUE_TOPIC` can also be configured. \n ### More Information\nThe _Unibox Team_ can be reached at **unibox@kpn.com** for more information.",
+      "contact": "unibox@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "TASK_COUNT": {
+            "description": "The number of tasks to deploy for better parallelism",
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "default": "3"
+          },
+          "CPU": {
+            "description": "Amount of CPU cores per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "0.1"
+          },
+          "DATABASE_SINK_TABLE": {
+            "description": "Name of the table in the database to stream the records to.",
+            "type": "string",
+            "enum": null,
+            "default": "TABLE_NAME"
+          },
+          "LOG_LEVEL": {
+            "description": "The log level for the application. The default is INFO.",
+            "type": "string",
+            "enum": [
+              "TRACE",
+              "DEBUG",
+              "INFO",
+              "WARN",
+              "ERROR"
+            ],
+            "default": "INFO"
+          },
+          "DATABASE_PASSWORD_FIELD_IN_SECRET_STORE": {
+            "description": "Name of the field in the DSH secrets store that contains the Database password.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "DATABASE_TIMEZONE": {
+            "description": "Used to recognize the timezone of timestamp values. The default is UTC. KPN Teradata uses Europe/Amsterdam.",
+            "type": "string",
+            "enum": null,
+            "default": "UTC"
+          },
+          "DEAD_LETTER_QUEUE_TOPIC": {
+            "description": "Name of the Kafka topic to stream the dead letter records to in case of errors.",
+            "type": "string",
+            "enum": null,
+            "default": "scratch.dead-letter-queue.greenbox"
+          },
+          "SCHEMA_TYPE": {
+            "description": "Schema type of the serialized data in the topic.",
+            "type": "string",
+            "enum": [
+              "avro",
+              "json",
+              "protobuf"
+            ],
+            "default": "avro"
+          },
+          "DATABASE_JDBC_URL": {
+            "description": "The database host to connect to. Ensure that the host is accessible from the application. Example: jdbc:teradata://tdp.kpn.org",
+            "type": "string",
+            "enum": null,
+            "default": "jdbc:teradata://tdp.kpn.org"
+          },
+          "DATABASE_SOURCE_TOPIC": {
+            "description": "Name of the Kafka topic to stream the records from.",
+            "type": "string",
+            "enum": null,
+            "default": "scratch.database-ingester-source.greenbox"
+          },
+          "INSTANCES": {
+            "description": "The number of instances to deploy in distributed mode (cluster). The default is 1.",
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ],
+            "default": "1"
+          },
+          "DATABASE_USER": {
+            "description": "Database user name. Make sure this user has the right permissions to execute the query.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "MEMORY": {
+            "description": "Amount of memory per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "1024"
+          },
+          "DATABASE": {
+            "description": "The database to connect to. Currently, we support Postgres (includes Yugabyte), MySQL, Oracle, SQLite, SAP Sybase, Microsoft SQL Server and IBM DB2.",
+            "type": "string",
+            "enum": [
+              "teradata",
+              "postgresql",
+              "mysql",
+              "oracle",
+              "sqlite",
+              "sybase",
+              "sqlserver",
+              "db2"
+            ],
+            "default": "sqlserver"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@public": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@public\""
+          }
+        },
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": "${CPU | number}",
+            "env": {
+              "DATABASE_TIMEZONE": "${DATABASE_TIMEZONE}",
+              "SCHEMA_TYPE": "${SCHEMA_TYPE}",
+              "LOG_LEVEL": "${LOG_LEVEL}",
+              "DISTRIBUTED_MODE_CONFIG_TOPIC": "scratch.${@name}-config.${@tenant}",
+              "DATABASE": "${DATABASE}",
+              "DATABASE_SOURCE_TOPIC": "${DATABASE_SOURCE_TOPIC}",
+              "SCHEMA_REGISTRY_URL": "https://api.schema-store.dsh.marathon.mesos:8443",
+              "KAFKA_OPTS": "-Xms256M -Xmx1000M",
+              "TASK_COUNT": "${TASK_COUNT}",
+              "DEAD_LETTER_QUEUE_TOPIC": "${DEAD_LETTER_QUEUE_TOPIC}",
+              "DISTRIBUTED_MODE_STATUS_TOPIC": "scratch.${@name}-status.${@tenant}",
+              "DISTRIBUTED_MODE_OFFSETS_TOPIC": "scratch.${@name}-offset.${@tenant}",
+              "DATABASE_SINK_TABLE": "${DATABASE_SINK_TABLE}",
+              "DEPLOYMENT": "distributed",
+              "DATABASE_USER": "${DATABASE_USER}",
+              "DATABASE_JDBC_URL": "${DATABASE_JDBC_URL}"
+            },
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/database-ingester-app:0.4.6",
+            "imageConsole": "registry.cp.kpn-dsh.com/aep-dev/database-ingester-app:0.4.6",
+            "instances": "${INSTANCES | number}",
+            "mem": "${MEMORY | number}",
+            "metrics": {
+              "path": "/",
+              "port": 9009
+            },
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "DATABASE_PASSWORD"
+                  }
+                ],
+                "name": "${DATABASE_PASSWORD_FIELD_IN_SECRET_STORE}"
+              }
+            ],
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/topic/${@name}-offset": {
+          "Topic": {
+            "kafkaProperties": {
+              "cleanup.policy": "compact"
+            },
+            "name": "${@name}-offset",
+            "partitions": 1,
+            "replicationFactor": 3
+          }
+        },
+        "allocation/${@tenant}/application/${@name}-ui": {
+          "Application": {
+            "cpus": 0.1,
+            "env": {
+              "CONNECT_URL": "${@name}:8083",
+              "PORT": "8000"
+            },
+            "exposedPorts": {
+              "8000": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": "auto",
+                "vhost": "{ vhost('${@name}.${@tenant}', 'public') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/database-ingester-app-ui:0.4.6",
+            "imageConsole": "registry.cp.kpn-dsh.com/greenbox/database-ingester-app-ui:0.4.6",
+            "instances": 1,
+            "mem": 16,
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": false,
+            "secrets": null,
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/topic/${@name}-config": {
+          "Topic": {
+            "kafkaProperties": {
+              "cleanup.policy": "compact"
+            },
+            "name": "${@name}-config",
+            "partitions": 1,
+            "replicationFactor": 3
+          }
+        },
+        "allocation/${@tenant}/topic/${@name}-status": {
+          "Topic": {
+            "kafkaProperties": {
+              "cleanup.policy": "compact"
+            },
+            "name": "${@name}-status",
+            "partitions": 1,
+            "replicationFactor": 3
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/dsh-labs",
+    {
+      "draft": false,
+      "last_modified": "2025-09-24 15:29:51 UTC",
+      "id": "kpn/dsh-labs",
+      "name": "DSH Labs",
+      "version": {
+        "major": 0,
+        "minor": 0,
+        "patch": 3,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Run (Jupyter) notebooks on DSH",
+      "moreInfo": "# DSH Labs\n\n**NOTE:** This is an alpha relase, it might contain bugs and is still under development.\n\n\nA fully integrated development environment for data science and machine learning by using Notebooks, built on the DSH platform.\n\nThis application is based on Jupyter Notebook. Jupyter Notebook is an open-source web application that allows you to create and share documents that contain live code, equations, visualizations, and narrative text. It is widely used for data analysis, machine learning, and scientific computing.\n\nThis application provides a user-friendly interface for running Jupyter Notebooks on the DSH platform, allowing users to easily create, edit, and run their notebooks in a secure and scalable environment.",
+      "contact": "unibox@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {}
+      },
+      "resources": {
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@private": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@private\""
+          }
+        },
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": 0.1,
+            "env": {
+              "DSH_ENVIRONMENT": "{ variables('DSH_ENVIRONMENT') }",
+              "DSH_PLATFORM_REGION": "{ variables('DSH_PLATFORM_REGION')}",
+              "RUST_LOG": "info",
+              "USER": "${@uid}:${@gid}"
+            },
+            "exposedPorts": {
+              "5317": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": "auto",
+                "vhost": "{ vhost('${@name}.${@tenant}', 'private') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/dsh-labs-app:0.0.3",
+            "imageConsole": "registry.cp.kpn-dsh.com/dsh-studio/dsh-labs-app:0.0.3",
+            "instances": 1,
+            "mem": 128,
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "REST_API_CLIENT_KEY"
+                  }
+                ],
+                "name": "system/rest-api-client"
+              }
+            ],
+            "singleInstance": true,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/dsh-labs-kernel",
+    {
+      "draft": false,
+      "last_modified": "2025-09-24 15:30:25 UTC",
+      "id": "kpn/dsh-labs-kernel",
+      "name": "dsh-labs-kernel",
+      "version": {
+        "major": 0,
+        "minor": 0,
+        "patch": 3,
+        "postfix": "python3-stateless"
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Kernels for DSH Labs",
+      "moreInfo": "# This APP is managed by DSH labs and should not be deployed manually\n\n<KERNEL_SPECS> {\"name\": \"python3\", \"language\": \"python\", \"display_name\": \"Python 3 (ephemeral)\", \"description\": \"Python 3 kernel (ephemeral).\\nThis kernel is great for exploring and some small analysis which does not use a lot of resources.\\n\\nNOTE: This kernel has limited space (1gb) to install packages and save files to disk. If the container is restarted it will lose all state\", \"argv\": [],  \"env\": {\"KEY\": \"value\"}, \"help_links\": [] } </KERNEL_SPECS>",
+      "contact": "unibox@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "CPU": {
+            "description": "CPU limit for the kernel container",
+            "type": "number",
+            "enum": null,
+            "default": "0.25"
+          },
+          "BACKEND_SERVER_DNS_NAME": {
+            "description": "DNS Name of backend server name",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "MEMORY": {
+            "description": "Memory limit for the kernel container",
+            "type": "number",
+            "enum": null,
+            "default": "1024"
+          },
+          "CONNECTION_LIMIT": {
+            "description": "Total amount of notebooks that are allowed on this node. Multiple kernels can be deployed on this node (allows multiple notebooks to run on this node to save resources)\n\nNOTE: SECRETS and VARIABLES are always part of a kernel and are not accessible by other kernels. Saved files to disk are accessible by all kernels on the node.",
+            "type": "number",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "default": "5"
+          },
+          "LOG_LEVEL": {
+            "description": "Log level for kernel handler, which is responsible for handling the communication between server and kernel container",
+            "type": "string",
+            "enum": [
+              "error",
+              "warn",
+              "info",
+              "debug",
+              "trace"
+            ],
+            "default": "info"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": "${CPU | number}",
+            "env": {
+              "DSH_ENVIRONMENT": "{ variables('DSH_ENVIRONMENT') }",
+              "RUST_LOG": "${LOG_LEVEL}",
+              "BACKEND_SERVER_DNS_NAME": "${BACKEND_SERVER_DNS_NAME}",
+              "CONNECTION_LIMIT": "${CONNECTION_LIMIT}"
+            },
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/dsh-labs-kernel-python3:0.0.3",
+            "imageConsole": "registry.cp.kpn-dsh.com/dsh-studio/dsh-labs-kernel-python3:0.0.3",
+            "instances": 1,
+            "mem": "${MEMORY | number}",
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "REST_API_CLIENT_KEY"
+                  }
+                ],
+                "name": "system/rest-api-client"
+              }
+            ],
+            "singleInstance": true,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/dsh-ollama",
+    {
+      "draft": false,
+      "last_modified": "2024-12-05 10:02:38 UTC",
+      "id": "kpn/dsh-ollama",
+      "name": "Ollama",
+      "version": {
+        "major": 0,
+        "minor": 5,
+        "patch": 0,
+        "postfix": "phi"
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "LLM package manager and runtime with a web UI and a DSH chat bot",
+      "moreInfo": "## Ollama: Run & Manage Your LLMs in DSH\n\n[Ollama](https://ollama.com/), developed by Meta, is a package manager and runtime for your LLMs with a standardized REST interface to simplify your LLM interaction.\n\n### Key Features\n\n- **Web Chat Interface:** Interact with your models directly through a user-friendly web interface.\n- **DSH Chatbot Integration:** Includes a built-in DSH chatbot powered by the Retrieval-Augmented Generation (RAG) system.\n- **Multiple LLM Integration:** Supports various LLMs, including Mistral (Nvidia), Phi (Microsoft), Gemma (Google).\n\n### API Usage:\n\nThe [API Documentation](https://github.com/ollama/ollama/blob/main/docs/api.md) provides the list available end points.\n\n```bash\n\ncurl http://ollama-server.<tenant>.marathon.mesos:11434/api/generate -d '{\n  \"model\": \"mistral:7b\",\n  \"prompt\": \"Why is the sky blue?\",\n  \"options\": {\n    \"seed\": 42,\n    \"temperature\": 0.9\n  }\n}'\n\n```\n\n### More Information\n\nThe _Unibox Team_ can be reached at **unibox@kpn.com** for more information.",
+      "contact": "unibox@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "CPU": {
+            "description": "Amount of CPU cores per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "3"
+          },
+          "INSTANCES": {
+            "description": "Number of instances to deploy for horizontal scaling. The default is 1.",
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ],
+            "default": "1"
+          },
+          "VHOST_DNS_ZONE": {
+            "description": "DNS Zone selection for Vhost (kpn.com or kpn.org)",
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "default": "private"
+          },
+          "MEMORY": {
+            "description": "Amount of memory per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "10240"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}-server": {
+          "Application": {
+            "cpus": "${CPU | number}",
+            "env": {},
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/ollama-server:phi",
+            "imageConsole": "registry.cp.kpn-dsh.com/connectors/ollama-server:phi",
+            "instances": "${INSTANCES | number}",
+            "mem": "${MEMORY | number}",
+            "metrics": null,
+            "name": "${@name}-server",
+            "needsToken": false,
+            "secrets": null,
+            "singleInstance": true,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@${VHOST_DNS_ZONE}": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@${VHOST_DNS_ZONE}\""
+          }
+        },
+        "allocation/${@tenant}/application/${@name}-ui": {
+          "Application": {
+            "cpus": 0.1,
+            "env": {
+              "OLLAMA_BASE_URL": "http://${@name}-server:11434"
+            },
+            "exposedPorts": {
+              "8080": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": "auto",
+                "vhost": "{ vhost('${@name}.${@tenant}', '${VHOST_DNS_ZONE}') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/ollama-ui:0.5.0",
+            "imageConsole": "registry.cp.kpn-dsh.com/connectors/ollama-ui:0.5.0",
+            "instances": 1,
+            "mem": 3000,
+            "metrics": null,
+            "name": "${@name}-ui",
+            "needsToken": false,
+            "secrets": null,
+            "singleInstance": true,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/volume/${@name}-ollama": {
+          "Volume": {
+            "name": "${@name}-ollama",
+            "size": 5
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/eavesdropper",
+    {
+      "draft": false,
+      "last_modified": "2025-10-14 11:27:05 UTC",
+      "id": "kpn/eavesdropper",
+      "name": "Eavesdropper",
+      "version": {
+        "major": 0,
+        "minor": 10,
+        "patch": 0,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Web application to visualize messages on Kafka topics in realtime",
+      "moreInfo": "## Realtime record visualization\n\nThis app enables you to view records on your DSH Kafka topics in realtime. It can show the record's keys, values and headers in json, text or binary format, and also recognizes some custom formats for some special topics. Furthermore, it allows you to:\n\n* unwrap a record from the envelope that the DSH platform enforces on stream topics, showing the envelope metadata and the envelope payload separately,\n* filter records based on regular expressions and/or sample ratio,\n* show records individually or in list view,\n* download/copy record values in json, text or binary format.\n\nWhen started from the App Catalog the Eavesdropper will be available with the same SSO authorization as the DSH console, and will expose all topics that your tenant is entitled to see.",
+      "contact": "unibox@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "ENVELOPE_DESERIALIZER_DSH_ENVELOPE": {
+            "description": "enable or disable dsh envelope deserializer",
+            "type": "string",
+            "enum": [
+              "disabled",
+              "enabled"
+            ],
+            "default": "enabled"
+          },
+          "REPRESENTATION_DESERIALIZER_CODOMAIN_VALUES_RECORD": {
+            "description": "enable keyring codomain values record deserializer",
+            "type": "string",
+            "enum": [
+              "disabled",
+              "enabled"
+            ],
+            "default": "disabled"
+          },
+          "ALLOW_CUSTOM_GROUP_ID": {
+            "description": "allow custom group id",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "true"
+          },
+          "ENVELOPE_DESERIALIZER_GZIP": {
+            "description": "enable or disable gzip deserializer",
+            "type": "string",
+            "enum": [
+              "disabled",
+              "enabled"
+            ],
+            "default": "enabled"
+          },
+          "LOG_LEVEL": {
+            "description": "application log level",
+            "type": "string",
+            "enum": [
+              "error",
+              "warn",
+              "info"
+            ],
+            "default": "info"
+          },
+          "REPRESENTATION_DESERIALIZER_SCHEMA_STORE": {
+            "description": "enable schema store deserializer",
+            "type": "string",
+            "enum": [
+              "disabled",
+              "enabled"
+            ],
+            "default": "disabled"
+          },
+          "VHOST_DNS_ZONE": {
+            "description": "application dns zone",
+            "type": "string",
+            "enum": [
+              "private",
+              "public"
+            ],
+            "default": "private"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@${VHOST_DNS_ZONE}": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@${VHOST_DNS_ZONE}\""
+          }
+        },
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": 0.1,
+            "env": {
+              "LOG_LEVEL_SERVICE_UPSTREAM": "info",
+              "ALLOW_CUSTOM_GROUP_ID": "${ALLOW_CUSTOM_GROUP_ID}",
+              "LOG_LEVEL_SERVICE": "${LOG_LEVEL}",
+              "LOG_LEVEL_ENTRYPOINT": "${LOG_LEVEL}",
+              "INSTANCE_IDENTIFIER": "${@tenant}_${@name}",
+              "LOG_LEVEL_MONITOR_UPSTREAM": "info",
+              "LOG_LEVEL_SERVICE_DOWNSTREAM_RECORD": "info",
+              "GROUP_ID_PREFIX": "${@tenant}_",
+              "LOG_LEVEL_SERVICE_DOWNSTREAM": "info",
+              "LOG_LEVEL_DESERIALIZER": "info",
+              "INCLUDE___CONSUMER_OFFSETS_TOPIC": "false",
+              "DEFAULT_GROUP_IDS": "*",
+              "LOG_LEVEL_DEVELOPMENT": "off",
+              "LOG_LEVEL_MONITOR_KEEP_ALIVE": "off",
+              "CONSUMER_BUILDER": "dsh-datastreams-properties",
+              "EXCLUDED_TOPICS": "",
+              "ENVELOPE_DESERIALIZER_DSH_ENVELOPE": "${ENVELOPE_DESERIALIZER_DSH_ENVELOPE}",
+              "REPRESENTATION_DESERIALIZER_SCHEMA_STORE": "${REPRESENTATION_DESERIALIZER_SCHEMA_STORE}",
+              "TITLE": "${@name}/${@tenant}",
+              "LOG_LEVEL_MONITOR_DOWNSTREAM": "error",
+              "LOG_LEVEL": "${LOG_LEVEL}",
+              "LOG_LEVEL_APPLICATION": "${LOG_LEVEL}",
+              "LOG_LEVEL_SERVICE_KEEP_ALIVE": "off",
+              "INCLUDED_TOPICS": "",
+              "LOG_LEVEL_KAFKA_ADMIN_CLIENT": "off",
+              "LOG_LEVEL_MONITOR_DOWNSTREAM_STATUS": "error",
+              "LOG_TIMESTAMPS": "disabled",
+              "ENVELOPE_DESERIALIZER_GZIP": "${ENVELOPE_DESERIALIZER_GZIP}",
+              "INCLUDED_TOPICS_REGEX": "",
+              "EXCLUDED_TOPICS_REGEX": "",
+              "LOG_LEVEL_KAFKA_CLIENT": "error",
+              "LOG_LEVEL_RECDES": "info",
+              "LOG_LEVEL_KAFKA_CONSUMER": "error",
+              "REPRESENTATION_DESERIALIZER_CODOMAIN_VALUES_RECORD": "${REPRESENTATION_DESERIALIZER_CODOMAIN_VALUES_RECORD}",
+              "LOG_LEVEL_GREENBOX": "error",
+              "LOG_LEVEL_MONITOR": "${LOG_LEVEL}"
+            },
+            "exposedPorts": {
+              "8081": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": "auto",
+                "vhost": "{ vhost('${@name}.${@tenant}', '${VHOST_DNS_ZONE}') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/eavesdropper:0.10.0",
+            "imageConsole": null,
+            "instances": 1,
+            "mem": 384,
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": null,
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/explorer",
+    {
+      "draft": false,
+      "last_modified": "2025-10-16 11:28:35 UTC",
+      "id": "kpn/explorer",
+      "name": "Explorer",
+      "version": {
+        "major": 0,
+        "minor": 2,
+        "patch": 5,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "An application that helps you explore data in your DSH tenant across various locations, such as Kafka topics or S3 buckets.",
+      "moreInfo": "## Explorer \nAn application to explore Apache Kafka topics and S3 buckets. \n\n### Features \n- Explore Apache Kafka topics \n- Explore S3 buckets",
+      "contact": "unibox@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "LOG_LEVEL": {
+            "description": "The log level for the application. The default is INFO.",
+            "type": "string",
+            "enum": [
+              "trace",
+              "debug",
+              "info",
+              "warn",
+              "error"
+            ],
+            "default": "info"
+          },
+          "MEMORY": {
+            "description": "Amount of memory per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "2048"
+          },
+          "CPU": {
+            "description": "Amount of CPU cores per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "1"
+          },
+          "VHOST_DNS_ZONE": {
+            "description": "The DNS zone for the application: kpn.com (public) and kpn.org (private)",
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "default": "private"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@${VHOST_DNS_ZONE}": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@${VHOST_DNS_ZONE}\""
+          }
+        },
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": "${CPU | number}",
+            "env": {
+              "MAXIMUM_FILE_SIZE_BYTE": "1024000",
+              "DSH_ENVIRONMENT": "{ variables('DSH_ENVIRONMENT') }",
+              "DSH_TENANT": "{ variables('DSH_TENANT') }",
+              "DSH_PLATFORM_REGION": "{ variables('DSH_PLATFORM_REGION') }",
+              "DSH_UID": "${@uid}",
+              "SERVER_IP_ADDRESS": "0.0.0.0:4000",
+              "DSH_GID": "${@gid}",
+              "RUST_LOG": "${LOG_LEVEL}"
+            },
+            "exposedPorts": {
+              "4000": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": "auto",
+                "vhost": "{ vhost('${@name}.${@tenant}', '${VHOST_DNS_ZONE}') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/greenbox-compact:0.2.5",
+            "imageConsole": "registry.cp.kpn-dsh.com/greenbox-dev/greenbox-compact:0.2.5",
+            "instances": 1,
+            "mem": "${MEMORY | number}",
+            "metrics": {
+              "path": "/",
+              "port": 9009
+            },
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "DSH_CLIENT_SECRET"
+                  }
+                ],
+                "name": "system/rest-api-client"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "BUCKET_IDENTIFIER"
+                  }
+                ],
+                "name": "system/objectstore/access_key_id"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "BUCKET_SECRET"
+                  }
+                ],
+                "name": "system/objectstore/secret_access_key"
+              }
+            ],
+            "singleInstance": true,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/bucket/${@name}": {
+          "Bucket": {
+            "encrypted": true,
+            "name": "${@name}",
+            "versioned": false
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/http-source-connector",
+    {
+      "draft": false,
+      "last_modified": "2024-08-05 11:02:57 UTC",
+      "id": "kpn/http-source-connector",
+      "name": "HTTP Source Connector",
+      "version": {
+        "major": 0,
+        "minor": 6,
+        "patch": 0,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Application to produce data to Kafka via HTTP in DSH",
+      "moreInfo": "## HTTP Source Kafka Connector with Oauth2 \n\n HTTP Source Kafka Connector with OAuth2 enables streaming data to DSH Kafka via HTTP with Digital Engine's AuthZ OAuth2 authentication. \n\n **1. HTTP Endpoint (Vhost)**: This will be automatically created during deployment based on the application name. It can be made `public` (kpn.com) or `private` (kpn.org) using the `VHOST_DNS_ZONE` environment variable. \n\n **2. OAuth2 Authentication**: You can choose the authz environment via `AUTHZ_ENVIRONMENT`. If you choose ACC (acceptance), the base url will be  https://api.acc.kpn.com and for PROD (production) it will be https://api.kpn.com . The fetching token endpoint for these urls is _oauth2/v1/token_ and validating token endpoint is _authz/v1/validate_. These will be arranged inside application according to `AUTHZ_ENVIRONMENT`. Authz Client ID, and Authz Client Secret should be stored in Secrets. These secret names must be specified in the deployment page. `AUTHZ_CLIENT_ID_IN_SECRET_STORE` and `AUTHZ_CLIENT_SECRET_IN_SECRET_STORE` are the secret names for the client ID and client secret, respectively. Please make sure you are using correct client-id and client-secret for your Authz environment. `AUTHZ_SCOPE` is for scope name for your application. Authorization is ensured via scopes which validates if the authenticated user has permission to produce data. Multiple scopes can be entered comma seperated. \n\n **3. URL Endpoint - Destination Topic - Data Format mapping string**: This establishes multiple endpoints for sending data and maps destination topics and data formats using a colon-separated format. You need to decide what to name your endpoint which you will use in your application to send data. The topic needs to be created in Topics section. Multiple mappings should be separated by commas. This could be set using the `OUTPUT_TOPIC_FORMATS` environment variable and it should be in the format of `<endpoint1>:<topic1>:<format1>`. The format can be `json`, `avro`, `protobuf`, `byte`, or `legacy`. JSON, Avro, and Protobuf correspond to the respective data formats (We support avro-byte encoding and we use Confluent standard for Avro & Protobuf serialization). Byte is for raw byte data. Legacy format is for the old data format which adds a metadata wrapper with client ID around JSON data. Example - 'publish-json:scratch.json-topic.tenant_name:json'. \n\n **4. Dead Letter Queue**: Topic for storing failed messages during serialization/deserialization and can be configured using `DEAD_LETTER_TOPIC`. \n\n **5. Scaling**: Use `INSTANCES` count for horizontal scaling and `CPU` & `MEMORY` values for vertical scaling. \n\n ## More Information \n The Unibox Team can be reached at unibox@kpn.com for more information.",
+      "contact": "unibox@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "MEMORY": {
+            "description": "Amount of memory per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "64"
+          },
+          "AUTHZ_CLIENT_ID_IN_SECRET_STORE": {
+            "description": "Name of the field in the DSH secrets store that contains the Authz Client ID.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "CPU": {
+            "description": "Amount of CPU cores per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "0.1"
+          },
+          "DEAD_LETTER_TOPIC": {
+            "description": "Topic for failed messages during serialization/deseralization",
+            "type": "string",
+            "enum": null,
+            "default": "scratch.dlq.tenant"
+          },
+          "VHOST_DNS_ZONE": {
+            "description": "DNS Zone selection for Vhost (kpn.com or kpn.org)",
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "default": "private"
+          },
+          "LOG_LEVEL": {
+            "description": "The log level for the application. The default is INFO.",
+            "type": "string",
+            "enum": [
+              "TRACE",
+              "DEBUG",
+              "INFO",
+              "WARN",
+              "ERROR"
+            ],
+            "default": "INFO"
+          },
+          "INSTANCES": {
+            "description": "The number of instances to deploy for scaling. The default is 1.",
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ],
+            "default": "1"
+          },
+          "AUTHZ_ENVIRONMENT": {
+            "description": "The environment value for Authz Digital Engine.",
+            "type": "string",
+            "enum": [
+              "ACC",
+              "PROD"
+            ],
+            "default": "ACC"
+          },
+          "OUTPUT_TOPIC_FORMATS": {
+            "description": "Define endpoint, topic and data format mapping to declare where to publish data to. Mapping format is like following, endpoint:topic_name:data_format can be added more sepearting with comma.",
+            "type": "string",
+            "enum": null,
+            "default": "endpoint1:scratch.topic1.tenant:byte"
+          },
+          "AUTHZ_CLIENT_SECRET_IN_SECRET_STORE": {
+            "description": "Name of the field in the DSH secrets store that contains the Authz Client Secret.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "AUTHZ_SCOPE": {
+            "description": "DE application scopes for authorization purposes",
+            "type": "string",
+            "enum": null,
+            "default": "scope1,scope2"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@${VHOST_DNS_ZONE}": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@${VHOST_DNS_ZONE}\""
+          }
+        },
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": "${CPU | number}",
+            "env": {
+              "ENABLE_OAUTH2": "true",
+              "DEAD_LETTER_TOPIC": "${DEAD_LETTER_TOPIC}",
+              "LOG_LEVEL": "${LOG_LEVEL}",
+              "AUTHZ_SCOPE": "${AUTHZ_SCOPE}",
+              "AUTHZ_ENVIRONMENT": "${AUTHZ_ENVIRONMENT}",
+              "OUTPUT_TOPIC_FORMATS": "${OUTPUT_TOPIC_FORMATS}"
+            },
+            "exposedPorts": {
+              "3000": {
+                "auth": null,
+                "tls": null,
+                "vhost": "{ vhost('${@name}.${@tenant}', '${VHOST_DNS_ZONE}') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/http-kafka-connector:0.6.0",
+            "imageConsole": "registry.cp.kpn-dsh.com/greenbox-training/http-kafka-connector:0.6.0",
+            "instances": "${INSTANCES | number}",
+            "mem": "${MEMORY | number}",
+            "metrics": {
+              "path": "/metrics",
+              "port": 9090
+            },
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "AUTHZ_CLIENT_ID"
+                  }
+                ],
+                "name": "${AUTHZ_CLIENT_ID_IN_SECRET_STORE}"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "AUTHZ_CLIENT_SECRET"
+                  }
+                ],
+                "name": "${AUTHZ_CLIENT_SECRET_IN_SECRET_STORE}"
+              }
+            ],
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/kafdrop",
+    {
+      "draft": false,
+      "last_modified": "2025-06-27 11:32:53 UTC",
+      "id": "kpn/kafdrop",
+      "name": "Kafdrop",
+      "version": {
+        "major": 4,
+        "minor": 1,
+        "patch": 0,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Web UI for viewing kafka topics and consumer groups",
+      "moreInfo": "## Info  \n Kafdrop is a web UI for viewing Kafka topics and browsing consumer groups. The tool displays information such as brokers, topics, partitions, consumers, and lets you view messages. \n## Github \n https://github.com/obsidiandynamics/kafdrop/ \n\n## Release Notes:  \n* v3.30 newest release",
+      "contact": "dsh-appcatalog@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "JVM_RAM_PERCENTAGE": {
+            "description": "JVM Memory allocation % of container memory.",
+            "type": "string",
+            "enum": null,
+            "default": "75.0"
+          },
+          "CPU": {
+            "description": "Amount of CPU cores per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "0.3"
+          },
+          "CMD_ARGS": {
+            "description": "Look at the obsidiandynamics/kafdrop repository on GitHub for available options",
+            "type": "string",
+            "enum": null,
+            "default": " "
+          },
+          "DNS_ZONE": {
+            "description": "DNS zone name for the vhost",
+            "type": "dns-zone",
+            "enum": null,
+            "default": null
+          },
+          "MEMORY": {
+            "description": "Amount of memory per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "700"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@${DNS_ZONE}": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@${DNS_ZONE}\""
+          }
+        },
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": "${CPU | number}",
+            "env": {
+              "PORT0": "10922",
+              "CMD_ARGS": "--server.port=8473 ${CMD_ARGS}",
+              "JVM_OPTS": "-XX:InitialRAMPercentage=${JVM_RAM_PERCENTAGE} -XX:MaxRAMPercentage=${JVM_RAM_PERCENTAGE}",
+              "KAFKA_KEYSTORE_FILE": "/tmp/keystore.jks",
+              "KAFKA_PROPERTIES_FILE": "/tmp/datastreams.properties",
+              "KAFKA_TRUSTSTORE_FILE": "/tmp/truststore.jks",
+              "SERVER_SERVLET_CONTEXTPATH": "/",
+              "HOST": "localhost",
+              "SERVER_PORT": "8473"
+            },
+            "exposedPorts": {
+              "8473": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": null,
+                "vhost": "{ vhost('${@name}.${@tenant}', '${DNS_ZONE}') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/kafdrop:4.1.0",
+            "imageConsole": null,
+            "instances": 1,
+            "mem": "${MEMORY | number}",
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": null,
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/kafka-data-archiver",
+    {
+      "draft": false,
+      "last_modified": "2025-04-18 14:52:08 UTC",
+      "id": "kpn/kafka-data-archiver",
+      "name": "Kafka Data Archiver",
+      "version": {
+        "major": 1,
+        "minor": 6,
+        "patch": 0,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Service to store kafka messages in an object storage like s3 and adls gen2",
+      "moreInfo": "## Kafka Data Archiver (KDA)\nA dsh service to store kafka messages in an object storage like S3 or ADLS Gen2. It also allows to convert kafka message into another format using schemas.\n\nTo run a KDA, an application configuration should be provided (stored in dsh secrets).\nHere is an example application configuration file for storing json messages from kafka into AWS S3 bucket as apache parquet format;\n```\ninclude \"base_application.conf\" # Contains application configuration with their default values\ninclude \"base_kafka.conf\" # Contains kafka configuration with default values\n\nkafka.consumerBootstrapServersOverride = false\n\nkafka.consumerBootstrapServers = []\n\nkafka.consumerBootstrapServersOverride = false\n\nkafka.producerBootstrapServers = []\nkafka.readTopics = [\n  \"input_topic1\"\n]\nkafka.groupId = \"example_groupid_1\"\n\napp.maxMessageCountToUpload = 1000 # This is the threshold for number of messages written in a local file before uploading to object storage.\napp.timeIntervalToUpload = 60.seconds # This is timeout threshold to upload file to object storage.\npartitionerType = \"timebased\" # If you want KDA to create timebased partition folders in object storage.\npartitionerFormat = \"yyyy-MM-dd\" # Timebased Partition format. (Reference: https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/format/DateTimeFormatter.html#patterns))\nparquet.compression = \"snappy\"\n\n# Topic input format mapping. You can define multiple topic which contains different message formats.\ntopic.inputFormat { \n  \"input_topic1\": json\n}\n\n# Topic ouput format mapping. You can define multiple topics with is stored in different formats.\ntopic.outputFormat {\n  \"input_topic1\": parquet\n}\n\n# Topic schema id mapping.\ntopic.schemaIds {\n  \"input_topic1\": \"schema-v1.avsc\"\n}\n\n# Topic s3 bucket mapping. It's possible to map each topic to different s3 bucket and/or prefix.\ntopic.s3Buckets {\n  \"input_topic1\" {\n    bucket: \"bucket1\"\n    prefix: \"archived\"\n  }\n}\n\nstorage.type = S3 # Valid values S3 or ADLS_GEN2\n\n# Schema Registry Url is needed if message conversion if needed. \n# Schemas can be stored in s3, adls_gen2 or http service\nschemaRegistry.url = \"s3://bucket1/schemas\"\n\n# Define aws_access_key_id for each bucket\nstorage.s3.accessKeyIds {\n  \"bucket1\": \"value of aws_access_key_id\"\n}\n\n# Define aws_secret_key for each bucket\nstorage.s3.secretKeys {\n  \"bucket1\": \"value of aws_secret_key\"\n}\n\n# Alternatively (do not use both!) if storage.type = adls_gen2\nschemaRegistry.url = \"abfss://testcontainer@testaccount.dfs.core.windows.net/schemas\"\n\ntopic.adlsAccountNames {\n  \"input_topic2\": {\n    accountName: \"testaccount\"\n    container: \"testcontainer\"\n    prefix: \"archived\"\n  }\n}\n\n# Each input_topic needs to have associated credentials, either on account level or SAS keys\nstorage.adls.accountKeys {\n  \"testaccount\": \"<ACCOUNT KEY>\"\n}\n\nstorage.adls.sasKeys {\n  \"testaccount\": {\n    \"test\": {\n      \"schemas\": \"<SAS TOKEN>\"\n    }\n    \"test\": {\n      \"archived\": \"<SAS TOKEN>\"\n    }\n  }\n}\n\n# What to do with messages that cannot be processed (parsing fails with schema)\nerror.tolerance = \"ignore\"\nerror.routing {\n  \"input_topic1\": \"dead-letter-queue1\"\n}\n```\n",
+      "contact": "dsh-lfm@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "LOG_LEVEL": {
+            "description": "",
+            "type": "string",
+            "enum": [
+              "TRACE",
+              "DEBUG",
+              "INFO",
+              "WARN",
+              "ERROR"
+            ],
+            "default": "INFO"
+          },
+          "APP_CONFIG_SECRET_NAME": {
+            "description": "Name of the dsh secret which contains kda application configuration.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "CPU": {
+            "description": "Amount of CPU cores per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "0.1"
+          },
+          "JVM_MAX_RAM_PERCENTAGE": {
+            "description": "Sets -XX:MaxRAMPercentage JVM argument",
+            "type": "string",
+            "enum": null,
+            "default": "80"
+          },
+          "MEMORY": {
+            "description": "Amount of memory per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "512"
+          },
+          "INSTANCES": {
+            "description": "The number of instances to deploy in distributed mode (cluster). The default is 1.",
+            "type": "string",
+            "enum": null,
+            "default": "1"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": "${CPU | number}",
+            "env": {
+              "DSH_LOG_LEVEL": "${LOG_LEVEL}",
+              "MAIN_LOG_LEVEL": "${LOG_LEVEL}",
+              "MAX_RAM_PERCENTAGE": "${JVM_MAX_RAM_PERCENTAGE}",
+              "ARCHIVER_LOG_LEVEL": "${LOG_LEVEL}"
+            },
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/kafka-data-archiver:20250408.21",
+            "imageConsole": "registry.cp.kpn-dsh.com/kpn-lfm-01/lfm-kda_prod:20250408.21",
+            "instances": "${INSTANCES | number}",
+            "mem": "${MEMORY | number}",
+            "metrics": {
+              "path": "/metrics",
+              "port": 9090
+            },
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "APP_CONF"
+                  }
+                ],
+                "name": "${APP_CONFIG_SECRET_NAME}"
+              }
+            ],
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/kafka2kafka",
+    {
+      "draft": false,
+      "last_modified": "2025-05-20 14:32:44 UTC",
+      "id": "kpn/kafka2kafka",
+      "name": "Kafka2Kafka",
+      "version": {
+        "major": 1,
+        "minor": 1,
+        "patch": 0,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Service to forward messages from Kafka topic to Kafka topic",
+      "moreInfo": "## Kafka2Kafka(K2K)\nA dsh service to forward kafka messages from one kafka topic to one or multiple kafka topics.\n\nTo run a K2K, an application configuration should be provided (stored in dsh secrets).\nHere is an example application configuration file for forwarding kafka messages from topic A to topic B;\n```batch_size = 5000\nbatch_duration= 10 #millis\nprometheus_port = 9090\n[kafka_consumer]\ngroup_id = \"tenant-name_group_id\"\ntopics = [ \"input_topic1\" ]\nstats_interval_ms = 30000\nuse_ssl_auth = false #Default is false since DSH doesn't support conditional fields in app catalog\n[kafka_sink_config]\nbatch_msg_size = 5000 # Amount of messages to be batched before sending to kafka\nqueue_size = 10000\nqueue_max_ms = 100\nlinger_ms = 100\n[kafka_sink_config.routing_map]\n\"input_topic1\" = \"output_topic1\"\n",
+      "contact": "dsh-lfm@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "MEMORY": {
+            "description": "Amount of memory per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "300"
+          },
+          "APP_CONFIG_SECRET_NAME": {
+            "description": "Name of the dsh secret which contains kda application configuration.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "LOG_LEVEL": {
+            "description": "",
+            "type": "string",
+            "enum": [
+              "trace",
+              "debug",
+              "info",
+              "warn",
+              "error"
+            ],
+            "default": "info"
+          },
+          "CPU": {
+            "description": "Amount of CPU cores per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "0.1"
+          },
+          "INSTANCES": {
+            "description": "The number of instances to deploy in distributed mode (cluster). The default is 1.",
+            "type": "string",
+            "enum": null,
+            "default": "1"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": "${CPU | number}",
+            "env": {
+              "RUST_LOG": "${LOG_LEVEL},common_kafka=${LOG_LEVEL},rustls::client=info,hyper=info,reqwest=info,librdkafka=trace,rdkafka::consumer=trace"
+            },
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/kafka2kafka:20250520.286",
+            "imageConsole": "registry.cp.kpn-dsh.com/kpn-lfm-01/glp-rust-lfm-forwarder-kafka_dev:20250520.286",
+            "instances": "${INSTANCES | number}",
+            "mem": "${MEMORY | number}",
+            "metrics": {
+              "path": "/metrics",
+              "port": 9090
+            },
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "APP_CONF"
+                  }
+                ],
+                "name": "${APP_CONFIG_SECRET_NAME}"
+              }
+            ],
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/keyring-kafka-database-extractor",
+    {
+      "draft": false,
+      "last_modified": "2024-06-24 15:12:39 UTC",
+      "id": "kpn/keyring-kafka-database-extractor",
+      "name": "DSH Database Extractor",
+      "version": {
+        "major": 0,
+        "minor": 4,
+        "patch": 4,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Application to bulk load/sync records from a relational database to Kafka in DSH",
+      "moreInfo": "## Database Extractor for Apache Kafka in DSH \nAn application to import data from any relational database with a JDBC driver into an Apache Kafka topic by extending the [Kafka Connect JDBC Source connector](https://docs.confluent.io/current/connect/kafka-connect-jdbc/source-connector/index.html) project. \n\n**1. Data Source:** Currently, we support Teradata, Postgres (includes Yugabyte), MySQL, Oracle, SQLite, SAP Sybase, Microsoft SQL Server and IBM DB2.\n\n**2. Kafka JDBC Database Extractor Application:** The application can be deployed with single or multiple workers. Cluster mode ensures fault tolerancy and HA. The data extraction mode can be configured by setting the `MODE` environment variable. These can be bulk, timestamp, incrementing or timestamp+incrementing. Furthermore, the `POLL_INTERVAL` environment variable can be used to determine the degree of realtime sync or periodicity of sync. \n\n**3. Data Sink:** The data is stored in JSON format in the kafka topic `DATABASE_OUTPUT_TOPIC`.\n ### More Information\nThe _Greenbox Team_ can be reached at **greenbox@kpn.com** for more information.",
+      "contact": "greenbox@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "TIMESTAMP_COLUMN_NAME": {
+            "description": "This is used in the `timestamp` and `timestamp+incrementing` extraction modes. Only relevant for these two modes. The column name should be a valid date/timestamp column in the database table.",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "INCREMENTING_COLUMN_NAME": {
+            "description": "This is used in the `incrementing` and `timestamp+incrementing` extraction modes. Only relevant for these two modes. The column name should be a valid autoincrementing column in the database table.",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "DATABASE_QUERY": {
+            "description": "The SQL query to execute. The query should be a valid SQL query for the database specified in the `DATABASE` environment variable.",
+            "type": "string",
+            "enum": null,
+            "default": "SELECT * FROM <table_name>"
+          },
+          "MEMORY": {
+            "description": "Amount of memory per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "1024"
+          },
+          "MODE": {
+            "description": "The data extraction mode can be `bulk`, `timestamp`, `incrementing` and `timestamp+incrementing`. Bulk is used for batch extraction whereas the other modes are used for realtime extraction.",
+            "type": "string",
+            "enum": [
+              "bulk",
+              "timestamp",
+              "incrementing",
+              "timestamp+incrementing"
+            ],
+            "default": "timestamp"
+          },
+          "DATABASE_USER": {
+            "description": "Database user name. Make sure this user has the right permissions to execute the query.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "DATABASE_OUTPUT_TOPIC": {
+            "description": "Name of the Kafka topic to write the records to.",
+            "type": "string",
+            "enum": null,
+            "default": "scratch.database-extractor-output.greenbox"
+          },
+          "INSTANCES": {
+            "description": "The number of instances to deploy in distributed mode (cluster). The default is 1.",
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ],
+            "default": "1"
+          },
+          "DATABASE_PASSWORD_FIELD_IN_SECRET_STORE": {
+            "description": "Name of the field in the DSH secrets store that contains the Database password.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "CPU": {
+            "description": "Amount of CPU cores per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "0.1"
+          },
+          "LOG_LEVEL": {
+            "description": "The log level for the application. The default is INFO.",
+            "type": "string",
+            "enum": [
+              "TRACE",
+              "DEBUG",
+              "INFO",
+              "WARN",
+              "ERROR"
+            ],
+            "default": "INFO"
+          },
+          "POLL_INTERVAL": {
+            "description": "Interval in milliseconds for polling (24 hours is 86400000 milliseconds).",
+            "type": "string",
+            "enum": null,
+            "default": "60000"
+          },
+          "DATABASE_JDBC_URL": {
+            "description": "The database host to connect to. Ensure that the host is accessible from the application. Example: jdbc:teradata://tdp.kpn.org",
+            "type": "string",
+            "enum": null,
+            "default": "jdbc:teradata://tdp.kpn.org"
+          },
+          "DATABASE": {
+            "description": "The database to connect to. Currently, we support Teradata, Postgres (includes Yugabyte), MySQL, Oracle, SQLite, SAP Sybase, Microsoft SQL Server and IBM DB2.",
+            "type": "string",
+            "enum": [
+              "teradata",
+              "postgresql",
+              "mysql",
+              "oracle",
+              "sqlite",
+              "sybase",
+              "sqlserver",
+              "db2"
+            ],
+            "default": "teradata"
+          },
+          "DATABASE_TIMEZONE": {
+            "description": "Used to recognize the timezone of timestamp values. The default is UTC. KPN Teradata uses Europe/Amsterdam.",
+            "type": "string",
+            "enum": null,
+            "default": "UTC"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/topic/${@name}-config": {
+          "Topic": {
+            "kafkaProperties": {
+              "cleanup.policy": "compact"
+            },
+            "name": "${@name}-config",
+            "partitions": 1,
+            "replicationFactor": 3
+          }
+        },
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": "${CPU | number}",
+            "env": {
+              "DISTRIBUTED_MODE_OFFSETS_TOPIC": "scratch.${@name}-offset.${@tenant}",
+              "KAFKA_OPTS": "-Xms256M",
+              "LOG_LEVEL": "${LOG_LEVEL}",
+              "POLL_INTERVAL": "${POLL_INTERVAL}",
+              "DATABASE": "${DATABASE}",
+              "MEMORY": "${MEMORY}",
+              "DISTRIBUTED_MODE_CONFIG_TOPIC": "scratch.${@name}-config.${@tenant}",
+              "MODE": "${MODE}",
+              "DATABASE_TIMEZONE": "${DATABASE_TIMEZONE}",
+              "TIMESTAMP_COLUMN_NAME": "${TIMESTAMP_COLUMN_NAME}",
+              "DATABASE_USER": "${DATABASE_USER}",
+              "DISTRIBUTED_MODE_STATUS_TOPIC": "scratch.${@name}-status.${@tenant}",
+              "DATABASE_OUTPUT_TOPIC": "${DATABASE_OUTPUT_TOPIC}",
+              "INCREMENTING_COLUMN_NAME": "${INCREMENTING_COLUMN_NAME}",
+              "DATABASE_JDBC_URL": "${DATABASE_JDBC_URL}",
+              "DATABASE_QUERY": "${DATABASE_QUERY}",
+              "DEPLOYMENT": "distributed"
+            },
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/keyring-kafka-database-extractor:0.4.4",
+            "imageConsole": "registry.cp.kpn-dsh.com/greenbox/keyring-kafka-database-extractor:0.4.4",
+            "instances": "${INSTANCES | number}",
+            "mem": "${MEMORY | number}",
+            "metrics": {
+              "path": "/",
+              "port": 9009
+            },
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "DATABASE_PASSWORD"
+                  }
+                ],
+                "name": "${DATABASE_PASSWORD_FIELD_IN_SECRET_STORE}"
+              }
+            ],
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/application/${@name}-ui": {
+          "Application": {
+            "cpus": 0.1,
+            "env": {
+              "CONNECT_URL": "${@name}:8083",
+              "PORT": "8000"
+            },
+            "exposedPorts": {
+              "8000": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": "auto",
+                "vhost": "{ vhost('${@name}.${@tenant}', 'public') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/keyring-kafka-database-extractor-ui:0.4.4",
+            "imageConsole": "registry.cp.kpn-dsh.com/greenbox/keyring-kafka-database-extractor-ui:0.4.4",
+            "instances": 1,
+            "mem": 8,
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": false,
+            "secrets": null,
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@public": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@public\""
+          }
+        },
+        "allocation/${@tenant}/topic/${@name}-status": {
+          "Topic": {
+            "kafkaProperties": {
+              "cleanup.policy": "compact"
+            },
+            "name": "${@name}-status",
+            "partitions": 1,
+            "replicationFactor": 3
+          }
+        },
+        "allocation/${@tenant}/topic/${@name}-offset": {
+          "Topic": {
+            "kafkaProperties": {
+              "cleanup.policy": "compact"
+            },
+            "name": "${@name}-offset",
+            "partitions": 1,
+            "replicationFactor": 3
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/keyring-service",
+    {
+      "draft": false,
+      "last_modified": "2025-03-20 11:50:20 UTC",
+      "id": "kpn/keyring-service",
+      "name": "keyring-service",
+      "version": {
+        "major": 0,
+        "minor": 6,
+        "patch": 3,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "KPN keyring service.",
+      "moreInfo": "# keyring service\n\nThe **keyring service** is a service that exposes a REST-service that maps identifiers from a *domain* to a *codomain*. E.g. it can map BOSS identifiers to KRN identifiers.\n\n* The **keyring service** runs in your own tenant environment, under your own control.\n\n* It optionally provides an OpenAPI specification of the REST-service to import into Postman or a similar application.\n\n* It optionally provides a Swagger UI to explore and test the REST-service.\n\n* It can expose metrics for a Prometheus scraper.\n\nBe sure to check the [keyring documentation](https://keyring.dsh-prod.dsh.prod.aws.kpn.org/using/app-catalog.html) for more and important information.\n",
+      "contact": "greenbox@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "DOMAINS": {
+            "description": "enter the domain(s) for the relation, separated by commas (allowed domain names: BOSS, ECID, ETKN, KIDH, KRN, SBCM)",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "FORBIDDEN_DOMAINS": {
+            "description": "specify domain(s) that will not be used as intermediate domains, separated by commas (allowed domain names: BOSS, ECID, ETKN, KIDH, KRN, SBCM)",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "FORBIDDEN_RELATIONS": {
+            "description": "specify relation(s) that will not be used as intermediate relations, separated by commas (recognized relation names: bk, bc, bki, eet, ek, kik, kib, etk, etb, kiet, ete, etki, ke, kb, kki, ks, sk, sc)",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "ENABLE_SWAGGER_UI": {
+            "description": "select whether to enable the swagger ui",
+            "type": "string",
+            "enum": [
+              "false",
+              "true"
+            ],
+            "default": "true"
+          },
+          "CODOMAINS": {
+            "description": "enter the codomain(s) for the relation, separated by commas (allowed codomain names: BOSS, CPS, ECID, ETKN, KIDH, KRN, SBCM)",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "FORBIDDEN_CODOMAINS": {
+            "description": "enter codomain(s) that will not be used as intermediate codomains, separated by commas (allowed codomain names: BOSS, CPS, ECID, ETKN, KIDH, KRN, SBCM)",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "ENABLE_METRICS_EXPORTER": {
+            "description": "select whether to enable exporting metrics",
+            "type": "string",
+            "enum": [
+              "false",
+              "true"
+            ],
+            "default": "true"
+          },
+          "ENABLE_OPEN_API_SPECIFICATION": {
+            "description": "select whether to enable the openapi specification",
+            "type": "string",
+            "enum": [
+              "false",
+              "true"
+            ],
+            "default": "true"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": 0.5,
+            "env": {
+              "HEAP_MEMORY": "768",
+              "RELATIONS_ENGINE_FORBIDDEN_DOMAINS": "${FORBIDDEN_DOMAINS}",
+              "SERVICE_JVM_METRICS_EXPORTER_ENABLED": "${ENABLE_METRICS_EXPORTER}",
+              "SERVICE_SWAGGER_UI_CONTACT_URL": "https://confluence.kpn.org/display/GBDocs/Greenbox",
+              "SERVICE_SWAGGER_UI_CONTACT_NAME": "Unibox Team",
+              "SERVICE_SWAGGER_UI_DOCUMENTATION_URL": "https://keyring.dsh-dev.dsh.np.aws.kpn.org",
+              "CODOMAINS": "${CODOMAINS}",
+              "RELATIONS_ENGINE_FORBIDDEN_CODOMAINS": "${FORBIDDEN_CODOMAINS}",
+              "DOMAINS": "${DOMAINS}",
+              "RELATIONS_ENGINE_FORBIDDEN_MASTER_RELATIONS": "${FORBIDDEN_RELATIONS}",
+              "KAFKA_GROUP_ID_PREFIX": "${@tenant}_",
+              "KEYRING_CONFIGURATION_RESOURCE": "application.conf",
+              "SERVICE_OPEN_API_SPECIFICATION_ENABLED": "${ENABLE_OPEN_API_SPECIFICATION}",
+              "KEYRING_INSTALLED_BASE_RESOURCE": "installed-base-20250319.conf",
+              "RELATIONS_ENGINE_METRICS_EXPORTER_ENABLED": "${ENABLE_METRICS_EXPORTER}",
+              "SERVICE_METRICS_EXPORTER_ENABLED": "${ENABLE_METRICS_EXPORTER}",
+              "SERVICE_SWAGGER_UI_ENABLED": "${ENABLE_SWAGGER_UI}",
+              "MASTER_RELATION_METRICS_EXPORTER_ENABLED": "${ENABLE_METRICS_EXPORTER}",
+              "CACHE_METRICS_EXPORTER_ENABLED": "${ENABLE_METRICS_EXPORTER}"
+            },
+            "exposedPorts": {
+              "8088": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": "auto",
+                "vhost": "{ vhost('${@name}.${@tenant}', 'public') }"
+              }
+            },
+            "image": "${@appstore}/release/kpn/keyring-service:0.6.3",
+            "imageConsole": "registry.cp.kpn-dsh.com/greenbox/keyring-service:0.6.3",
+            "instances": 1,
+            "mem": 3000,
+            "metrics": {
+              "path": "/",
+              "port": 9585
+            },
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": null,
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@public": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@public\""
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/metrics-proxy",
+    {
+      "draft": false,
+      "last_modified": "2024-02-15 15:24:56 UTC",
+      "id": "kpn/metrics-proxy",
+      "name": "Metrics-Proxy",
+      "version": {
+        "major": 0,
+        "minor": 1,
+        "patch": 2,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "DSH Metrics Proxy",
+      "moreInfo": "# metrics-proxy\nThe **metrics-proxy** can combine the metrics of multiple Prometheus exporters, possibly running in different services in your tenant, and expose the result via one single endpoint.\n* The combined metrics will be available for the DSH monitoring-as-a-service.\n* The **metrics-proxy** has the capability to add prefixes to the combined metric names.\n* The **metrics-proxy** will also expose the combined metrics via a vhost, making them available for scraping by your own Prometheus instance, or via your browser for testing purposes.\n* The **metrics-proxy** also adds metrics for the status of the configured exporters.\n\nSee the [project's git repo](https://git.kpn.org/projects/GB/repos/metrics-proxy/browse) for more information.\n",
+      "contact": "wilbert.schelvis@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "METRICS_PREFIX": {
+            "description": "Global metrics prefix",
+            "type": "string",
+            "enum": null,
+            "default": "proxy"
+          },
+          "METRICS_SCRAPER_6": {
+            "description": "Configuration pattern for scraper 6 ([prefix:]service-name:port[/path])",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "METRICS_SCRAPER_3": {
+            "description": "Configuration pattern for scraper 3 ([prefix:]service-name:port[/path])",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "METRICS_SCRAPER_4": {
+            "description": "Configuration pattern for scraper 4 ([prefix:]service-name:port[/path])",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "METRICS_SCRAPER_2": {
+            "description": "Configuration pattern for scraper 2 ([prefix:]service-name:port[/path])",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "METRICS_SCRAPER_1": {
+            "description": "Configuration pattern for scraper 1 ([prefix:]service-name:port[/path])",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "METRICS_SCRAPER_5": {
+            "description": "Configuration pattern for scraper 5 ([prefix:]service-name:port[/path])",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@public": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@public\""
+          }
+        },
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": 0.1,
+            "env": {
+              "METRICS_PREFIX": "${METRICS_PREFIX}",
+              "METRICS_SCRAPER_3": "${METRICS_SCRAPER_3}",
+              "METRICS_SCRAPER_4": "${METRICS_SCRAPER_4}",
+              "METRICS_SCRAPER_5": "${METRICS_SCRAPER_5}",
+              "METRICS_SCRAPER_1": "${METRICS_SCRAPER_1}",
+              "METRICS_SCRAPER_2": "${METRICS_SCRAPER_2}",
+              "METRICS_SCRAPER_6": "${METRICS_SCRAPER_6}"
+            },
+            "exposedPorts": {
+              "9292": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": "auto",
+                "vhost": "{ vhost('${@name}.${@tenant}', 'public') }"
+              }
+            },
+            "image": "${@appstore}/release/kpn/metrics-proxy:0.1.1",
+            "imageConsole": null,
+            "instances": 1,
+            "mem": 32,
+            "metrics": {
+              "path": "/metrics",
+              "port": 9292
+            },
+            "name": "${@name}",
+            "needsToken": false,
+            "secrets": null,
+            "singleInstance": true,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/oidc-fwd-auth",
+    {
+      "draft": false,
+      "last_modified": "2025-05-28 14:49:51 UTC",
+      "id": "kpn/oidc-fwd-auth",
+      "name": "OIDC forward-auth",
+      "version": {
+        "major": 1,
+        "minor": 1,
+        "patch": 0,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Use custom OIDC forward auth for your services.",
+      "moreInfo": "# OIDC Forward-Auth\n\nUse OIDC forward authentication for your custom services on the DSH.\n\n## Description\n\nThis app is a custom deployment of [thomseddon/traefik-forward-auth](https://github.com/thomseddon/traefik-forward-auth).\n\nThe OIDC Forward-Auth app functions as authentication middleware between your custom service on the DSH, and your OpenID Connect (OIDC) provider:\n\n- An external client sends a request to your custom service.\n- The custom service forwards the request to the OIDC Forward-Auth app, using the latter's endpoint in the service definition.\n- The OIDC Forward-Auth app checks the request with the OIDC provider.\n- The OIDC Forward-Auth app forwards the response from the OIDC provider to your custom service.\n\nSee [Vhost authentication](https://docs.kpn-dsh.com/kpn-dsh-user-doc-console/custom-services-management/the-service-definition/#vhost-authentication) in the DSH's manual for more information.\n\nFollow the steps below to set up forward authentication with the OIDC Forward-Auth app.\n\n## Set up OIDC\n\nYou can choose from many OIDC providers: KPN's Grip, Microsoft, Google, Keycloak, etc. In order to deploy the OIDC Forward-Auth app, you need the following information from your OIDC provider:\n\n- The URL for your client at the OIDC provider\n- The client ID\n- The client secret\n\n## Configure the OIDC Forward-Auth app\n\nBefore deploying the OIDC Forward-Auth app, you need to create 2 secrets on the DSH:\n\n- A DSH secret with the client secret that you obtained from your OIDC provider\n- A DSH secret with a random key to encrypt the cookie with\n\nYou can then click \"Configure\" to set up the app. Fill out the fields below:\n\n- **App name**: Fill out a name for your app:\n  - Only use lowercase letters (a–z), numbers (0–9), or hyphens (`-`).\n  - The name can’t be longer than 45 characters.\n  - The name can’t end in a hyphen (`-`) and should start with a lowercase letter.\n- **Client ID**: The ID of the client at your OIDC provider\n- **Client secret**: The name of the DSH secret that contains the secret for the client at your OIDC provider\n- **Cookie secret**: The name of the DSH secret that contains the random key to encrypt the cookie with\n- **Log level**: Select \"Info\" for informational logging, or \"Debug\" for detailed logging for debugging purposes\n- **OIDC URL**: The URL for the client at your OIDC provider\n- **UMA authorization**: Whether you want to use User-Managed Access (UMA) authorization\n\nClick \"Deploy\" to deploy the app.\n\n## Configure your custom service\n\nOnce the OIDC Forward-Auth app is up and running, you can configure one or more of your custom services to actually use it. You can manage this in the service definition of you custom service, see [Vhost authentication](https://docs.kpn-dsh.com/kpn-dsh-user-doc-console/custom-services-management/the-service-definition/#vhost-authentication) in the DSH's manual for more information.\n\nIn the service definition, you need to enter the following key and value if you use the OIDC Forward-Auth app:\n\n```JSON\n\"auth\": \"fwd-auth@<app-name>@<headers>\"`\n```\n\n- `<app-name>`: Enter the name that you chose for the OIDC Forward-Auth app.\n- `<headers>`: A comma separated list of headers to forward to the custom service. The service can then use it to grant permissions based on the user's token.\n  - `X-Forwarded-Id-Token`: Forward the ID token\n  - `X-Forwarded-Access-Token`: Forward the access token",
+      "contact": "sre@kpn-dsh.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "CLIENT_ID": {
+            "description": "Enter the ID of the client at your OIDC provider.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "TOKEN_VALIDATOR_ENABLED": {
+            "description": "Add an extra validation step to call the token-introspection endpoint on every request. Default false.",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "CLIENT_SECRET": {
+            "description": "OIDC client secret (name of the DSH secret that contains the value). Enter the name of the DSH secret that contains the client secret at your OIDC provider.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "LOG_LEVEL": {
+            "description": "Choose between informational logging, or detailed logging for debugging purposes.",
+            "type": "string",
+            "enum": [
+              "debug",
+              "info"
+            ],
+            "default": "info"
+          },
+          "COOKIE_SECRET": {
+            "description": "Random key to encrypt cookie with (name of the DSH secret that contains the value). Enter the name of the DSH secret that contains the random key to encrypt the cookie with.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "OIDC_ISSUER": {
+            "description": "OIDC issuer url. Enter the the URL for the client at your OIDC provider.",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "UMA_AUTHORIZATION": {
+            "description": "Enable UMA authorization (fine grained authorization). Indicate whether you want to activate User-Managed Access (UMA) authorization.",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": 0.1,
+            "env": {
+              "COOKIE_NAME": "__Secure-${@tenant}_${@name}",
+              "CSRF_COOKIE_NAME": "__Secure-${@tenant}_${@name}_csrf",
+              "OIDC_ISSUER": "${OIDC_ISSUER}",
+              "INFO_COOKIE_NAME": "__Secure-${@tenant}_${@name}_info",
+              "TOKEN_VALIDATOR_ENABLED": "${TOKEN_VALIDATOR_ENABLED}",
+              "UMA_AUTHORIZATION": "${UMA_AUTHORIZATION}",
+              "CLIENT_ID": "${CLIENT_ID}",
+              "COOKIE_SECURE": "true",
+              "SECURE": "true",
+              "LOG_LEVEL": "${LOG_LEVEL}"
+            },
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/traefik-fwd-auth:3.1.0",
+            "imageConsole": null,
+            "instances": 1,
+            "mem": 64,
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": false,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "CLIENT_SECRET"
+                  }
+                ],
+                "name": "${CLIENT_SECRET}"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "SECRET"
+                  }
+                ],
+                "name": "${COOKIE_SECRET}"
+              }
+            ],
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/prometheus-scraper",
+    {
+      "draft": false,
+      "last_modified": "2025-06-23 16:13:04 UTC",
+      "id": "kpn/prometheus-scraper",
+      "name": "Prometheus Scraper",
+      "version": {
+        "major": 0,
+        "minor": 1,
+        "patch": 7,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Application to scrape Prometheus metrics to Kafka in DSH",
+      "moreInfo": "## Prometheus Scraper to Kafka \n\n  \n\n **1. Prometheus URL**: Prometheus endpoint to scrape metrics from. If you do not change the default value `tenant-prometheus-server`, it will be automatically assigned to your tenant's Prometheus server. \n\n **2. Kafka Topic**: Kafka topic name for producing metrics to. Can be configured using `KAFKA_TOPIC`. \n\n **3. Scraper Interval Seconds**: Interval in seconds at which metrics are scraped. The default interval is 15 secs. Too frequent intervals might cause issues on Prometheus server. So, less than 15 seconds is not allowed and will be reaasigned to 15 secs as minimal interval seconds. Set the interval using `SCRAPE_INTERVAL_SECS`. \n\n **4. Prometheus Queries**: Semicolon-separated metric names or Prometheus queries. Double quotes in the queries should be escaped with triple backslash. Default value: 'up;node_cpu_seconds_total'. Can be configured using `PROMETHEUS_QUERIES` variable. \n\n **5. Max Retries**: Maxiumum number of retries in the case of failure of scraping metrics. Set to 0 if you do not want to retry. \n\n **6. Scaling**: Use `CPU` & `MEMORY` values for vertical scaling. \n\n ## More Information \n The Unibox Team can be reached at unibox@kpn.com for more information.",
+      "contact": "unibox@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "CPU": {
+            "description": "Amount of CPU cores per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "0.1"
+          },
+          "MEMORY": {
+            "description": "Amount of memory per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "16"
+          },
+          "PROMETHEUS_QUERIES": {
+            "description": "Semicolon-separated Prometheus queries (or metric names). Double quotes in the queries should be escaped with triple backslash.",
+            "type": "string",
+            "enum": null,
+            "default": "up;node_cpu_seconds_total"
+          },
+          "KAFKA_TOPIC": {
+            "description": "Kafka Topic name for producing metrics to.",
+            "type": "string",
+            "enum": null,
+            "default": "scratch.scraper-metrics.connectors"
+          },
+          "MAX_RETRIES": {
+            "description": "Maximum number of retries in the case of failure of scraping metrics. Set to 0 if you do not want to retry.",
+            "type": "string",
+            "enum": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "default": "1"
+          },
+          "LOG_LEVEL": {
+            "description": "The log level for the application. The default is INFO.",
+            "type": "string",
+            "enum": [
+              "TRACE",
+              "DEBUG",
+              "INFO",
+              "WARN",
+              "ERROR"
+            ],
+            "default": "INFO"
+          },
+          "SCRAPE_INTERVAL_SECS": {
+            "description": "Interval in seconds at which metrics are scraped. The default interval is 15 secs. Too frequent intervals might cause issues on Prometheus server. So, less than 15 seconds is not allowed and will be reaasigned to 15 secs (min interval).",
+            "type": "string",
+            "enum": null,
+            "default": "15"
+          },
+          "PROMETHEUS_ENDPOINT": {
+            "description": "Prometheus endpoint URL. If you do not change the default value, it will be automatically assigned to your tenant Prometheus server.",
+            "type": "string",
+            "enum": null,
+            "default": "tenant-prometheus-server"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": "${CPU | number}",
+            "env": {
+              "PROMETHEUS_ENDPOINT": "${PROMETHEUS_ENDPOINT}",
+              "RUST_LOG": "${LOG_LEVEL}",
+              "PROMETHEUS_QUERIES": " ${PROMETHEUS_QUERIES}",
+              "SCRAPE_INTERVAL_SECS": "${SCRAPE_INTERVAL_SECS}",
+              "MAX_RETRIES": "${MAX_RETRIES}",
+              "KAFKA_TOPIC": "${KAFKA_TOPIC}"
+            },
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/prometheus-scraper:0.1.7",
+            "imageConsole": null,
+            "instances": 1,
+            "mem": "${MEMORY | number}",
+            "metrics": {
+              "path": "/metrics",
+              "port": 8080
+            },
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": null,
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/schema-store-ui",
+    {
+      "draft": false,
+      "last_modified": "2024-08-27 13:32:36 UTC",
+      "id": "kpn/schema-store-ui",
+      "name": "Schema Store UI (beta)",
+      "version": {
+        "major": 0,
+        "minor": 0,
+        "patch": 15,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Swagger UI documentation of the Schema Store API",
+      "moreInfo": "",
+      "contact": "dsh-appcatalog@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "DNS_ZONE": {
+            "description": "DNS zone for the vhost",
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "default": "public"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": 0.1,
+            "env": {
+              "SR_DOMAIN": "api.schema-store.dsh.marathon.mesos",
+              "SR_PATH": "/",
+              "SR_PORT": "8443"
+            },
+            "exposedPorts": {
+              "8080": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": null,
+                "vhost": "{ vhost('${@name}.${@tenant}','${DNS_ZONE}') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/schema-store-ui:0.0.15-RC.pgr.20240819.1",
+            "imageConsole": null,
+            "instances": 1,
+            "mem": 256,
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": null,
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        },
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@public": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@${DNS_ZONE}\""
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/secor",
+    {
+      "draft": false,
+      "last_modified": "2023-11-29 15:13:49 UTC",
+      "id": "kpn/secor",
+      "name": "Secor",
+      "version": {
+        "major": 0,
+        "minor": 30,
+        "patch": 3,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Secor is a service persisting Kafka logs to Amazon S3, Google Cloud Storage, Microsoft Azure Blob Storage and Openstack Swift.",
+      "moreInfo": "## Key features ##\n  - **Strong consistency**: as long as [Kafka] is not dropping messages (e.g., due to aggressive cleanup policy) before Secor is able to read them, it is guaranteed that each message will be saved in exactly one [S3] file. This property is not compromised by the notorious temporal inconsistency of [S3] caused by the [eventual consistency] model.\n  - **Fault tolerance**: any component of Secor is allowed to crash at any given point without compromising data integrity.\n  - **Load distribution**: Secor may be distributed across multiple machines.\n  - **Horizontal scalability**: scaling the system out to handle more load is as easy as starting extra Secor processes. Reducing the resource footprint can be achieved by killing any of the running Secor processes. Neither ramping up nor down has any impact on data consistency.\n  - **Output partitioning**: Secor parses incoming messages and puts them under partitioned s3 paths to enable direct import into systems like [Hive]. day,hour,minute level partitions are supported by secor.\n  - **Configurable upload policies**: commit points controlling when data is persisted in S3 are configured through size-based and time-based policies (e.g., upload data when local buffer reaches size of 100MB and at least once per hour).\n  - **Monitoring**: metrics tracking various performance properties are exposed through [Ostrich], [Micrometer] and optionally exported to [OpenTSDB] / [statsD].\n  - **Customizability**: external log message parser may be loaded by updating the configuration.\n  - **Event transformation**: external message level transformation can be done by using customized class.\n  - **Qubole interface**: Secor connects to [Qubole] to add finalized output partitions to Hive tables.\n## Github \n https://github.com/pinterest/secor \n\n## Release Notes:  \n* First release",
+      "contact": "dsh-appcatalog@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "SECOR_UPLOAD_MANAGER_CLASS": {
+            "description": "secor.upload.manager.class",
+            "type": "string",
+            "enum": [
+              "com.pinterest.secor.uploader.S3UploadManager",
+              "com.pinterest.secor.uploader.AzureUploadManager"
+            ],
+            "default": "com.pinterest.secor.uploader.S3UploadManager"
+          },
+          "SECOR_AZURE_PATH": {
+            "description": "secor.azure.path",
+            "type": "string",
+            "enum": null,
+            "default": "data"
+          },
+          "AWS_REGION": {
+            "description": "aws.region",
+            "type": "string",
+            "enum": null,
+            "default": "eu-central-1"
+          },
+          "SECOR_MESSAGE_PARSER_CLASS": {
+            "description": "secor.message.parser.class",
+            "type": "string",
+            "enum": [
+              "com.pinterest.secor.parser.JsonMessageParser",
+              "com.pinterest.secor.parser.AvroMessageParser",
+              "com.pinterest.secor.parser.Iso8601MessageParser",
+              "com.pinterest.secor.parser.MessagePackParser",
+              "com.pinterest.secor.parser.ProtobufMessageParser"
+            ],
+            "default": "com.pinterest.secor.parser.JsonMessageParser"
+          },
+          "CLOUD_SERVICE": {
+            "description": "cloud.service",
+            "type": "string",
+            "enum": [
+              "S3",
+              "Azure"
+            ],
+            "default": "S3"
+          },
+          "AWS_ACCESS_KEY": {
+            "description": "aws.access.key",
+            "type": "string",
+            "enum": null,
+            "default": "system/objectstore/access_key_id"
+          },
+          "ZOOKEEPER_QUORUM_REQUIRED": {
+            "description": "zookeeper name",
+            "type": "string",
+            "enum": null,
+            "default": "zk-{zookeeper-name}.{tenant}.marathon.mesos:2181"
+          },
+          "SECOR_FILE_READER_WRITER_FACTORY": {
+            "description": "secor.file.reader.writer.factory",
+            "type": "string",
+            "enum": [
+              "com.pinterest.secor.io.impl.AvroFileReaderWriterFactory",
+              "com.pinterest.secor.io.impl.DelimitedTextFileReaderWriterFactory",
+              "com.pinterest.secor.io.impl.SequenceFileReaderWriterFactory",
+              "com.pinterest.secor.io.impl.JsonORCFileReaderWriterFactory",
+              "com.pinterest.secor.io.impl.ProtobufParquetFileReaderWriterFactory",
+              "com.pinterest.secor.io.impl.ThriftParquetFileReaderWriterFactory",
+              "com.pinterest.secor.io.impl.AvroParquetFileReaderWriterFactory"
+            ],
+            "default": "com.pinterest.secor.io.impl.DelimitedTextFileReaderWriterFactory"
+          },
+          "SECOR_MAX_FILE_SIZE_BYTES": {
+            "description": "secor.max.file.size.bytes",
+            "type": "string",
+            "enum": null,
+            "default": "200000000"
+          },
+          "SECOR_AZURE_ENDPOINTS_PROTOCOL": {
+            "description": "secor.azure.endpoints.protocol",
+            "type": "string",
+            "enum": null,
+            "default": "https"
+          },
+          "AWS_SECRET_KEY": {
+            "description": "aws.secret.key",
+            "type": "string",
+            "enum": null,
+            "default": "system/objectstore/secret_access_key"
+          },
+          "SECOR_AZURE_ACCOUNT_KEY": {
+            "description": "secor.azure.account.key",
+            "type": "string",
+            "enum": null,
+            "default": "system/objectstore/secret_access_key"
+          },
+          "SECOR_MAX_FILE_AGE_SECONDS": {
+            "description": "secor.max.file.age.seconds",
+            "type": "string",
+            "enum": null,
+            "default": "3600"
+          },
+          "SECOR_KAFKA_TOPIC_FILTER": {
+            "description": "secor.kafka.topic_filter scratch.secor-demo.dshtest",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "AWS_SECOR_S3_BUCKET_REQUIRED": {
+            "description": "secor.s3.bucket dev-dsh-dshtest-secor-demo",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "SECOR_AZURE_CONTAINER_NAME": {
+            "description": "secor.azure.container.name",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "SECOR_AZURE_ACCOUNT_NAME": {
+            "description": "secor.azure.account.name",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": 0.5,
+            "env": {
+              "secor.azure.account.name": "${SECOR_AZURE_ACCOUNT_NAME}",
+              "secor.s3.bucket": "${AWS_SECOR_S3_BUCKET_REQUIRED}",
+              "aws.region": "${AWS_REGION}",
+              "secor.azure.container.name": "${SECOR_AZURE_CONTAINER_NAME}",
+              "secor.azure.endpoints.protocol": "${SECOR_AZURE_ENDPOINTS_PROTOCOL}",
+              "secor.local.path": "/tmp/secor_prod/message_logs/partition",
+              "secor.max.file.size.bytes": "${SECOR_MAX_FILE_SIZE_BYTES}",
+              "PKI_CONFIG_DIR": "/tmp",
+              "cloud.service": "${CLOUD_SERVICE}",
+              "kafka.dual.commit.enabled": "false",
+              "kafka.offsets.storage": "kafka",
+              "secor.message.parser.class": "${SECOR_MESSAGE_PARSER_CLASS}",
+              "secor.kafka.topic_filter": "${SECOR_KAFKA_TOPIC_FILTER}",
+              "secor.max.file.age.seconds": "${SECOR_MAX_FILE_AGE_SECONDS}",
+              "secor.azure.path": "${SECOR_AZURE_PATH}",
+              "secor.file.reader.writer.factory": "${SECOR_FILE_READER_WRITER_FACTORY}",
+              "secor.upload.manager.class": "${SECOR_UPLOAD_MANAGER_CLASS}",
+              "zookeeper.quorum": "${ZOOKEEPER_QUORUM_REQUIRED}"
+            },
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/secor:0.30.2",
+            "imageConsole": null,
+            "instances": 1,
+            "mem": 2300,
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "aws.access.key"
+                  }
+                ],
+                "name": "${AWS_ACCESS_KEY}"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "aws.secret.key"
+                  }
+                ],
+                "name": "${AWS_SECRET_KEY}"
+              },
+              {
+                "injections": [
+                  {
+                    "env": "secor.azure.account.key"
+                  }
+                ],
+                "name": "${SECOR_AZURE_ACCOUNT_KEY}"
+              }
+            ],
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/sql-database",
+    {
+      "draft": false,
+      "last_modified": "2023-11-29 15:17:58 UTC",
+      "id": "kpn/sql-database",
+      "name": "SQL Database",
+      "version": {
+        "major": 1,
+        "minor": 1,
+        "patch": 3,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Managed YugabyteDB 2.11, a PostgreSQL compatible relational database",
+      "moreInfo": "## SQL Database as a Service (beta release)\n### Introduction\nFor some use cases, a relational database is indispensable. With SQL Database as a Service, DSH offers a scalable, secure, managed, relational database.\n\nIt's a managed YugabyteDB that provides the following features:\n*   YugabyteDB version `2.11`\n*   PostgreSQL compatibility\n    \n*   Optional extensions: PostGIS, Foreign Data Wrapper\n    \n*   Automated backups\n    \n*   Secure data (TLS connections, volume encryption)\n### Configuration\nWhen you configure a new managed database, there are some settings you must configure.\n**WARNING:** You can't change these options after the initial deployment of the database. Consider your choices carefully.\n#### `INSTANCES`\nThe number of YugabyteDB tablet servers. Each table is split into multiple tablets and replicated 3 times. These tablets are spread out over all tablet servers.\n\n_Due to the replication factor of 3, the database requires at least 3 instances_.\n#### `CPU`\nThe number of CPUs per YugabyteDB tablet server. Behaves the same as the CPU value for other services. Keep in mind that this setting is per instance, for example, 3 instances x 2 CPU = 6 CPU in total.\n\n_The minimum is 0.3 CPU for a lightly used database. For optimal performance, between 1.0 - 6.0 CPUs per instance are recommended._\n#### `MEMORY`\nThe amount of memory in MB per YugabyteDB tablet server. Behaves the same as the memory value for other services. Keep in mind that this setting is per instance, for example, 3 instances x 4096 MB = 12 GB in total. Don’t set this too low if you want good performance.\n\n_We recommend 3072 MB (3 GB) or more. The minimum is 2048 MB._\n#### `VOLUME_SIZE`\nThe amount of disk space in GB per YugabyteDB tablet server. This setting is per instance, but keep in mind all data is replicated 3 times. For example, if you want a database that can grow to 20 GB, and you have chosen 4 instances, then you need to set the volume size to 20 GB x 3 replicas / 4 instances = 15 GB.\n\n_We recommend you start with big enough volumes since you can’t resize your database (the minimum is 5 GB)._\n#### `EXTENSIONS`\nYugabyteDB allows the addition of PostgreSQL extensions. Currently, three extensions are part of the DSH DBaaS offering. PostgreSQL extensions must be enabled when the database is deployed.\n\n- `postgis` PostGIS is a spatial database extension for PostgreSQL databases. It adds SQL support for geographic objects and location queries. This extension requires at least 2048 MB of memory per tablet server. _The minimum memory requirement with this extension enabled is 3072 MB._\n\n- `postgres_fdw` A foreign data wrapper (FDW) is a library that can communicate with an external data source, hiding the details of connecting to the data source and obtaining data from it. Multiple tenants can configure this to read tables from each others databases.\n\n- `uuid-ossp` The uuid-ossp module provides functions to generate universally unique identifiers (UUIDs) using one of several standard algorithms.\n#### `SNAPSHOT_INTERVAL`\nThe interval in seconds with which full snapshots of the database are taken.\n\n_Typical intervals are 1 hour (3600, the shortest allowed interval) or 1 day (86400). Set the interval to 0 to turn this feature off._\n\n### SQL connection in app definitions\nUse a PostgreSQL compatible driver in your service code, for example, `JDBC`, `Npgsql`, `psycopg2`, ...\n\nThe name you give to a new DBaaS allocation is not the same as the PostgreSQL role, database or tablespace that gets created in the process. These get a unique generated name. There’s a set of app definition macros to get those identifiers.\n\nIn the service definition of your application, the _hostname_, _username_, and _database_ name can be injected with the following macros: \n\n```json\n\"env\": {\n  \"HOSTNAME\": \"{ database_host('example1') }\",\n  \"USERNAME\": \"{ database_user('example1') }\",\n  \"DATABASE\": \"{ database_id('example1') }\"\n}\n```\nThe `DATABASE` and `USERNAME` variables are generated. They are not equal to the name of the DBaaS allocation you chose at deployment. The password can be injected with this secret:  \n\n```json\n\"secrets\": [{\n  \"name\": \"system/dbaas/example1_password\",\n  \"injections\": [{\n    \"env\": \"PASSWORD\"\n  }]\n}]\n```\nFor convenience there is a *databases* dropdown in the _INSERT_ toolbar of the service definition editor.\n\nAll four variables are needed to set up a connection with YugabyteDB. For example, when using a JDBC driver, construct the connection string: `postgresql://$USERNAME:$PASSWORD@$HOSTNAME:5432/$DATABASE`\n\nThe standard PostgreSQL port `5432` is used.\n### More information\nConsult the _DSH User Documentation_ by clicking the _docs_ button in the top left corner and searching for the term _database_.\n",
+      "contact": "dsh-appcatalog@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "CPU": {
+            "description": "The number of CPU cores per YugabyteDB tablet server (minimum 0.3, we recommend 1.0 or more)",
+            "type": "number",
+            "enum": null,
+            "default": "0.3"
+          },
+          "EXTENSIONS": {
+            "description": "Comma separated list of extensions (postgis, postgres_fdw, uuid-ossp)",
+            "type": "string",
+            "enum": null,
+            "default": ""
+          },
+          "INSTANCES": {
+            "description": "The number of YugabyteDB tablet servers (minimum 3)",
+            "type": "number",
+            "enum": null,
+            "default": "3"
+          },
+          "MEMORY": {
+            "description": "The amount of memory in MB per YugabyteDB tablet server (minimum 2048, we recommend 3072 or more)",
+            "type": "number",
+            "enum": null,
+            "default": "2048"
+          },
+          "SNAPSHOT_INTERVAL": {
+            "description": "The interval in seconds with which full snapshots of the database are taken (minimum 3600, set to 0 to turn off)",
+            "type": "number",
+            "enum": null,
+            "default": "0"
+          },
+          "VOLUME_SIZE": {
+            "description": "The amount of disk space in GB per YugabyteDB tablet server (minimum 5 GB)",
+            "type": "number",
+            "enum": null,
+            "default": "5"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/database/${@name}": {
+          "Database": {
+            "cpus": "${CPU | number}",
+            "extensions": [
+              "${EXTENSIONS}"
+            ],
+            "instances": "${INSTANCES | number}",
+            "mem": "${MEMORY | number}",
+            "name": "${@name}",
+            "snapshotInterval": "${SNAPSHOT_INTERVAL | number}",
+            "version": "2.11.2.0-1",
+            "volumeSize": "${VOLUME_SIZE | number}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/sql-database-viewer",
+    {
+      "draft": false,
+      "last_modified": "2023-10-13 09:20:34 UTC",
+      "id": "kpn/sql-database-viewer",
+      "name": "SQL Database Viewer",
+      "version": {
+        "major": 1,
+        "minor": 1,
+        "patch": 2,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Managed Pgweb 0.13.1, a web-based database browser for PostgreSQL, written in Go.",
+      "moreInfo": "https://github.com/sosedoff/pgweb",
+      "contact": "dsh-appcatalog@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "DATABASE_NAME": {
+            "description": "database name",
+            "type": "string",
+            "enum": null,
+            "default": null
+          },
+          "DNS_ZONE": {
+            "description": "DNS zone name for the vhost",
+            "type": "dns-zone",
+            "enum": null,
+            "default": null
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@${DNS_ZONE}": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@${DNS_ZONE}\""
+          }
+        },
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": 0.1,
+            "env": {
+              "DB_USER": "{ database_user('${DATABASE_NAME}') }",
+              "DB_ID": "{ database_id('${DATABASE_NAME}') }",
+              "DB_HOST": "{ database_host('${DATABASE_NAME}') }"
+            },
+            "exposedPorts": {
+              "8081": {
+                "auth": "system-fwd-auth@view,manage",
+                "tls": "auto",
+                "vhost": "{ vhost('${@name}.${@tenant}', '${DNS_ZONE}') }"
+              }
+            },
+            "image": "${@appcatalog}/release/kpn/pgweb:0.13.1-6",
+            "imageConsole": null,
+            "instances": 1,
+            "mem": 256,
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": false,
+            "secrets": [
+              {
+                "injections": [
+                  {
+                    "env": "DB_PASSWORD"
+                  }
+                ],
+                "name": "system/dbaas/${DATABASE_NAME}_password"
+              }
+            ],
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/topic-metrics-exporter",
+    {
+      "draft": false,
+      "last_modified": "2025-05-27 14:13:41 UTC",
+      "id": "kpn/topic-metrics-exporter",
+      "name": "Topic Metrics Exporter",
+      "version": {
+        "major": 0,
+        "minor": 1,
+        "patch": 5,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Application to export Kafka Topic metrics like earliest_offset, latest_offset, size (delta) and consumer lag per topic/partition per partitition to Prometheus. Metric names are as following: `kafka_topic_earliest_offset`, `kafka_topic_latest_offset`, `kafka_topic_offset_delta`, `kafka_consumer_group_lag`. ",
+      "moreInfo": "## Topic Metrics Exporter \n\n  \n\n **1. Export Interval Seconds**: Interval in seconds at which metrics are exported. The default interval and min value for the interval is 60 secs. Set the interval using `EXPORT_INTERVAL_SECS`. \n\n **2. Scaling**: Use `CPU` & `MEMORY` values for vertical scaling. \n\n ## More Information \n The Unibox Team can be reached at unibox@kpn.com for more information.",
+      "contact": "unibox@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "CPU": {
+            "description": "Amount of CPU cores per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "0.1"
+          },
+          "LOG_LEVEL": {
+            "description": "The log level for the application. The default is INFO.",
+            "type": "string",
+            "enum": [
+              "TRACE",
+              "DEBUG",
+              "INFO",
+              "WARN",
+              "ERROR"
+            ],
+            "default": "INFO"
+          },
+          "EXPORT_INTERVAL_SECS": {
+            "description": "Interval in seconds at which metrics are exported. The default interval and min value for the interval is 60 secs.",
+            "type": "string",
+            "enum": null,
+            "default": "60"
+          },
+          "MEMORY": {
+            "description": "Amount of memory per instance.",
+            "type": "string",
+            "enum": null,
+            "default": "12"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": "${CPU | number}",
+            "env": {
+              "EXPORT_INTERVAL_SECS": "${EXPORT_INTERVAL_SECS}",
+              "RUST_LOG": "${LOG_LEVEL}"
+            },
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/topic-metrics-exporter:0.1.5",
+            "imageConsole": "registry.cp.kpn-dsh.com/connectors/topic-metrics-exporter:0.1.5",
+            "instances": 1,
+            "mem": "${MEMORY | number}",
+            "metrics": {
+              "path": "/metrics",
+              "port": 8080
+            },
+            "name": "${@name}",
+            "needsToken": true,
+            "secrets": null,
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/whoami",
+    {
+      "draft": false,
+      "last_modified": "2025-07-03 14:09:57 UTC",
+      "id": "kpn/whoami",
+      "name": "Who Am I",
+      "version": {
+        "major": 0,
+        "minor": 0,
+        "patch": 7,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Webserver that prints OS information and HTTP request to output",
+      "moreInfo": "https://klarrio.com",
+      "contact": "dsh-appcatalog@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "LOG_LEVEL": {
+            "description": "Log level",
+            "type": "string",
+            "enum": [
+              "error",
+              "warn",
+              "info"
+            ],
+            "default": "info"
+          },
+          "DNS_ZONE": {
+            "description": "DNS zone name for the vhost",
+            "type": "dns-zone",
+            "enum": null,
+            "default": null
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/vhost/${@name}.${@tenant}@${DNS_ZONE}": {
+          "Vhost": {
+            "unformatted_representation": "\"${@name}.${@tenant}@${DNS_ZONE}\""
+          }
+        },
+        "allocation/${@tenant}/application/${@name}": {
+          "Application": {
+            "cpus": 0.1,
+            "env": {
+              "LOG_LEVEL": "${LOG_LEVEL}"
+            },
+            "exposedPorts": {
+              "8080": {
+                "auth": null,
+                "tls": null,
+                "vhost": "{ vhost('${@name}.${@tenant}', '${DNS_ZONE}') }"
+              }
+            },
+            "image": "${@appcatalog}/release/klarrio/whoami:v1.11.0-KLARRIO-1",
+            "imageConsole": null,
+            "instances": 1,
+            "mem": 128,
+            "metrics": null,
+            "name": "${@name}",
+            "needsToken": false,
+            "secrets": null,
+            "singleInstance": false,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ],
+  [
+    "kpn/zookeeper-proxy",
+    {
+      "draft": false,
+      "last_modified": "2024-01-26 12:52:25 UTC",
+      "id": "kpn/zookeeper-proxy",
+      "name": "Zookeeper Proxy",
+      "version": {
+        "major": 1,
+        "minor": 2,
+        "patch": 2,
+        "postfix": null
+      },
+      "vendor": "KPN",
+      "kind": "manifest",
+      "apiVersion": "v0-alpha",
+      "description": "Tenant proxy to Zookeeper",
+      "moreInfo": "## Features  \n- Transparent proxy to the platform-provided Zookeeper. \n- Data you store via this proxy in Zookeeper is fully isolated to your tenant.\n## How to connect\nWhen you need a Zookeeper in your setup, you can directly connect to this proxy as you would to any regular Zookeeper deployment, using the Zookeeper client of your preference. \nTo connect to this proxy, simply configure your client with the following connection endpoint: `zk-<zookeeper-proxy-name>.<tenant>.marathon.mesos:2181`\n## Release Notes  \n- Support added for checkWatches (opcode 17) and removeWatches (opcode 18) Zookeeper operations",
+      "contact": "dsh-appcatalog@kpn.com",
+      "configuration": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "properties": {
+          "TRACE_LOGGING": {
+            "description": "Enable or disable trace logging",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          }
+        }
+      },
+      "resources": {
+        "allocation/${@tenant}/application/zk-${@name}": {
+          "Application": {
+            "cpus": 0.1,
+            "env": {
+              "PREFIX": "__tenant_${@tenant}",
+              "TRACE": "${TRACE_LOGGING}",
+              "PORT": "2181",
+              "SERVERS": "tenant-zookeeper-1.dsh.marathon.mesos:2181,tenant-zookeeper-2.dsh.marathon.mesos:2181,tenant-zookeeper-3.dsh.marathon.mesos:2181"
+            },
+            "exposedPorts": null,
+            "image": "${@appcatalog}/release/kpn/zookeeper-proxy:0.3.1",
+            "imageConsole": null,
+            "instances": 1,
+            "mem": 256,
+            "metrics": null,
+            "name": "zk-${@name}",
+            "needsToken": false,
+            "secrets": null,
+            "singleInstance": true,
+            "user": "${@uid}:${@gid}"
+          }
+        }
+      }
+    }
+  ]
+]

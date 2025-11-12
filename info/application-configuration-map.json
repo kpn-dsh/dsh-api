@@ -1,0 +1,1253 @@
+{
+  "ri-protobuf-producer": {
+    "cpus": 0.1,
+    "env": {
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE": "false",
+      "GREENBOX_RI_PRODUCER_RATE": "1.0",
+      "GREENBOX_RI_PRODUCER_TOPIC": "scratch.reference-implementation-protobuf.greenbox-dev",
+      "GREENBOX_RI_PRODUCER_LOG_LEVEL_GREENBOX": "error",
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE_TENANT": "greenbox-dev",
+      "GREENBOX_RI_PRODUCER_LOG_LEVEL": "info",
+      "GREENBOX_RI_PRODUCER_ARTIFACT": "ri:protobuf",
+      "GREENBOX_RI_PRODUCER_LOG_LEVEL_KAFKA": "info",
+      "GREENBOX_RI_PRODUCER_VERBOSE": "true"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/greenbox-ri-producer:0.2.0-SNAPSHOT",
+    "instances": 1,
+    "mem": 128,
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "GREENBOX_RI_PRODUCER_IDENTIFIERS"
+          }
+        ],
+        "name": "boss-account-ids"
+      }
+    ],
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "keyring-063": {
+    "cpus": 0.5,
+    "env": {
+      "SERVICE_SWAGGER_UI_DOCUMENTATION_URL": "https://keyring.dsh-dev.dsh.np.aws.kpn.org",
+      "CODOMAINS": "BOSS,KRN,SBCM",
+      "SERVICE_SWAGGER_UI_ENABLED": "true",
+      "SERVICE_SWAGGER_UI_CONTACT_URL": "https://confluence.kpn.org/display/GBDocs/Greenbox",
+      "RELATIONS_ENGINE_METRICS_EXPORTER_ENABLED": "true",
+      "KEYRING_CONFIGURATION_RESOURCE": "application.conf",
+      "KAFKA_GROUP_ID_PREFIX": "greenbox-dev_",
+      "RELATIONS_ENGINE_FORBIDDEN_DOMAINS": "",
+      "SERVICE_SWAGGER_UI_CONTACT_NAME": "Unibox Team",
+      "SERVICE_OPEN_API_SPECIFICATION_ENABLED": "true",
+      "DOMAINS": "KIDH",
+      "SERVICE_METRICS_EXPORTER_ENABLED": "true",
+      "HEAP_MEMORY": "768",
+      "KEYRING_INSTALLED_BASE_RESOURCE": "installed-base-20250319.conf",
+      "SERVICE_JVM_METRICS_EXPORTER_ENABLED": "true",
+      "RELATIONS_ENGINE_FORBIDDEN_CODOMAINS": "",
+      "RELATIONS_ENGINE_FORBIDDEN_MASTER_RELATIONS": "ke,kiet",
+      "MASTER_RELATION_METRICS_EXPORTER_ENABLED": "true",
+      "CACHE_METRICS_EXPORTER_ENABLED": "true"
+    },
+    "exposedPorts": {
+      "8088": {
+        "auth": "system-fwd-auth@view,manage",
+        "tls": "auto",
+        "vhost": "{ vhost('keyring-063.greenbox-dev', 'public') }"
+      }
+    },
+    "image": "APPCATALOG_REGISTRY/dsh-appcatalog/tenant/greenbox-dev/1903/1903/release/kpn/keyring-service:0.6.3",
+    "instances": 1,
+    "mem": 3000,
+    "metrics": {
+      "path": "/",
+      "port": 9585
+    },
+    "needsToken": true,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "installed-base-2": {
+    "cpus": 0.1,
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/keyring-installed-base:0.0.4-SNAPSHOT",
+    "instances": 1,
+    "mem": 16,
+    "needsToken": false,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "HTPASSWD_NP_LZ"
+          }
+        ],
+        "name": "installed-base-accounts-np-lz"
+      },
+      {
+        "injections": [
+          {
+            "env": "HTPASSWD_PROD_LZ"
+          }
+        ],
+        "name": "installed-base-accounts-prod-lz"
+      }
+    ],
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "ri-avro-producer": {
+    "cpus": 0.1,
+    "env": {
+      "GREENBOX_RI_PRODUCER_LOG_LEVEL_GREENBOX": "error",
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE_QOS": "Reliable",
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE_TENANT": "greenbox-dev",
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE_PUBLISHER": "UITGEVER",
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE_RETAINED": "false",
+      "GREENBOX_RI_PRODUCER_ARTIFACT_TYPE": "ri:avro",
+      "GREENBOX_RI_PRODUCER_VERBOSE": "true",
+      "GREENBOX_RI_PRODUCER_RATE": "1.0",
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE": "false",
+      "GREENBOX_RI_PRODUCER_LOG_LEVEL_KAFKA": "info",
+      "GREENBOX_RI_PRODUCER_TOPIC": "scratch.reference-implementation-avro.greenbox-dev",
+      "GREENBOX_RI_PRODUCER_LOG_LEVEL": "info"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/greenbox-ri-producer:0.2.0-SNAPSHOT",
+    "instances": 1,
+    "mem": 128,
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "GREENBOX_RI_PRODUCER_IDENTIFIERS"
+          }
+        ],
+        "name": "boss-account-ids"
+      }
+    ],
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "starrocks-iceberg-catalog": {
+    "cpus": 0.5,
+    "env": {
+      "CATALOG_IO__IMPL": "org.apache.iceberg.aws.s3.S3FileIO",
+      "AWS_REGION": "eu-west-1",
+      "CATALOG_WAREHOUSE": "s3://dev-lz-dsh-greenbox-dev-iceberg-test/"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/iceberg-rest-fixture:1.9.1",
+    "instances": 1,
+    "mem": 2048,
+    "needsToken": false,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "AWS_ACCESS_KEY_ID"
+          }
+        ],
+        "name": "system/objectstore/access_key_id"
+      },
+      {
+        "injections": [
+          {
+            "env": "AWS_SECRET_ACCESS_KEY"
+          }
+        ],
+        "name": "system/objectstore/secret_access_key"
+      }
+    ],
+    "singleInstance": true,
+    "user": "1903:1903"
+  },
+  "starrocks-fe": {
+    "cpus": 0.5,
+    "env": {
+      "AWS_S3_REGION": "eu-west-1",
+      "AWS_S3_BUCKET": "dev-lz-dsh-greenbox-dev-iceberg-test"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/starrocks-fe:3.3.5",
+    "instances": 1,
+    "mem": 4096,
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "AWS_S3_ACCESS_KEY"
+          }
+        ],
+        "name": "system/objectstore/access_key_id"
+      },
+      {
+        "injections": [
+          {
+            "env": "AWS_S3_SECRET_KEY"
+          }
+        ],
+        "name": "system/objectstore/secret_access_key"
+      },
+      {
+        "injections": [
+          {
+            "env": "AWS_ACCESS_KEY_ID"
+          }
+        ],
+        "name": "system/objectstore/access_key_id"
+      },
+      {
+        "injections": [
+          {
+            "env": "AWS_SECRET_ACCESS_KEY"
+          }
+        ],
+        "name": "system/objectstore/secret_access_key"
+      }
+    ],
+    "singleInstance": true,
+    "user": "1903:1903",
+    "volumes": {
+      "/demo": {
+        "name": "{ volume('starrocks-fe') }"
+      }
+    }
+  },
+  "python-artifact-generator": {
+    "cpus": 0.2,
+    "env": {
+      "LOG_LEVEL": "DEBUG"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/python-artifact-generator:0.0.8-SNAPSHOT",
+    "instances": 0,
+    "mem": 512,
+    "needsToken": false,
+    "singleInstance": true,
+    "user": "1903:1903"
+  },
+  "schema-registry-doc": {
+    "cpus": 0.1,
+    "env": {
+      "PAGE_TITLE": "Greenbox Schema Registry API Specification",
+      "LOGO_ALT_TEXT": "GREENBOX Logo",
+      "LOGO_URL": "http://schema-registry.greenbox-dev.marathon.mesos:8081/v0/greenbox-logo.png",
+      "OPEN_API_URL": "http://schema-registry.greenbox-dev.marathon.mesos:8081/v0/schema-registry-openapi.yaml",
+      "PORT": "5000"
+    },
+    "exposedPorts": {
+      "5000": {
+        "tls": "auto",
+        "vhost": "{ vhost('schema-registry-doc-dev') }"
+      }
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/dsh-base-redoc:1.0.1",
+    "instances": 1,
+    "mem": 256,
+    "needsToken": true,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "cmd": {
+    "cpus": 0.25,
+    "exposedPorts": {
+      "8080": {
+        "auth": "system-fwd-auth@view,manage",
+        "tls": "auto",
+        "vhost": "{ vhost('cmd.greenbox-dev', 'private') }"
+      }
+    },
+    "image": "APPCATALOG_REGISTRY/dsh-appcatalog/tenant/greenbox-dev/1903/1903/release/kpn/cmdline:1.1.4",
+    "instances": 1,
+    "mem": 256,
+    "needsToken": true,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "greenbox-proxy": {
+    "cpus": 0.5,
+    "env": {
+      "TENANT": "greenbox-dev"
+    },
+    "exposedPorts": {
+      "8080": {
+        "auth": "greenbox-dev:$1$2tWPcLyh$s1jSAiHOsOmEHTyppUq/J0",
+        "vhost": "{ vhost('greenbox-backend-dev') }"
+      }
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/greenbox-proxy:0.2.0",
+    "instances": 0,
+    "mem": 32,
+    "needsToken": false,
+    "singleInstance": true,
+    "user": "1903:1903"
+  },
+  "greenbox-website": {
+    "cpus": 0.1,
+    "exposedPorts": {
+      "8080": {
+        "auth": "system-fwd-auth@view,manage",
+        "vhost": "{ vhost('greenbox','public') }"
+      }
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/greenbox-website:0.3.3",
+    "instances": 0,
+    "mem": 32,
+    "needsToken": true,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "installed-base": {
+    "cpus": 0.1,
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/keyring-installed-base:0.0.4-SNAPSHOT",
+    "instances": 1,
+    "mem": 16,
+    "needsToken": false,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "HTPASSWD_NP_LZ"
+          }
+        ],
+        "name": "installed-base-accounts-np-lz"
+      },
+      {
+        "injections": [
+          {
+            "env": "HTPASSWD_PROD_LZ"
+          }
+        ],
+        "name": "installed-base-accounts-prod-lz"
+      }
+    ],
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "keyring-dev": {
+    "cpus": 0.5,
+    "env": {
+      "SERVICE_SWAGGER_UI_DOCUMENTATION_URL": "https://keyring-documentation.dsh-dev.dsh.np.aws.kpn.com",
+      "SERVICE_SWAGGER_UI_ENABLED": "true",
+      "LOG_LEVEL_CACHE": "info",
+      "KAFKA_GROUP_ID_PREFIX": "greenbox-dev_2_",
+      "RELATIONS_ENGINE_FORBIDDEN_MASTER_RELATIONS": "ke,kiet",
+      "DOMAINS": "KIDH",
+      "LOG_LEVEL_ENTRYPOINT": "info",
+      "SERVICE_SWAGGER_UI_CONTACT_NAME": "Greenbox Team",
+      "CACHE_METRICS_EXPORTER_ENABLED": "true",
+      "LOG_LEVEL_ENGINE": "info",
+      "RELATIONS_ENGINE_METRICS_EXPORTER_ENABLED": "true",
+      "SERVICE_METRICS_EXPORTER_ENABLED": "true",
+      "KEYRING_INSTALLED_BASE_SERVICE_USERNAME": "np",
+      "MASTER_RELATION_CODOMAIN_VALUE_KAFKA_THROTTLE": "1.0",
+      "LOG_LEVEL_CONFIG": "info",
+      "SERVICE_OPEN_API_SPECIFICATION_ENABLED": "true",
+      "HEAP_MEMORY": "1536",
+      "SERVICE_SWAGGER_UI_CONTACT_URL": "https://confluence.kpn.org/display/GBDocs/Greenbox",
+      "LOG_LEVEL_SERVICE": "info",
+      "MASTER_RELATION_METRICS_EXPORTER_ENABLED": "true",
+      "CODOMAINS": "BOSS,KRN,SBCM",
+      "SERVICE_JVM_METRICS_EXPORTER_ENABLED": "true",
+      "KEYRING_INSTALLED_BASE_SERVICE_PASSWORD": "*****",
+      "KEYRING_INSTALLED_BASE_SERVICE_URL": "https://keyring-installed-base.dsh-dev.dsh.np.aws.kpn.com/np-lz/installed-base-actual.conf",
+      "LOG_LEVEL_MASTER_RELATION": "info"
+    },
+    "exposedPorts": {
+      "8088": {
+        "auth": "system-fwd-auth@view,manage",
+        "tls": "auto",
+        "vhost": "{ vhost('keyring-dev','public') }"
+      }
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/keyring-service:0.6.3",
+    "instances": 1,
+    "mem": 3000,
+    "metrics": {
+      "path": "/metrics",
+      "port": 9585
+    },
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "HTPASSWD_NP_LZ"
+          }
+        ],
+        "name": "installed-base-accounts-np-lz"
+      }
+    ],
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "eavesdropper": {
+    "cpus": 0.1,
+    "env": {
+      "LOG_LEVEL_KAFKA_CONSUMER": "error",
+      "LOG_LEVEL_SERVICE": "info",
+      "ENVELOPE_DESERIALIZER_DSH_ENVELOPE": "enabled",
+      "LOG_LEVEL_SERVICE_UPSTREAM": "info",
+      "LOG_LEVEL_MONITOR_DOWNSTREAM_STATUS": "error",
+      "INSTANCE_IDENTIFIER": "greenbox-dev_eavesdropper",
+      "EXCLUDED_TOPICS_REGEX": "",
+      "LOG_LEVEL_MONITOR_KEEP_ALIVE": "off",
+      "CONSUMER_BUILDER": "dsh-datastreams-properties",
+      "INCLUDE___CONSUMER_OFFSETS_TOPIC": "false",
+      "LOG_LEVEL_SERVICE_DOWNSTREAM_RECORD": "info",
+      "REPRESENTATION_DESERIALIZER_SCHEMA_STORE": "enabled",
+      "LOG_LEVEL": "info",
+      "LOG_LEVEL_APPLICATION": "info",
+      "LOG_LEVEL_KAFKA_ADMIN_CLIENT": "off",
+      "LOG_LEVEL_DEVELOPMENT": "off",
+      "INCLUDED_TOPICS_REGEX": "",
+      "DEFAULT_GROUP_IDS": "*",
+      "LOG_LEVEL_SERVICE_KEEP_ALIVE": "off",
+      "LOG_LEVEL_SERVICE_DOWNSTREAM": "info",
+      "LOG_LEVEL_ENTRYPOINT": "info",
+      "LOG_LEVEL_KAFKA_CLIENT": "error",
+      "LOG_LEVEL_MONITOR_DOWNSTREAM": "error",
+      "ENVELOPE_DESERIALIZER_GZIP": "enabled",
+      "EXCLUDED_TOPICS": "",
+      "INCLUDED_TOPICS": "",
+      "ALLOW_CUSTOM_GROUP_ID": "true",
+      "LOG_LEVEL_DESERIALIZER": "info",
+      "LOG_LEVEL_MONITOR_UPSTREAM": "info",
+      "GROUP_ID_PREFIX": "greenbox-dev_",
+      "LOG_LEVEL_GREENBOX": "error",
+      "LOG_TIMESTAMPS": "disabled",
+      "LOG_LEVEL_RECDES": "info",
+      "TITLE": "eavesdropper/greenbox-dev",
+      "REPRESENTATION_DESERIALIZER_CODOMAIN_VALUES_RECORD": "enabled",
+      "LOG_LEVEL_MONITOR": "info"
+    },
+    "exposedPorts": {
+      "8081": {
+        "auth": "system-fwd-auth@view,manage",
+        "tls": "auto",
+        "vhost": "{ vhost('eavesdropper.greenbox-dev', 'private') }"
+      }
+    },
+    "image": "APPCATALOG_REGISTRY/dsh-appcatalog/tenant/greenbox-dev/1903/1903/draft/kpn/eavesdropper:0.10.0",
+    "instances": 1,
+    "mem": 384,
+    "needsToken": true,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "github-runner": {
+    "cpus": 0.2,
+    "env": {
+      "RUNNER_NAME": "Runner",
+      "RUNNER_WORKDIR": "/tmp/runner/work",
+      "REPO_URL": "https://github.com/kpn-dsh/trifonius-backend",
+      "RUNNER_SCOPE": "repo",
+      "CONFIGURED_ACTIONS_RUNNER_FILES_DIR": "/home/actions-runner-files",
+      "DISABLE_AUTOMATIC_DEREGISTRATION": "true",
+      "LABELS": "testrunner"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/github-runner:0.0.1-SNAPSHOT",
+    "instances": 0,
+    "mem": 4096,
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "RUNNER_TOKEN"
+          }
+        ],
+        "name": "github_runner_trifonius_backend_token"
+      }
+    ],
+    "singleInstance": true,
+    "user": "1903:1903",
+    "volumes": {
+      "/tmp": {
+        "name": "{ volume('github-action-runner-tmp') }"
+      },
+      "/home": {
+        "name": "{ volume('github-action-runner-home') }"
+      }
+    }
+  },
+  "broker-schema-store": {
+    "cpus": 0.1,
+    "env": {
+      "BOOTSTRAP_SERVER_MAPPING": "{ join(' ', concat('tt-1.tt-headless.kafka.svc.cluster.local:9091,', '0.0.0.0:30000,', vhost('broker-0.kafka.greenbox-dev', 'private'), ':9091'), concat('tt-2.tt-headless.kafka.svc.cluster.local:9091,', '0.0.0.0:30001,', vhost('broker-1.kafka.greenbox-dev', 'private'), ':9091'), concat('tt-3.tt-headless.kafka.svc.cluster.local:9091,', '0.0.0.0:30002,', vhost('broker-2.kafka.greenbox-dev', 'private'), ':9091')) }",
+      "KAFKA_CONFIG_HOST": "pikachu.dsh.marathon.mesos:4443",
+      "FORBIDDEN_API_KEYS": "20",
+      "SCHEMA_STORE_HOST": "broker-schema-store.kafka.greenbox-dev.dsh-dev.dsh.np.aws.kpn.org"
+    },
+    "exposedPorts": {
+      "9091": {
+        "mode": "tcp/kafka-proxy",
+        "vhost": "{ vhost('broker-schema-store.kafka.greenbox-dev', 'private') }"
+      }
+    },
+    "image": "APPCATALOG_REGISTRY/dsh-appcatalog/tenant/greenbox-dev/1903/1903/release/kpn/schema-store-proxy:0.2.3-0",
+    "instances": 1,
+    "mem": 256,
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "KAFKA_PROXY_CA_CHAIN"
+          }
+        ],
+        "name": "ca-greenbox-dev-nplz-pem-2024-12-12"
+      },
+      {
+        "injections": [
+          {
+            "env": "KAFKA_PROXY_CERTIFICATE"
+          }
+        ],
+        "name": "server-greenbox-dev-nplz-pem-2024-12-12"
+      },
+      {
+        "injections": [
+          {
+            "env": "KAFKA_PROXY_KEY"
+          }
+        ],
+        "name": "server-greenbox-dev-nplz-key-2024-12-12"
+      }
+    ],
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "schema-store": {
+    "cpus": 0.1,
+    "env": {
+      "SR_DOMAIN": "api.schema-store.dsh.marathon.mesos",
+      "SR_PATH": "/",
+      "SR_PORT": "8443"
+    },
+    "exposedPorts": {
+      "8080": {
+        "auth": "system-fwd-auth@view,manage",
+        "vhost": "{ vhost('schema-store.greenbox-dev','public') }"
+      }
+    },
+    "image": "APPCATALOG_REGISTRY/dsh-appcatalog/tenant/greenbox-dev/1903/1903/release/kpn/schema-store-ui:0.0.15-RC.pgr.20240819.1",
+    "instances": 1,
+    "mem": 256,
+    "needsToken": true,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "keyring-pw": {
+    "cpus": 0.5,
+    "env": {
+      "SWAGGER_UI_DOCUMENTATION_URL": "https://keyring-documentation.dsh-dev.dsh.np.aws.kpn.com",
+      "REDIS_EMBEDDED": "true",
+      "DOMAINS": "BOSS,KRN,SBCM",
+      "ENABLE_DERIVED_RELATIONS": "true",
+      "LOG_LEVEL_ENTRYPOINT": "info",
+      "CODOMAINS": "BOSS,KRN,SBCM",
+      "LOG_LEVEL_CACHE": "info",
+      "ENABLE_SWAGGER_UI": "true",
+      "SWAGGER_UI_CONTACT_URL": "https://confluence.kpn.org/display/GBDocs/Greenbox",
+      "DEFAULT_CACHE_TYPE": "chronicle",
+      "GROUP_ID_PREFIX": "greenbox-dev_",
+      "LOG_LEVEL_SERVICE": "info",
+      "SWAGGER_UI_CONTACT_NAME": "Greenbox Team",
+      "KEYRING_SERVICE_PORT": "8088",
+      "ENABLE_JVM_METRICS_EXPORTER": "true",
+      "HEAP_MEMORY": "384",
+      "ENABLE_OPEN_API_SPECIFICATION": "true",
+      "ENABLE_METRICS_EXPORTER": "true",
+      "LOG_LEVEL_ENGINE": "info",
+      "LOG_LEVEL_MASTER_RELATION": "info"
+    },
+    "exposedPorts": {
+      "8088": {
+        "auth": "basic-auth@keyring:keyring:$1$QnYsds5e$h4maiwTORbrpm6w.662H3/",
+        "vhost": "{ vhost('keyring-service-dev') }"
+      }
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/keyring-service:0.4.3-SNAPSHOT",
+    "instances": 0,
+    "mem": 2048,
+    "metrics": {
+      "path": "/",
+      "port": 9585
+    },
+    "needsToken": true,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "test": {
+    "cpus": 0.1,
+    "env": {
+      "LOG_LEVEL_MONITOR_UPSTREAM": "info",
+      "TITLE": "test/greenbox-dev",
+      "LOG_LEVEL_MONITOR_DOWNSTREAM_STATUS": "error",
+      "LOG_LEVEL_APPLICATION": "warn",
+      "LOG_LEVEL_MONITOR_KEEP_ALIVE": "off",
+      "LOG_LEVEL_KAFKA_CONSUMER": "error",
+      "LOG_LEVEL_SERVICE_KEEP_ALIVE": "off",
+      "LOG_LEVEL_GREENBOX": "error",
+      "EXCLUDED_TOPICS": "",
+      "GROUP_ID_PREFIX": "greenbox-dev_",
+      "INCLUDE___CONSUMER_OFFSETS_TOPIC": "false",
+      "LOG_LEVEL_DESERIALIZER": "info",
+      "LOG_TIMESTAMPS": "disabled",
+      "REPRESENTATION_DESERIALIZER_CODOMAIN_VALUES_RECORD": "disabled",
+      "LOG_LEVEL_SERVICE_DOWNSTREAM_RECORD": "info",
+      "LOG_LEVEL_SERVICE_UPSTREAM": "info",
+      "LOG_LEVEL_ENTRYPOINT": "warn",
+      "LOG_LEVEL_KAFKA_ADMIN_CLIENT": "off",
+      "DEFAULT_GROUP_IDS": "*",
+      "INCLUDED_TOPICS": "",
+      "ENVELOPE_DESERIALIZER_DSH_ENVELOPE": "enabled",
+      "INCLUDED_TOPICS_REGEX": "",
+      "LOG_LEVEL_SERVICE": "warn",
+      "CONSUMER_BUILDER": "dsh-datastreams-properties",
+      "LOG_LEVEL": "warn",
+      "LOG_LEVEL_RECDES": "info",
+      "LOG_LEVEL_SERVICE_DOWNSTREAM": "info",
+      "ALLOW_CUSTOM_GROUP_ID": "true",
+      "LOG_LEVEL_DEVELOPMENT": "off",
+      "EXCLUDED_TOPICS_REGEX": "",
+      "LOG_LEVEL_MONITOR_DOWNSTREAM": "error",
+      "INSTANCE_IDENTIFIER": "greenbox-dev_test",
+      "LOG_LEVEL_MONITOR": "warn",
+      "ENVELOPE_DESERIALIZER_GZIP": "enabled",
+      "REPRESENTATION_DESERIALIZER_SCHEMA_STORE": "disabled",
+      "LOG_LEVEL_KAFKA_CLIENT": "error"
+    },
+    "exposedPorts": {
+      "8081": {
+        "auth": "system-fwd-auth@view,manage",
+        "tls": "auto",
+        "vhost": "{ vhost('test.greenbox-dev', 'private') }"
+      }
+    },
+    "image": "APPCATALOG_REGISTRY/dsh-appcatalog/tenant/greenbox-dev/1903/1903/release/kpn/eavesdropper:0.10.0",
+    "instances": 1,
+    "mem": 384,
+    "needsToken": true,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "greenbox-compact": {
+    "cpus": 0.1,
+    "env": {
+      "MAXIMUM_FILE_SIZE_BYTE": "1024000",
+      "DSH_PLATFORM_REGION": "{ variables('DSH_PLATFORM_REGION') }",
+      "CONFIG_YML_PATH": "/tmp/config.yml",
+      "DSH_ENVIRONMENT": "{ variables('DSH_ENVIRONMENT') }",
+      "DSH_GID": "1903",
+      "RUST_LOG": "info",
+      "DSH_TENANT": "{ variables('DSH_TENANT') }",
+      "SERVER_IP_ADDRESS": "0.0.0.0:4000",
+      "DSH_UID": "1903"
+    },
+    "exposedPorts": {
+      "4000": {
+        "auth": "system-fwd-auth@view,manage",
+        "paths": [
+          {
+            "prefix": "/"
+          }
+        ],
+        "tls": "auto",
+        "vhost": "{ vhost('explorer.greenbox-dev','private') }"
+      }
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/greenbox-compact:0.3.0-rc",
+    "instances": 1,
+    "mem": 512,
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "DSH_CLIENT_SECRET"
+          }
+        ],
+        "name": "system/rest-api-client"
+      },
+      {
+        "injections": [
+          {
+            "env": "BUCKET_IDENTIFIER"
+          }
+        ],
+        "name": "system/objectstore/access_key_id"
+      },
+      {
+        "injections": [
+          {
+            "env": "BUCKET_SECRET"
+          }
+        ],
+        "name": "system/objectstore/secret_access_key"
+      }
+    ],
+    "singleInstance": true,
+    "user": "1903:1903"
+  },
+  "ex-025": {
+    "cpus": 1.0,
+    "env": {
+      "DSH_GID": "1903",
+      "DSH_PLATFORM_REGION": "{ variables('DSH_PLATFORM_REGION') }",
+      "RUST_LOG": "info",
+      "MAXIMUM_FILE_SIZE_BYTE": "1024000",
+      "DSH_ENVIRONMENT": "{ variables('DSH_ENVIRONMENT') }",
+      "DSH_TENANT": "{ variables('DSH_TENANT') }",
+      "DSH_UID": "1903",
+      "SERVER_IP_ADDRESS": "0.0.0.0:4000"
+    },
+    "exposedPorts": {
+      "4000": {
+        "auth": "system-fwd-auth@view,manage",
+        "tls": "auto",
+        "vhost": "{ vhost('ex-025.greenbox-dev', 'private') }"
+      }
+    },
+    "image": "APPCATALOG_REGISTRY/dsh-appcatalog/tenant/greenbox-dev/1903/1903/release/kpn/greenbox-compact:0.2.5",
+    "instances": 1,
+    "mem": 2048,
+    "metrics": {
+      "path": "/",
+      "port": 9009
+    },
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "DSH_CLIENT_SECRET"
+          }
+        ],
+        "name": "system/rest-api-client"
+      },
+      {
+        "injections": [
+          {
+            "env": "BUCKET_IDENTIFIER"
+          }
+        ],
+        "name": "system/objectstore/access_key_id"
+      },
+      {
+        "injections": [
+          {
+            "env": "BUCKET_SECRET"
+          }
+        ],
+        "name": "system/objectstore/secret_access_key"
+      }
+    ],
+    "singleInstance": true,
+    "user": "1903:1903"
+  },
+  "keyring-kafka-realtime-ingestor-dummy-data": {
+    "cpus": 0.1,
+    "env": {
+      "KEY": "VALUE"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/keyring-kafka-realtime-ingestor-dummy-data:0.1.0",
+    "instances": 0,
+    "mem": 256,
+    "needsToken": true,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "schema-registry-console": {
+    "cpus": 0.1,
+    "env": {
+      "SCHEMA_REGISTRY_HOST": "http://schema-registry.greenbox-dev.marathon.mesos:8088"
+    },
+    "exposedPorts": {
+      "8089": {
+        "auth": "system-fwd-auth@view,manage",
+        "tls": "auto",
+        "vhost": "{ vhost('schema-registry-console-dev', 'public') }"
+      }
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/greenbox-schema-registry-console:0.1.2",
+    "instances": 1,
+    "mem": 32,
+    "metrics": {
+      "path": "/metrics",
+      "port": 9090
+    },
+    "needsToken": false,
+    "singleInstance": true,
+    "user": "1903:1903"
+  },
+  "greenbox-ri-producer-faulty": {
+    "cpus": 0.1,
+    "env": {
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE_QOS": "Reliable",
+      "GREENBOX_RI_PRODUCER_LOG_LEVEL_KAFKA": "error",
+      "GREENBOX_RI_PRODUCER_LOG_LEVEL_GREENBOX": "error",
+      "GREENBOX_RI_PRODUCER_ERROR_RATE": "0.5",
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE_RETAINED": "false",
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE_TENANT": "HUURDER",
+      "GREENBOX_RI_PRODUCER_LOG_LEVEL": "info",
+      "GREENBOX_RI_PRODUCER_RATE": "0.1",
+      "GREENBOX_RI_PRODUCER_TOPIC": "scratch.reference-implementation-faulty.greenbox-dev",
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE": "false",
+      "GREENBOX_RI_PRODUCER_ARTIFACT_TYPE": "ri:avro",
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE_PUBLISHER": "UITGEVER"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/greenbox-ri-producer:0.2.0-SNAPSHOT",
+    "instances": 1,
+    "mem": 128,
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "GREENBOX_RI_PRODUCER_IDENTIFIERS"
+          }
+        ],
+        "name": "boss-account-ids"
+      }
+    ],
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "greenbox-privacy-setting-provider": {
+    "cpus": 0.1,
+    "env": {
+      "RECORD_THROTTLE": "1"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/greenbox-privacy-setting-provider:0.0.9",
+    "instances": 1,
+    "mem": 2048,
+    "needsToken": true,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "schema-registry": {
+    "cpus": 0.1,
+    "env": {
+      "CLASSIFICATION_STORE": "S3",
+      "LOG_LEVEL": "INFO",
+      "AWS_SCHEMA_REGISTRY_BUCKET_NAME": "dev-lz-dsh-greenbox-dev-schema-registry",
+      "AWS_CLASSIFICATION_BUCKET_NAME": "dev-lz-dsh-greenbox-dev-schema-registry",
+      "PORT": "8088",
+      "SCHEMA_STORE": "S3"
+    },
+    "exposedPorts": {
+      "8088": {
+        "auth": "greenbox-dev:$1$2tWPcLyh$s1jSAiHOsOmEHTyppUq/J0",
+        "vhost": "{ vhost('schema-registry-dev') }"
+      }
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/greenbox-schema-registry:0.6.1",
+    "instances": 1,
+    "mem": 512,
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "AWS_ACCESS_KEY_ID"
+          }
+        ],
+        "name": "system/objectstore/access_key_id"
+      },
+      {
+        "injections": [
+          {
+            "env": "AWS_SECRET_ACCESS_KEY"
+          }
+        ],
+        "name": "system/objectstore/secret_access_key"
+      }
+    ],
+    "singleInstance": true,
+    "user": "1903:1903"
+  },
+  "starrocks-be": {
+    "cpus": 0.2,
+    "env": {
+      "FE_HOSTNAME": "starrocks-fe",
+      "AWS_REGION": "eu-west-1",
+      "HOST_TYPE": "QDN",
+      "AWS_S3_REGION": "eu-west-1",
+      "CN_HOSTNAME": "starrocks-be"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/starrocks-be:3.3.5",
+    "instances": 10,
+    "mem": 512,
+    "needsToken": false,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "AWS_S3_ACCESS_KEY"
+          }
+        ],
+        "name": "system/objectstore/access_key_id"
+      },
+      {
+        "injections": [
+          {
+            "env": "AWS_S3_SECRET_KEY"
+          }
+        ],
+        "name": "system/objectstore/secret_access_key"
+      },
+      {
+        "injections": [
+          {
+            "env": "AWS_ACCESS_KEY_ID"
+          }
+        ],
+        "name": "system/objectstore/access_key_id"
+      },
+      {
+        "injections": [
+          {
+            "env": "AWS_SECRET_ACCESS_KEY"
+          }
+        ],
+        "name": "system/objectstore/secret_access_key"
+      }
+    ],
+    "singleInstance": true,
+    "user": "1903:1903"
+  },
+  "keyring-load-generator": {
+    "cpus": 0.5,
+    "env": {
+      "METRICS_EXPORTER_PORT": "9585",
+      "LOG_LEVEL_ENTRYPOINT": "debug",
+      "SBCM_REQUESTS_PER_SECOND": "100.0",
+      "ENABLE_METRICS_EXPORTER": "true",
+      "LOG_LEVEL": "info",
+      "SBCM_RANDOM_RATE": "0.02",
+      "LOG_LEVEL_CACHE": "info",
+      "SBCM_INITIAL_DELAY": "0.0",
+      "DOMAINS": "SBCM",
+      "SBCM_BURST_PERIOD": "0.0",
+      "LOG_LEVEL_PEKKO": "error",
+      "LOG_LEVEL_ENGINE": "info",
+      "KEYRING_SERVER_ENDPOINT": "http://keyring-dev.greenbox-dev.marathon.mesos:8088/v0",
+      "CLIENT_TYPE": "rest-service",
+      "LOG_LEVEL_STTP": "error",
+      "CODOMAINS": "KRN"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/keyring-load-generator:0.0.1-SNAPSHOT",
+    "instances": 0,
+    "mem": 512,
+    "metrics": {
+      "path": "/",
+      "port": 9585
+    },
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "SBCM_DOMAIN_VALUES"
+          }
+        ],
+        "name": "sbcm-ids"
+      }
+    ],
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "iceberg-writer-example": {
+    "cpus": 0.1,
+    "env": {
+      "ICEBERG_REST_URI": "http://starrocks-iceberg-catalog:8181",
+      "ICEBERG_TABLE_NAME": "table_name_1",
+      "AWS_REGION": "eu-west-1",
+      "ICEBERG_NAMESPACE": "namespace"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/iceberg-example-rust:0.0.2",
+    "instances": 0,
+    "mem": 256,
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "DSH_CLIENT_SECRET"
+          }
+        ],
+        "name": "system/rest-api-client"
+      },
+      {
+        "injections": [
+          {
+            "env": "AWS_ACCESS_KEY_ID"
+          }
+        ],
+        "name": "system/objectstore/access_key_id"
+      },
+      {
+        "injections": [
+          {
+            "env": "AWS_SECRET_ACCESS_KEY"
+          }
+        ],
+        "name": "system/objectstore/secret_access_key"
+      }
+    ],
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "greenbox-monitor-dashboard": {
+    "cpus": 0.1,
+    "exposedPorts": {
+      "8080": {
+        "auth": "system-fwd-auth@view,manage",
+        "tls": "auto",
+        "vhost": "{ vhost('monitor-dashboard','public') }"
+      }
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/greenbox-monitor-dashboard:0.0.12",
+    "instances": 1,
+    "mem": 256,
+    "metrics": {
+      "path": "/metrics",
+      "port": 8080
+    },
+    "needsToken": false,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "GREENBOX_MONITOR_DASHBOARD_PASSWORD"
+          }
+        ],
+        "name": "greenbox_monitor_dashboard_password"
+      }
+    ],
+    "singleInstance": true,
+    "user": "1903:1903",
+    "volumes": {
+      "/home/nginx/app/data": {
+        "name": "{ volume('greenbox-monitor-dashboard-volume') }"
+      }
+    }
+  },
+  "non-existing-service": {
+    "cpus": 0.0,
+    "image": "",
+    "instances": 0,
+    "mem": 0,
+    "needsToken": false,
+    "singleInstance": false,
+    "user": ""
+  },
+  "keyring-documentation": {
+    "cpus": 0.2,
+    "exposedPorts": {
+      "8080": {
+        "auth": "system-fwd-auth@view,manage",
+        "tls": "auto",
+        "vhost": "{ vhost('keyring-documentation', 'public') }"
+      }
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/keyring-website:0.6.2",
+    "instances": 1,
+    "mem": 32,
+    "needsToken": false,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "keyring-050": {
+    "cpus": 1.0,
+    "env": {
+      "KEYRING_SERVICE_PORT": "8088",
+      "ENABLE_METRICS_EXPORTER": "true",
+      "HEAP_MEMORY": "384",
+      "ENABLE_JVM_METRICS_EXPORTER": "true",
+      "ENABLE_SWAGGER_UI": "true",
+      "GROUP_ID_PREFIX": "greenbox-dev_",
+      "LOG_LEVEL_NETTY": "error",
+      "LOG_LEVEL_ENTRYPOINT": "error",
+      "MASTER_RELATIONS_CONFIG_FILE": "master-relations.conf",
+      "LOG_LEVEL_ENGINE": "info",
+      "DOMAINS": "BOSS,KRN,SBCM",
+      "LOG_LEVEL_MASTER_RELATION": "info",
+      "SWAGGER_UI_CONTACT_NAME": "Greenbox Team",
+      "ENABLE_DERIVED_RELATIONS": "true",
+      "CODOMAINS": "BOSS,KRN,SBCM",
+      "LOG_LEVEL_CODOMAIN_VALUES": "info",
+      "SWAGGER_UI_DOCUMENTATION_URL": "https://keyring.dsh-prod.dsh.prod.aws.kpn.org",
+      "SWAGGER_UI_CONTACT_URL": "https://confluence.kpn.org/display/KEYR/Keyring",
+      "ENABLE_OPEN_API_SPECIFICATION": "true",
+      "LOG_LEVEL_CACHE": "info",
+      "METRICS_EXPORTER_PREFIX": "",
+      "LOG_LEVEL": "info",
+      "BASE_DOMAINS_CONFIG_FILE": "base-domains.conf",
+      "LOG_LEVEL_SERVICE": "info",
+      "DEFAULT_CACHE_TYPE": "chronicle"
+    },
+    "exposedPorts": {
+      "8088": {
+        "auth": "system-fwd-auth@view,manage",
+        "tls": "auto",
+        "vhost": "{ vhost('keyring-050.greenbox-dev', 'public') }"
+      }
+    },
+    "image": "APPCATALOG_REGISTRY/dsh-appcatalog/tenant/greenbox-dev/1903/1903/release/kpn/keyring-service:0.5.0",
+    "instances": 0,
+    "mem": 2048,
+    "metrics": {
+      "path": "/",
+      "port": 9585
+    },
+    "needsToken": true,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "metric-exporter": {
+    "cpus": 0.1,
+    "env": {
+      "RUST_LOG": "INFO",
+      "EXPORT_INTERVAL_SECS": "60"
+    },
+    "image": "APPCATALOG_REGISTRY/dsh-appcatalog/tenant/greenbox-dev/1903/1903/release/kpn/topic-metrics-exporter:0.1.5",
+    "instances": 1,
+    "mem": 16,
+    "metrics": {
+      "path": "/metrics",
+      "port": 8080
+    },
+    "needsToken": true,
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "greenbox-ri-producer": {
+    "cpus": 0.1,
+    "env": {
+      "GREENBOX_RI_PRODUCER_ARTIFACT": "ri:protobuf",
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE_TENANT": "greenbox-dev",
+      "GREENBOX_RI_PRODUCER_LOG_LEVEL_GREENBOX": "error",
+      "GREENBOX_RI_PRODUCER_LOG_LEVEL": "info",
+      "GREENBOX_RI_PRODUCER_LOG_LEVEL_KAFKA": "info",
+      "GREENBOX_RI_PRODUCER_TOPIC": "stream.reference-implementation.greenbox-dev",
+      "GREENBOX_RI_PRODUCER_DSH_ENVELOPE": "true",
+      "GREENBOX_RI_PRODUCER_RATE": "1.0",
+      "GREENBOX_RI_PRODUCER_VERBOSE": "true"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/greenbox-ri-producer:0.2.0-SNAPSHOT",
+    "instances": 1,
+    "mem": 128,
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "GREENBOX_RI_PRODUCER_IDENTIFIERS"
+          }
+        ],
+        "name": "boss-account-ids"
+      }
+    ],
+    "singleInstance": false,
+    "user": "1903:1903"
+  },
+  "keyring-dev-proxy": {
+    "cpus": 0.1,
+    "env": {
+      "METRICS_SCRAPER_3": "",
+      "METRICS_SCRAPER_6": "",
+      "METRICS_SCRAPER_1": "p1:keyring-dev:9585",
+      "METRICS_SCRAPER_5": "",
+      "METRICS_PREFIX": "dev",
+      "METRICS_SCRAPER_2": "p2:keyring-dev:9585/metrics",
+      "METRICS_SCRAPER_4": ""
+    },
+    "exposedPorts": {
+      "9292": {
+        "auth": "system-fwd-auth@view,manage",
+        "tls": "auto",
+        "vhost": "{ vhost('keyring-dev-proxy.greenbox-dev', 'public') }"
+      }
+    },
+    "image": "APPCATALOG_REGISTRY/dsh-appcatalog/tenant/greenbox-dev/1903/1903/release/kpn/metrics-proxy:0.1.1",
+    "instances": 1,
+    "mem": 32,
+    "metrics": {
+      "path": "/metrics",
+      "port": 9292
+    },
+    "needsToken": false,
+    "singleInstance": true,
+    "user": "1903:1903"
+  },
+  "starrocks-ttyd": {
+    "cpus": 0.5,
+    "exposedPorts": {
+      "7600": {
+        "auth": "system-fwd-auth@view,manage",
+        "vhost": "{ vhost('starrocks-fe','private') }"
+      }
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/ttyd",
+    "instances": 1,
+    "mem": 512,
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "TEST_UPDATE"
+          }
+        ],
+        "name": "test-update"
+      }
+    ],
+    "singleInstance": true,
+    "user": "1903:1903"
+  },
+  "cck-ingestor": {
+    "cpus": 0.3,
+    "env": {
+      "SIEBELCM_OUTPUT_STREAM": "internal.keyring-codomain-values-siebelcm.greenbox-dev",
+      "BOSS_CPS_OUTPUT_STREAM": "internal.keyring-codomain-values-boss-cps.greenbox-dev",
+      "CCK_DB_SOURCE": "A0_CCK_V.CCK_GREENBOX_V",
+      "CPR_WL_DB_SOURCE": "A0_CPR30_RES_V.V_CPR_WHITELIST_DATA",
+      "LOG_LEVEL": "info",
+      "CPRWL_CRON_SCHEDULE": "00 30 10 * * *",
+      "CPR_BL_DB_SOURCE": "A0_CPR30_RES_V.V_CPR_BLACKLIST_DATA",
+      "LOG_LEVEL_SERVICE": "info",
+      "SIEBELCM_CPS_OUTPUT_STREAM": "internal.keyring-codomain-values-siebelcm-cps.greenbox-dev",
+      "CCK_CRON_SCHEDULE": "00 00 09 * * *",
+      "BOSS_OUTPUT_STREAM": "internal.keyring-codomain-values-boss.greenbox-dev",
+      "KAFKA_HEAP_OPTS": "-Xms512m -Xmx1g",
+      "CPR_DB_URL": "jdbc:teradata://unt04.app.gen.local/database=A0_CPR30_RES_V",
+      "KRN_OUTPUT_STREAM": "internal.keyring-codomain-values-krn.greenbox-dev",
+      "CCK_DB_URL": "jdbc:teradata://unt04.app.gen.local/database=A0_CCK_V",
+      "CPRBL_CRON_SCHEDULE": "00 00 10 * * *",
+      "USERNAME": "A0_GREENBOX_READER_USR"
+    },
+    "image": "registry.cp.kpn-dsh.com/greenbox-dev/cck-ingestor:0.0.18",
+    "instances": 1,
+    "mem": 1024,
+    "metrics": {
+      "path": "/actuator/prometheus",
+      "port": 8090
+    },
+    "needsToken": true,
+    "secrets": [
+      {
+        "injections": [
+          {
+            "env": "PASSWORD"
+          }
+        ],
+        "name": "a0_greenbox_reader_cck_usr_password"
+      }
+    ],
+    "singleInstance": false,
+    "user": "1903:1903"
+  }
+}

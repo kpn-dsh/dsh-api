@@ -1,0 +1,103 @@
+{
+  "cpus": 0.5,
+  "env": {
+    "TOPIC": "data-stream",
+    "KAFKA_BROKERS": "{ variables('DSH_KAFKA_BOOTSTRAP_SERVERS') }"
+  },
+  "env-bucket": {
+    "BUCKETNAME": "{ bucket_name('bucketname') }"
+  },
+  "env-database": {
+    "HOSTNAME": "{ database_host('example1') }",
+    "DATABASE": "{ database_id('example1') }",
+    "USERNAME": "{ database_user('example1') }"
+  },
+  "exposedPorts": {
+    "1880": {
+      "vhost": "{ vhost('your-vhost-name','a-zone') }",
+      "auth": "app-realm:admin:$1$EZsDrd93$7g2osLFOay4.TzDgGo9bF/",
+      "mode": "http",
+      "whitelist": "56.59.120.23",
+      "paths": [
+        {
+          "prefix": "/abc"
+        }
+      ],
+      "serviceGroup": "mygroup"
+    },
+    "7800": {
+      "vhost": "undefined"
+    }
+  },
+  "healthCheck": {
+    "protocol": "http",
+    "port": 8080,
+    "path": "/health"
+  },
+  "image": "registry.cp.kpn-dsh.com/<tenant-name>/docker-image-name:1.0.0",
+  "instances": 2,
+  "mem": 1024,
+  "metrics": {
+    "port": 9090,
+    "path": "/metrics"
+  },
+  "needsToken": true,
+  "secrets": [
+    {
+      "name": "an_aws_access_key_id",
+      "injections": [
+        {
+          "env": "AWS_ACCESS_KEY_ID"
+        }
+      ]
+    },
+    {
+      "name": "an_aws_secret_access_key",
+      "injections": [
+        {
+          "env": "AWS_SECRET_ACCESS_KEY"
+        }
+      ]
+    }
+  ],
+  "secrets-bucket": [
+    {
+      "name": "system/objectstore/access_key_id",
+      "injections": [
+        {
+          "env": "SYSTEM_OBJECTSTORE_ACCESS_KEY_ID"
+        }
+      ]
+    },
+    {
+      "name": "system/objectstore/secret_access_key",
+      "injections": [
+        {
+          "env": "SYSTEM_OBJECTSTORE_SECRET_ACCESS_KEY"
+        }
+      ]
+    }
+  ],
+  "secrets-database": [
+    {
+      "name": "system/dbaas/example1_password",
+      "injections": [
+        {
+          "env": "PASSWORD"
+        }
+      ]
+    }
+  ],
+  "singleInstance": false,
+  "spreadGroup": "spreadgroup1",
+  "topics": [
+    "topic-name-one",
+    "topic-name-two"
+  ],
+  "user": "1029:1029",
+  "volumes": {
+    "/correct_path": {
+      "name": "{ volume('correct_volume_name') }"
+    }
+  }
+}
