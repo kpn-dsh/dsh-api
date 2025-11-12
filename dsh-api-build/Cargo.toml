@@ -12,6 +12,9 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[lints.clippy]
+uninlined_format_args = "allow"
+
 [dependencies]
 indoc = "2.0"
 itertools = "0.14"
