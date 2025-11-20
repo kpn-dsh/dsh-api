@@ -105,9 +105,9 @@ impl DshApiClient {
     app_ids.sort();
     for app_id in app_ids {
       let app = apps.get(app_id).unwrap();
-      for (vhost, injection) in vhost_resources_from_app(app) {
-        let dependant_apps = vhosts_map.entry(vhost.to_string()).or_default();
-        dependant_apps.push(DependantApp::new(app_id.clone(), vec![injection.to_string()]));
+      for (_, vhost_string) in vhost_strings_from_app(app) {
+        let dependant_apps = vhosts_map.entry(vhost_string.vhost_name.clone()).or_default();
+        dependant_apps.push(DependantApp::new(app_id.clone(), vec![vhost_string.to_string()]));
       }
     }
     let mut vhosts: Vec<(String, Vec<DependantApp>)> = Vec::from_iter(vhosts_map);
@@ -137,9 +137,9 @@ impl DshApiClient {
     app_ids.sort();
     for app_id in app_ids {
       let app = appcatalogapp_configuration_map.get(app_id).unwrap();
-      for (vhost, injection) in vhost_resources_from_app(app) {
-        let dependants = vhosts_with_dependants_map.entry(vhost.to_string()).or_default();
-        dependants.push(Dependant::app(app_id.clone(), vec![injection.to_string()]));
+      for (_, vhost_string) in vhost_strings_from_app(app) {
+        let dependants = vhosts_with_dependants_map.entry(vhost_string.vhost_name.clone()).or_default();
+        dependants.push(Dependant::app(app_id.clone(), vec![vhost_string.to_string()]));
       }
     }
     let mut vhosts: Vec<(String, Vec<Dependant<VhostInjection>>)> = Vec::from_iter(vhosts_with_dependants_map.into_iter());
@@ -226,6 +226,28 @@ pub fn vhost_resources_from_app(app: &AppCatalogApp) -> Vec<(&str, &Vhost)> {
     AppCatalogAppResourcesValue::Vhost(vhost) => Some(vhost),
     _ => None,
   })
+}
+
+/// Get parsed vhost strings from `AppCatalogApp`
+///
+/// # Parameters
+/// * `app` - app to get the vhost strings from
+///
+/// # Returns
+/// `Vec` that contains tuples describing the resource ids and vhost strings:
+/// * resource id
+/// * [VhostString]
+pub(crate) fn vhost_strings_from_app(app: &AppCatalogApp) -> Vec<(&str, VhostString)> {
+  let mut resources: Vec<(&str, VhostString)> = vec![];
+  for (resource_id, resource) in &app.resources {
+    if let AppCatalogAppResourcesValue::Vhost(vhost) = resource {
+      if let Ok(vhost_string) = VhostString::from_resource_str(&vhost.value) {
+        resources.push((resource_id, vhost_string))
+      }
+    }
+  }
+  resources.sort_by(|(resource_id_a, _), (resource_id_b, _)| resource_id_a.cmp(resource_id_b));
+  resources
 }
 
 /// # Get vhosts from application
@@ -318,6 +340,48 @@ impl VhostString {
     V: Into<String>,
   {
     Self { vhost_name: vhost_name.into(), kafka, tenant_name: tenant_name.map(Into::<String>::into), zone: zone.map(Into::<String>::into) }
+  }
+
+  /// # Parse vhost resource string
+  ///
+  /// Multiple vhosts using the `join` function are not supported.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// # use dsh_api::vhost::VhostString;
+  /// assert_eq!(
+  ///   VhostString::from_resource_str("my-vhost.my-tenant@private"),
+  ///   Ok(VhostString::new(
+  ///     "my-vhost".to_string(),
+  ///     false,
+  ///     Some("my-tenant".to_string()),
+  ///     Some("private".to_string())
+  ///   ))
+  /// );
+  /// ```
+  ///
+  /// # Parameters
+  /// * `vhost_string` - the vhost string to be parsed
+  ///
+  /// # Returns
+  /// When the provided string is valid, the method returns an instance of the `VhostString`
+  /// struct, describing the auth string.
+  pub fn from_resource_str(vhost_resource_string: &str) -> Result<Self, String> {
+    lazy_static! {
+      static ref VHOST_RESOURCE_STRING_REGEX: Regex = Regex::new(r"^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)@([a-zA-Z0-9_-]+)$").unwrap();
+    }
+    VHOST_RESOURCE_STRING_REGEX
+      .captures(vhost_resource_string)
+      .map(|captures| {
+        VhostString::new(
+          captures.get(1).map(|vhost_match| vhost_match.as_str()).unwrap_or_default(),
+          false,
+          captures.get(2).map(|tenant_match| Some(tenant_match.as_str())).unwrap_or_default(),
+          captures.get(3).map(|zone_match| zone_match.as_str()),
+        )
+      })
+      .ok_or(format!("invalid value in vhost string (\"{}\")", vhost_resource_string))
   }
 }
 
