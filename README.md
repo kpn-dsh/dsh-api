@@ -182,10 +182,6 @@ gets the default value from the environment variables described below.
                     - Production platform for KPN internal tenants.
                 </li>
                 <li>
-                    <code>prod-aws-lz-laas / prodls</code> 
-                    - Production platform for logstash as a service.
-                </li>
-                <li>
                     <code>prod-azure-dsh / prodaz</code> 
                     - Production platform for non KPN tenants.
                 </li>
