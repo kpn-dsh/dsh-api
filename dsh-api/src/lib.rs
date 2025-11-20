@@ -139,7 +139,6 @@ pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/openapi.
 /// Specification of default platforms
 pub static DEFAULT_PLATFORMS: &str = include_str!("../default-platforms.json");
 
-use crate::platform::DshPlatform;
 use crate::token_fetcher::ManagementApiTokenError;
 use crate::types::error::ConversionError;
 use chrono::{TimeZone, Utc};
@@ -165,6 +164,7 @@ pub mod display;
 pub mod dsh_api_client;
 pub mod dsh_api_client_factory;
 pub mod dsh_api_tenant;
+pub mod dsh_jwt;
 #[cfg(feature = "generic")]
 pub mod generic;
 pub mod manifest;
@@ -534,55 +534,6 @@ pub(crate) const ENV_VAR_PLATFORM: &str = "DSH_API_PLATFORM";
 
 // Environment variable used to define the client tenant
 pub(crate) const ENV_VAR_TENANT: &str = "DSH_API_TENANT";
-
-pub(crate) const ENV_VAR_PREFIX_PASSWORD: &str = "DSH_API_PASSWORD";
-pub(crate) const ENV_VAR_PREFIX_PASSWORD_FILE: &str = "DSH_API_PASSWORD_FILE";
-
-// # Create client password environment variable
-//
-// This function creates the environment variable used to define the client tenant's password
-// from the platform name and the tenant name. The format of the environment variable is
-// `DSH_API_PASSWORD_[platform_name]_[tenant_name]`,
-// where the `platform_name` and the `tenant_name` will be converted to uppercase and
-// `-` will be replaced by `_`.
-//
-// # Parameters
-// * `platform` - target platform
-// * `tenant_name` - client tenant name
-//
-// # Returns
-// Client password environment variable.
-pub(crate) fn password_environment_variable(platform: &DshPlatform, tenant_name: &str) -> String {
-  format!(
-    "{}_{}_{}",
-    ENV_VAR_PREFIX_PASSWORD,
-    platform.name().to_ascii_uppercase().replace('-', "_"),
-    tenant_name.to_ascii_uppercase().replace('-', "_")
-  )
-}
-
-// # Create client password file environment variable
-//
-// This function creates the environment variable used to define the client tenant's password file
-// from the platform name and the tenant name. The format of the environment variable is
-// `DSH_API_PASSWORD_FILE_[platform_name]_[tenant_name]`,
-// where the `platform_name` and the `tenant_name` will be converted to uppercase and
-// `-` will be replaced by `_`.
-//
-// # Parameters
-// * `platform` - target platform
-// * `tenant_name` - client tenant name
-//
-// # Returns
-// Client password file environment variable.
-pub(crate) fn password_file_environment_variable(platform: &DshPlatform, tenant_name: &str) -> String {
-  format!(
-    "{}_{}_{}",
-    ENV_VAR_PREFIX_PASSWORD_FILE,
-    platform.name().to_ascii_uppercase().replace('-', "_"),
-    tenant_name.to_ascii_uppercase().replace('-', "_")
-  )
-}
 
 // Converts epoch timestamp in seconds to utc representation
 pub(crate) fn epoch_seconds_to_string(timestamp: impl Into<i64>) -> String {

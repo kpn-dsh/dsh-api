@@ -18,7 +18,7 @@
 //!
 //! ## Example
 //!
-//! In this example explicit tenant parameters used to create a `DshApiClientFactory`.
+//! In this example explicit tenant parameters are used to create a `DshApiClientFactory`.
 //!
 //! ```ignore
 //! # use dsh_api::dsh_api_client_factory::DshApiClientFactory;
@@ -30,8 +30,8 @@
 //!   "my-tenant".to_string(),
 //!   DshPlatform::try_from("np-aws-lz-dsh")?
 //! );
-//! let password = "...".to_string();
-//! let client_factory = DshApiClientFactory::create(tenant, password)?;
+//! let robot_password = "...".to_string();
+//! let client_factory = DshApiClientFactory::create_with_token_factory(tenant, robot_password)?;
 //! let client = client_factory.client().await?;
 //! ...
 //! # Ok(())
@@ -69,7 +69,7 @@ use crate::dsh_api_tenant::DshApiTenant;
 use crate::generated::Client as GeneratedClient;
 use crate::platform::DshPlatform;
 use crate::token_fetcher::ManagementApiTokenFetcherBuilder;
-use crate::{password_environment_variable, password_file_environment_variable, DshApiError};
+use crate::DshApiError;
 use log::debug;
 use std::env;
 
@@ -78,7 +78,8 @@ use std::env;
 pub struct DshApiClientFactory {
   generated_client: GeneratedClient,
   tenant: DshApiTenant,
-  password: String,
+  access_token: Option<String>,
+  robot_password: Option<String>,
 }
 
 impl DshApiClientFactory {
@@ -99,24 +100,25 @@ impl DshApiClientFactory {
   /// ```
   /// # Panics
   /// This function will panic if it cannot create a new `DshApiClientFactory` from the default
-  /// environment variables. If you want to capture such a failure, use the
-  /// [`try_default()`](DshApiClientFactory::try_default) or the
-  /// [`create()`](DshApiClientFactory::create) function.
+  /// environment variables. If you want to capture such a failure, use:
+  /// * [try_default()](Self::try_default),
+  /// * [create_from_access_token()](Self::create_from_access_token) or
+  /// * [create_with_token_fetcher()](Self::create_with_token_fetcher).
   pub fn new() -> DshApiClientFactory {
     DshApiClientFactory::default()
   }
 
-  /// # Create factory for DSH API client
+  /// # Create factory for DSH API client with token fetcher
   ///
   /// This function will create a new `DshApiClientFactory` from the provided parameters.
   ///
   /// # Parameters
   /// * `tenant` - Tenant struct, containing the platform and tenant name.
-  /// * `password` - The secret password used to retrieve the DSH API tokens.
+  /// * `robot_password` - The secret robot password used to retrieve the DSH API tokens
+  ///   by the token fetcher.
   ///
   /// # Returns
-  /// * `Ok<DshApiClientFactory>` - the created client factory
-  /// * `Err<String>` - when the client factory could not be created
+  /// * [DshApiClientFactory] - Created client factory.
   ///
   /// # Examples
   /// ```no_run
@@ -125,24 +127,122 @@ impl DshApiClientFactory {
   ///
   /// # use dsh_api::DshApiError;
   /// # async fn hide() -> Result<(), DshApiError> {
-  /// let password = "...".to_string();
+  /// let robot_password = "...".to_string();
   /// let tenant = DshApiTenant::from_tenant("my-tenant".to_string())?;
-  /// let client_factory = DshApiClientFactory::create(tenant, password)?;
+  /// let client_factory =
+  ///   DshApiClientFactory::create_with_token_fetcher(tenant, robot_password);
   /// let client = client_factory.client().await?;
   /// println!("tenant is {}", client.tenant());
   /// # Ok(())
   /// # }
   /// ```
-  pub fn create(tenant: DshApiTenant, password: String) -> Result<Self, DshApiError> {
+  pub fn create_with_token_fetcher(tenant: DshApiTenant, robot_password: String) -> Self {
     let endpoint = tenant.platform().rest_api_endpoint();
-    let factory = DshApiClientFactory { generated_client: GeneratedClient::new(endpoint.as_str()), tenant: tenant.clone(), password };
-    debug!("dsh api client factory created for '{}' at endpoint '{}'", tenant, endpoint);
-    Ok(factory)
+    debug!("create dsh api client factory with token fetcher for '{}' at endpoint '{}'", tenant, endpoint);
+    DshApiClientFactory { generated_client: GeneratedClient::new(endpoint.as_str()), tenant, access_token: None, robot_password: Some(robot_password) }
+  }
+
+  /// # Create factory for DSH API client with static access token
+  ///
+  /// This function will create a new `DshApiClientFactory` from the provided parameters.
+  ///
+  /// # Parameters
+  /// * `tenant` - Tenant struct, containing the platform and tenant name.
+  /// * `access_token` - The static access token used to access the API.
+  ///
+  /// # Returns
+  /// * [DshApiClientFactory] - Created client factory.
+  ///
+  /// # Examples
+  /// ```no_run
+  /// use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+  /// use dsh_api::dsh_api_tenant::DshApiTenant;
+  ///
+  /// # use dsh_api::DshApiError;
+  /// # async fn hide() -> Result<(), DshApiError> {
+  /// let access_token = "...".to_string();
+  /// let tenant = DshApiTenant::from_tenant("my-tenant".to_string())?;
+  /// let client_factory =
+  ///   DshApiClientFactory::create_from_access_token(tenant, access_token);
+  /// let client = client_factory.client().await?;
+  /// println!("tenant is {}", client.tenant());
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn create_from_access_token(tenant: DshApiTenant, access_token: String) -> Self {
+    let endpoint = tenant.platform().rest_api_endpoint();
+    debug!("create dsh api client factory with static access token for '{}' at endpoint '{}'", tenant, endpoint);
+    DshApiClientFactory { generated_client: GeneratedClient::new(endpoint.as_str()), tenant, access_token: Some(access_token), robot_password: None }
+  }
+
+  /// # Create factory for DSH API client
+  ///
+  /// Deprecated, use [create_with_token_fetcher()](Self::create_with_token_fetcher).
+  #[deprecated]
+  pub fn create(tenant: DshApiTenant, password: String) -> Result<Self, DshApiError> {
+    Ok(Self::create_with_token_fetcher(tenant, password))
+  }
+
+  /// # Create default factory for DSH API client with token fetcher
+  ///
+  /// This function will create a new `DshApiClientFactory` with token fetcher from the
+  /// default platform and tenant.
+  ///
+  /// # Returns
+  /// * `Ok<DshApiClientFactory>` - the created client factory
+  /// * `Err<String>` - when the client factory could not be created
+  ///
+  /// # Examples
+  /// ```no_run
+  /// use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+  ///
+  /// # use dsh_api::DshApiError;
+  /// # async fn hide() -> Result<(), DshApiError> {
+  /// let client_factory = DshApiClientFactory::try_default_with_token_factory()?;
+  /// let client = client_factory.client().await?;
+  /// println!("tenant is {}", client.tenant());
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn try_default_with_token_factory() -> Result<Self, DshApiError> {
+    let tenant = DshApiTenant::try_default()?;
+    let robot_password = get_robot_password(&tenant)?;
+    debug!("create default dsh api client factory for '{}'", tenant);
+    Ok(DshApiClientFactory::create_with_token_fetcher(tenant, robot_password))
+  }
+
+  /// # Create default factory for DSH API client with access token
+  ///
+  /// This function will create a new `DshApiClientFactory` with token fetcher from the default platform and tenant.
+  ///
+  /// # Returns
+  /// * `Ok<DshApiClientFactory>` - the created client factory
+  /// * `Err<String>` - when the client factory could not be created
+  ///
+  /// # Examples
+  /// ```no_run
+  /// use dsh_api::dsh_api_client_factory::DshApiClientFactory;
+  ///
+  /// # use dsh_api::DshApiError;
+  /// # async fn hide() -> Result<(), DshApiError> {
+  /// let client_factory = DshApiClientFactory::try_default_from_access_token()?;
+  /// let client = client_factory.client().await?;
+  /// println!("tenant is {}", client.tenant());
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn try_default_from_access_token() -> Result<Self, DshApiError> {
+    let tenant = DshApiTenant::try_default()?;
+    let access_token = get_access_token(&tenant)?;
+    debug!("create default dsh api client factory for '{}'", tenant);
+    Ok(DshApiClientFactory::create_from_access_token(tenant, access_token))
   }
 
   /// # Create default factory for DSH API client
   ///
-  /// This function will create a new `DshApiClientFactory` from the default platform and tenant.
+  /// This function will create a new `DshApiClientFactory` with either a token fetcher or an
+  /// access token from the default platform and tenant.
+  /// This function will fail if both a robot password and an access token are configured.
   ///
   /// # Returns
   /// * `Ok<DshApiClientFactory>` - the created client factory
@@ -162,9 +262,18 @@ impl DshApiClientFactory {
   /// ```
   pub fn try_default() -> Result<Self, DshApiError> {
     let tenant = DshApiTenant::try_default()?;
-    let password = get_password(&tenant)?;
-    debug!("create default dsh api client factory for '{}'", tenant);
-    DshApiClientFactory::create(tenant.clone(), password)
+    match (get_access_token(&tenant), get_robot_password(&tenant)) {
+      (Err(_), Err(_)) => Err(DshApiError::Configuration("missing robot password or access token configuration".to_string())),
+      (Err(_), Ok(robot_password)) => {
+        debug!("create default dsh api client factory with token fetcher for '{}'", tenant);
+        Ok(DshApiClientFactory::create_with_token_fetcher(tenant, robot_password))
+      }
+      (Ok(access_token), Err(_)) => {
+        debug!("create default dsh api client factory with static access token for '{}'", tenant);
+        Ok(DshApiClientFactory::create_from_access_token(tenant, access_token))
+      }
+      (Ok(_), Ok(_)) => Err(DshApiError::Configuration("both robot password and access token are configured".to_string())),
+    }
   }
 
   /// # Returns the factories platform
@@ -187,8 +296,8 @@ impl DshApiClientFactory {
   /// This function will create a new `DshApiClient`.
   ///
   /// # Returns
-  /// * `Ok<DshApiClient>` - the created client
-  /// * `Err<String>` - error message when the client could not be created
+  /// * `Ok<DshApiClient>` - Created client.
+  /// * `Err<String>` - Error message when the client could not be created.
   ///
   /// # Examples
   /// ```no_run
@@ -205,19 +314,22 @@ impl DshApiClientFactory {
   /// # }
   /// ```
   pub async fn client(self) -> Result<DshApiClient, DshApiError> {
-    match ManagementApiTokenFetcherBuilder::new(self.tenant.platform().clone())
-      .tenant_name(self.tenant.name().clone())
-      .client_secret(self.password.clone())
-      .build()
-    {
-      Ok(token_fetcher) => {
-        debug!("dsh api client created for '{}'", self.tenant);
-        Ok(DshApiClient::new(token_fetcher, self.generated_client, self.tenant.clone()))
+    if let Some(robot_password) = self.robot_password {
+      match ManagementApiTokenFetcherBuilder::new(self.tenant.platform().clone())
+        .tenant_name(self.tenant.name().clone())
+        .client_secret(robot_password)
+        .build()
+      {
+        Ok(token_fetcher) => Ok(DshApiClient::from_token_fetcher(token_fetcher, self.generated_client, self.tenant.clone())),
+        Err(rest_token_error) => Err(DshApiError::Unexpected(
+          format!("could not create token fetcher ({})", rest_token_error),
+          Some(rest_token_error.to_string()),
+        )),
       }
-      Err(rest_token_error) => Err(DshApiError::Unexpected(
-        format!("could not create token fetcher ({})", rest_token_error),
-        Some(rest_token_error.to_string()),
-      )),
+    } else if let Some(access_token) = self.access_token {
+      Ok(DshApiClient::from_static_token(access_token, self.generated_client, self.tenant.clone()))
+    } else {
+      unreachable!()
     }
   }
 }
@@ -241,8 +353,22 @@ impl Default for DshApiClientFactory {
   }
 }
 
-fn get_password(tenant: &DshApiTenant) -> Result<String, DshApiError> {
-  let password_file_env_var = password_file_environment_variable(tenant.platform(), tenant.name());
+const ENV_VAR_ACCESS_TOKEN_PREFIX: &str = "DSH_API_ACCESS_TOKEN";
+const ENV_VAR_ACCESS_TOKEN__FILE_PREFIX: &str = "DSH_API_ACCESS_TOKEN_FILE";
+
+fn get_access_token(tenant: &DshApiTenant) -> Result<String, DshApiError> {
+  get_password(tenant, ENV_VAR_ACCESS_TOKEN_PREFIX, ENV_VAR_ACCESS_TOKEN__FILE_PREFIX)
+}
+
+const ENV_VAR_PASSWORD_PREFIX: &str = "DSH_API_PASSWORD";
+const ENV_VAR_PASSWORD_FILE_PREFIX: &str = "DSH_API_PASSWORD_FILE";
+
+fn get_robot_password(tenant: &DshApiTenant) -> Result<String, DshApiError> {
+  get_password(tenant, ENV_VAR_PASSWORD_PREFIX, ENV_VAR_PASSWORD_FILE_PREFIX)
+}
+
+fn get_password(tenant: &DshApiTenant, password_env_var_prefix: &str, password_file_env_var_prefix: &str) -> Result<String, DshApiError> {
+  let password_file_env_var = environment_variable(password_file_env_var_prefix, tenant.platform(), tenant.name());
   match env::var(&password_file_env_var) {
     Ok(password_file_from_env_var) => match std::fs::read_to_string(&password_file_from_env_var) {
       Ok(password_from_file) => {
@@ -263,7 +389,7 @@ fn get_password(tenant: &DshApiTenant) -> Result<String, DshApiError> {
       ))),
     },
     Err(_) => {
-      let password_env_var = password_environment_variable(tenant.platform(), tenant.name());
+      let password_env_var = environment_variable(password_env_var_prefix, tenant.platform(), tenant.name());
       match env::var(&password_env_var) {
         Ok(password_from_env_var) => {
           debug!("password read from environment variable '{}'", password_env_var);
@@ -273,4 +399,13 @@ fn get_password(tenant: &DshApiTenant) -> Result<String, DshApiError> {
       }
     }
   }
+}
+
+fn environment_variable(env_var_prefix: &str, platform: &DshPlatform, tenant_name: &str) -> String {
+  format!(
+    "{}_{}_{}",
+    env_var_prefix,
+    platform.name().to_ascii_uppercase().replace('-', "_"),
+    tenant_name.to_ascii_uppercase().replace('-', "_")
+  )
 }
