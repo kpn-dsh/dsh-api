@@ -4,22 +4,25 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
-## [0.7.2] - yyyy-mm-dd
+## [0.8.0] - 2025-11-20
 
 ### Added
 
-* Platform methods:
-    * `tenant_private_domain`,
-    * `tenant_proxy_private_bootstrap_servers`,
-    * `tenant_proxy_private_schema_registry_host`,
-    * `tenant_proxy_public_bootstrap_servers`,
-    * `tenant_proxy_public_schema_registry_host`,
-    * `tenant_public_domain`.
-* Bucket methods.
+* Added `k8s-dev-aws-lz-dsh` (development platform for Klarrio) to default platform list.
+* Implemented `Default` trait for selected types.
+* Implemented `new()` function for selected types.
+* Parsers for selected string formats.
+* Added methods and functions for application, bucket, manifest, platform, stream and tenant.
+* Added capability to use static access tokens instead of robot password and token fetcher.
+* Added DSH Json Web Token struct.
 
 ### Changed
 
-* Platform method `tenant_public_apps_domain` is deprecated.
+* New open api specification version `1.10.0` (skipped version `1.9.2`).
+* Removed `prod-aws-lz-laas` from default platform list.
+* Redundant patches removed.
+* Platform method `tenant_public_apps_domain` deprecated.
+* Struct `AccessToken` removed.
 
 ## [0.7.1] - 2025-04-18
 
