@@ -1,3 +1,7 @@
+//! # Models DSH tokens
+//!
+//! A `DshJwt` struct models some DSH specifics in the used Json Web Tokens.
+
 use base64::engine::general_purpose::STANDARD_NO_PAD;
 use base64::Engine;
 use itertools::Itertools;

@@ -1,3 +1,5 @@
+//! # Models semantic versions
+
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{de, Deserializer};
