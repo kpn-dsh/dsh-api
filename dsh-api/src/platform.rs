@@ -40,14 +40,12 @@ pub struct DshPlatform {
   #[serde(rename = "cloud-provider")]
   cloud_provider: CloudProvider,
   region: Option<String>,
-  #[serde(rename = "access-token-endpoint")]
-  access_token_endpoint: String,
+  issuer_endpoint: String,
   realm: String,
   #[serde(rename = "public-domain")]
   public_domain: String,
   #[serde(rename = "private-domain")]
   private_domain: Option<String>,
-  // TODO Oauth2 URL
 }
 
 /// # Cloud service provider that hosts a platform
@@ -71,11 +69,11 @@ impl DshPlatform {
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
   ///   DshPlatform::new("nplz").access_token_endpoint(),
-  ///   "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/dev-lz-dsh/protocol/openid-connect/token"
+  ///   "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/dev-lz-dsh/protocol/openid-connect/token".to_string()
   /// );
   /// ```
-  pub fn access_token_endpoint(&self) -> &str {
-    self.access_token_endpoint.as_str()
+  pub fn access_token_endpoint(&self) -> String {
+    format!("{}/protocol/openid-connect/token", self.issuer_endpoint())
   }
 
   /// # Returns the optional short/alias platform name
@@ -226,6 +224,20 @@ impl DshPlatform {
   /// ```
   pub fn internal_service_domain(&self, tenant_name: impl Display, service_name: impl Display) -> String {
     format!("{}.{}", service_name, self.internal_domain(tenant_name))
+  }
+
+  /// Returns the base issuer endpoint for openid connect
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").issuer_endpoint(),
+  ///   "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/dev-lz-dsh"
+  /// );
+  /// ```
+  pub fn issuer_endpoint(&self) -> &str {
+    self.issuer_endpoint.as_str()
   }
 
   /// # Returns whether the platform is production

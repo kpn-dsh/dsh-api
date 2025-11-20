@@ -6,7 +6,7 @@
     "is-production": false,
     "cloud-provider": "aws",
     "region": "eu-west-1",
-    "access-token-endpoint": "https://auth.staging.dev-aws-cp.kpn-dsh.com/auth/realms/k8s-dev-aws-lz-dsh/protocol/openid-connect/token",
+    "issuer_endpoint": "https://auth.staging.dev-aws-cp.kpn-dsh.com/auth/realms/k8s-dev-aws-lz-dsh",
     "realm": "k8s-dev-aws-lz-dsh",
     "public-domain": "dev.dsh-k8s.np.aws.kpn.com",
     "private-domain": "dev.dsh-k8s.np.aws.kpn.org"
@@ -18,7 +18,7 @@
     "is-production": false,
     "cloud-provider": "aws",
     "region": "eu-west-1",
-    "access-token-endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/dev-lz-dsh/protocol/openid-connect/token",
+    "issuer_endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/dev-lz-dsh",
     "realm": "dev-lz-dsh",
     "public-domain": "dsh-dev.dsh.np.aws.kpn.com",
     "private-domain": "dsh-dev.dsh.np.aws.kpn.org"
@@ -30,7 +30,7 @@
     "is-production": true,
     "cloud-provider": "aws",
     "region": "eu-west-1",
-    "access-token-endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/poc-dsh/protocol/openid-connect/token",
+    "issuer_endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/poc-dsh",
     "realm": "poc-dsh",
     "public-domain": "poc.kpn-dsh.com"
   },
@@ -41,7 +41,7 @@
     "is-production": true,
     "cloud-provider": "aws",
     "region": "eu-west-1",
-    "access-token-endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/tt-dsh/protocol/openid-connect/token",
+    "issuer_endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/tt-dsh",
     "realm": "prod-dsh",
     "public-domain": "kpn-dsh.com"
   },
@@ -52,7 +52,7 @@
     "is-production": true,
     "cloud-provider": "aws",
     "region": "eu-west-1",
-    "access-token-endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/prod-lz-dsh/protocol/openid-connect/token",
+    "issuer_endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/prod-lz-dsh",
     "realm": "prod-lz-dsh",
     "public-domain": "dsh-prod.dsh.prod.aws.kpn.com",
     "private-domain": "dsh-prod.dsh.prod.aws.kpn.org"
@@ -63,7 +63,7 @@
     "alias": "prodaz",
     "is-production": true,
     "cloud-provider": "azure",
-    "access-token-endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/prod-azure-dsh/protocol/openid-connect/token",
+    "issuer_endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/prod-azure-dsh",
     "realm": "prod-azure-dsh",
     "public-domain": "az.kpn-dsh.com"
   }
