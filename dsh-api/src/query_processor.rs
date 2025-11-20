@@ -1,9 +1,10 @@
 //! # Enums, traits and structs used by the various find methods
-use std::fmt::{Display, Formatter};
-
+use crate::parse::{parse_function1, parse_function2};
 use crate::query_processor::Part::{Matching, NonMatching};
 use crate::DshApiError;
+use itertools::Itertools;
 use regex::Regex;
+use std::fmt::{Display, Formatter};
 
 /// # Represents a part of a matched query.
 #[derive(Debug, PartialEq)]
@@ -12,6 +13,19 @@ pub enum Part {
   Matching(String),
   /// Represents a part of a string that did not match the query.
   NonMatching(String),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Match {
+  /// Matching expression
+  /// - Kind of expression,
+  /// - First parameter,
+  /// - Optional second parameter.
+  Expression(String, String, Option<String>),
+  /// Matching and non-matching parts
+  Parts(Vec<Part>),
+  /// Simple match
+  Simple,
 }
 
 /// # Defines the methods in the query processor
@@ -26,15 +40,355 @@ pub trait QueryProcessor: Send + Sync {
   /// * a `String` describing the query processor
   fn describe(&self) -> String;
 
-  /// # Applies query to string
+  /// # Applies generic query to string
   ///
   /// # Parameters
-  /// * `haystack` - `String` that will be searched for parts that match the query
+  /// * `haystack` - `String` that will be matched against the expression query.
   ///
   /// # Returns
-  /// * `Ok(Vec<Part>)` - when the `haystack` contains one or more parts that match the query
-  /// * `None` - when the `haystack` did not match the query
+  /// * `Ok(Match::Expression)` - When the `haystack` matches the expression query.
+  /// * `Ok(Match::Parts)` - When the `haystack` contains one or more parts that match the query.
+  /// * `Ok(Match::Simple)` - When the `haystack` matches the query.
+  /// * `None` - When the `haystack` did not match the query.
+  fn matching(&self, haystack: &str) -> Option<Match>;
+
+  /// # Applies expression query to string
+  ///
+  /// # Parameters
+  /// * `haystack` - `String` that will be matched against the expression query.
+  ///
+  /// # Returns
+  /// * `Ok((String, Option<String>))` - When the `haystack` matches the expression query.
+  /// * `None` - When the `haystack` did not match the query.
+  fn matching_expression(&self, haystack: &str) -> Option<(String, String, Option<String>)>;
+
+  /// # Applies parts query to string
+  ///
+  /// # Parameters
+  /// * `haystack` - `String` that will be matched against the parts query.
+  ///
+  /// # Returns
+  /// * `Ok(Vec<Part>)` - When the `haystack` contains one or more parts that match the query.
+  /// * `Ok(Simple)` - When the `haystack` matches the query.
+  /// * `None` - When the `haystack` did not match the query.
   fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>>;
+
+  /// # Applies simple query to string
+  ///
+  /// # Parameters
+  /// * `haystack` - `String` that will be matched against the simple query.
+  ///
+  /// # Returns
+  /// * `true` - When the `haystack` matches the query.
+  /// * `false` - When the `haystack` did not match the query.
+  fn matching_simple(&self, haystack: &str) -> bool;
+}
+
+/// # Query processor implementation for exact matches
+///
+/// # Examples
+/// This example will demonstrate how to create and use a `QueryProcessor` that will performa an
+/// exact match on the `haystack` string.
+/// Note that the `matching_parts` method can only return `None` when no match was found,
+/// or a `Some` which contains a `Vec` with exactly one `Part::Matching` element,
+/// containing the entire `haystack`.
+/// ```
+/// # use dsh_api::query_processor::{ExactMatchQueryProcessor, Match, Part, QueryProcessor};
+/// let exact_match_query_processor = ExactMatchQueryProcessor::new("exact");
+/// let matching = exact_match_query_processor.matching("exact").unwrap();
+/// assert_eq!(matching, Match::simple());
+/// ```
+pub struct ExactMatchQueryProcessor {
+  exact_match: String,
+}
+
+impl ExactMatchQueryProcessor {
+  pub fn create<T: Into<String>>(exact_match: T) -> Result<Self, DshApiError> {
+    Ok(Self { exact_match: exact_match.into() })
+  }
+
+  pub fn new<T: Into<String>>(exact_match: T) -> Self {
+    Self { exact_match: exact_match.into() }
+  }
+}
+
+impl QueryProcessor for ExactMatchQueryProcessor {
+  fn describe(&self) -> String {
+    format!("match the string \"{}\"", self.exact_match)
+  }
+
+  fn matching(&self, haystack: &str) -> Option<Match> {
+    if self.exact_match == haystack {
+      Some(Match::Simple)
+    } else {
+      None
+    }
+  }
+
+  fn matching_expression(&self, _haystack: &str) -> Option<(String, String, Option<String>)> {
+    None
+  }
+
+  fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>> {
+    if self.exact_match == haystack {
+      Some(vec![Part::matching(haystack.to_string())])
+    } else {
+      None
+    }
+  }
+
+  fn matching_simple(&self, haystack: &str) -> bool {
+    self.exact_match == haystack
+  }
+}
+
+/// # Query processor implementation for substring matches
+///
+/// # Examples
+/// This example will demonstrate how to create and use a `QueryProcessor` that will perform a
+/// substring match on the `haystack` string.
+/// ```
+/// # use dsh_api::query_processor::{Match, Part, QueryProcessor, SubstringQueryProcessor};
+/// let substring_query_processor = SubstringQueryProcessor::new("sub");
+/// let parts = substring_query_processor.matching("contains substring").unwrap();
+/// assert_eq!(
+///   parts,
+///   Match::parts(vec![
+///     Part::non_matching("contains "),
+///     Part::matching("sub"),
+///     Part::non_matching("string")
+///   ])
+/// );
+/// ```
+pub struct SubstringQueryProcessor {
+  substring: String,
+}
+
+impl SubstringQueryProcessor {
+  pub fn create<T: Into<String>>(substring: T) -> Result<Self, DshApiError> {
+    Ok(Self { substring: substring.into() })
+  }
+
+  pub fn new<T: Into<String>>(substring: T) -> Self {
+    Self { substring: substring.into() }
+  }
+}
+
+impl QueryProcessor for SubstringQueryProcessor {
+  fn describe(&self) -> String {
+    format!("match substring \"{}\"", self.substring)
+  }
+
+  fn matching(&self, haystack: &str) -> Option<Match> {
+    self.matching_parts(haystack).map(Match::parts)
+  }
+
+  fn matching_expression(&self, _haystack: &str) -> Option<(String, String, Option<String>)> {
+    None
+  }
+
+  fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>> {
+    let mut parts: Vec<Part> = vec![];
+    let mut leftover = haystack;
+    let mut match_found = false;
+    while !leftover.is_empty() {
+      match leftover.strip_prefix(&self.substring) {
+        Some(stripped) => {
+          match_found = true;
+          parts.push(Part::matching(self.substring.to_string()));
+          leftover = stripped;
+        }
+        None => match leftover.find(&self.substring) {
+          Some(index) => {
+            parts.push(Part::non_matching(leftover[0..index].to_string()));
+            leftover = &leftover[index..];
+          }
+          None => {
+            parts.push(Part::non_matching(leftover.to_string()));
+            leftover = "";
+          }
+        },
+      }
+    }
+    if match_found {
+      Some(parts)
+    } else {
+      None
+    }
+  }
+
+  fn matching_simple(&self, haystack: &str) -> bool {
+    self.matching_parts(haystack).is_some()
+  }
+}
+
+/// # Query processor implementation based on regular expressions
+///
+/// # Examples
+/// ```
+/// # use dsh_api::query_processor::{Match, Part, QueryProcessor, RegexQueryProcessor};
+/// let regex_query_processor = RegexQueryProcessor::create(r#"a+"#).unwrap();
+/// let parts = regex_query_processor.matching("bbabbbaab").unwrap();
+/// assert_eq!(
+///   parts,
+///   Match::parts(vec![
+///     Part::non_matching("bb"),
+///     Part::matching("a"),
+///     Part::non_matching("bbb"),
+///     Part::matching("aa"),
+///     Part::non_matching("b"),
+///   ])
+/// );
+/// ```
+pub struct RegexQueryProcessor {
+  regex: Regex,
+}
+
+impl RegexQueryProcessor {
+  pub fn new<T: Into<Regex>>(regex: Regex) -> Self {
+    Self { regex }
+  }
+
+  pub fn create<T: TryInto<Regex>>(pattern: T) -> Result<Self, DshApiError> {
+    match pattern.try_into() {
+      Ok(regex) => Ok(Self { regex }),
+      Err(_) => Err(DshApiError::Configuration("illegal regular expression".to_string())),
+    }
+  }
+}
+
+impl QueryProcessor for RegexQueryProcessor {
+  fn describe(&self) -> String {
+    format!("match against regular expression \"{}\"", self.regex.as_str())
+  }
+
+  fn matching(&self, haystack: &str) -> Option<Match> {
+    self.matching_parts(haystack).map(Match::parts)
+  }
+
+  fn matching_expression(&self, _haystack: &str) -> Option<(String, String, Option<String>)> {
+    None
+  }
+
+  fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>> {
+    let mut parts: Vec<Part> = vec![];
+    let mut ptr: usize = 0;
+    let mut match_found = false;
+    for matching in self.regex.find_iter(haystack) {
+      if matching.start() > ptr {
+        parts.push(Part::non_matching(&haystack[ptr..matching.start()]))
+      }
+      match_found = true;
+      parts.push(Part::matching(matching.as_str()));
+      ptr = matching.end();
+    }
+    if haystack.len() > ptr {
+      parts.push(Part::non_matching(&haystack[ptr..haystack.len()]));
+    }
+    if match_found {
+      Some(parts)
+    } else {
+      None
+    }
+  }
+
+  fn matching_simple(&self, haystack: &str) -> bool {
+    self.matching_parts(haystack).is_some()
+  }
+}
+
+/// # Query processor for DSH expression
+///
+/// # Examples
+/// ```
+/// # use dsh_api::query_processor::{Match, Part, QueryProcessor, ExpressionQueryProcessor};
+/// let expression_query_processor = ExpressionQueryProcessor::new("vhost");
+/// let matching = expression_query_processor.matching("{ vhost('par') }").unwrap();
+/// assert_eq!(matching, Match::expression("vhost", "par", None::<String>));
+/// let matching = expression_query_processor.matching("{ vhost('par1', 'par2') }").unwrap();
+/// assert_eq!(matching, Match::expression("vhost", "par1", Some("par2")));
+/// ```
+pub struct ExpressionQueryProcessor {
+  kind: String,
+}
+
+impl ExpressionQueryProcessor {
+  pub fn new<T: Into<String>>(kind: T) -> Self {
+    Self { kind: kind.into() }
+  }
+
+  pub fn create<T: Into<String>>(kind: T) -> Result<Self, DshApiError> {
+    Ok(Self { kind: kind.into() })
+  }
+}
+
+impl QueryProcessor for ExpressionQueryProcessor {
+  fn describe(&self) -> String {
+    format!("match against dsh expression {}()", self.kind)
+  }
+
+  fn matching(&self, haystack: &str) -> Option<Match> {
+    self
+      .matching_expression(haystack)
+      .map(|(name, first, second)| Match::expression(name, first, second))
+  }
+
+  fn matching_expression(&self, haystack: &str) -> Option<(String, String, Option<String>)> {
+    match parse_function2(haystack, &self.kind) {
+      Ok((parameter1, parameter2)) => Some((self.kind.to_string(), parameter1.to_string(), Some(parameter2.to_string()))),
+      Err(_) => match parse_function1(haystack, &self.kind) {
+        Ok(parameter) => Some((self.kind.to_string(), parameter.to_string(), None)),
+        Err(_) => None,
+      },
+    }
+  }
+
+  fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>> {
+    self.matching_expression(haystack).map(|(name, first, second)| match second {
+      Some(second_parameter) => vec![Part::matching(name), Part::matching(first), Part::matching(second_parameter)],
+      None => vec![Part::matching(name), Part::matching(first)],
+    })
+  }
+
+  fn matching_simple(&self, haystack: &str) -> bool {
+    self.matching_expression(haystack).is_some()
+  }
+}
+
+/// # Dummy query processor implementation
+///
+/// This dummy query processor always returns the literal `haystack` as a
+/// single non-matching `Part`.
+/// This can be useful when you want to apply a function that expects a query processor,
+/// without actually applying the query.
+pub struct DummyQueryProcessor {}
+
+impl DummyQueryProcessor {
+  pub fn create() -> Result<Self, DshApiError> {
+    Ok(Self {})
+  }
+}
+
+impl QueryProcessor for DummyQueryProcessor {
+  fn describe(&self) -> String {
+    "accept all input".to_string()
+  }
+
+  fn matching(&self, haystack: &str) -> Option<Match> {
+    self.matching_parts(haystack).map(Match::parts)
+  }
+
+  fn matching_expression(&self, _haystack: &str) -> Option<(String, String, Option<String>)> {
+    None
+  }
+
+  fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>> {
+    Some(vec![Part::non_matching(haystack)])
+  }
+
+  fn matching_simple(&self, _haystack: &str) -> bool {
+    true
+  }
 }
 
 impl Part {
@@ -70,298 +424,34 @@ impl Display for Part {
   }
 }
 
-/// # Generate string with ansi formatting from a `Part`
-///
-/// For a `NonMatching` part this method will return the literal inner `String`. For a `Matching`
-/// part the returned `String` will be wrapped in an ANSI escape code for a bold type face.
-///
-/// # Parameters
-/// `part` - The `Part` to generate the formatted string from
-///
-/// # Returns
-/// String representation of this `Part`
-///
-/// # Examples
-/// ```
-/// use dsh_api::query_processor::{part_to_ansi_formatted_string, Part};
-///
-/// println!("part is {}", part_to_ansi_formatted_string(&Part::matching("MATCH")));
-/// ```
-/// This will print the string `"part is \x1B[1mMATCH\x1B[0m"` which,
-/// on a terminal that supports ANSI escape sequences,
-/// will be shown as `"part is `<code><b>MATCH</b></code>`"`.
-pub fn part_to_ansi_formatted_string(part: &Part) -> String {
-  match part {
-    Matching(part) => format!("\x1B[1m{}\x1B[0m", part),
-    NonMatching(part) => part.to_string(),
+impl Match {
+  pub fn expression<T, U, V>(kind: T, first_parameter: U, second_parameter: Option<V>) -> Self
+  where
+    T: Into<String>,
+    U: Into<String>,
+    V: Into<String>,
+  {
+    Match::Expression(kind.into(), first_parameter.into(), second_parameter.map(|sp| sp.into()))
+  }
+
+  pub fn parts(parts: Vec<Part>) -> Self {
+    Match::Parts(parts)
+  }
+
+  pub fn simple() -> Self {
+    Match::Simple
   }
 }
 
-/// # Generate string with ansi formatting from a slice of `Part`s
-///
-/// This method will generate a `String` representation from a `&[Part]` slice, where the
-/// `Matching` parts will be wrapped in an ANSI escape code for a bold type face.
-///
-/// # Parameters
-/// `parts` - The `Part`s to generate the formatted string from
-///
-/// # Returns
-/// String representation of this `&[Part]` slice
-/// # Examples
-/// ```
-/// use dsh_api::query_processor::{parts_to_ansi_formatted_string, Part};
-///
-/// let parts: [Part; 3] =
-///   [Part::non_matching("prefix"), Part::matching("MATCH"), Part::non_matching("postfix")];
-/// println!("parts are {}", parts_to_ansi_formatted_string(&parts));
-/// ```
-/// This will print the string `"parts are prefix\x1B[1mMATCH\x1B[0mpostfix"` which,
-/// on a terminal that supports ANSI escape sequences,
-/// will be shown as `"parts are prefix`<code><b>MATCH</b></code>`postfix"`.
-pub fn parts_to_ansi_formatted_string(parts: &[Part]) -> String {
-  parts.iter().map(part_to_ansi_formatted_string).collect::<Vec<_>>().join("")
-}
-
-/// # Query processor implementation for exact matches
-///
-/// # Examples
-/// This example will demonstrate how to create and use a `QueryProcessor` that will performa an
-/// exact match on the `haystack` string.
-/// Note that the `matching_parts` method can only return `None` when no match was found,
-/// or a `Some` which contains a `Vec` with exactly one `Part::Matching` element,
-/// containing the entire `haystack`.
-/// ```
-/// use dsh_api::query_processor::{ExactMatchQueryProcessor, Part, QueryProcessor};
-///
-/// let exact_match_query_processor = ExactMatchQueryProcessor::create("exact").unwrap();
-/// let parts = exact_match_query_processor.matching_parts("exact").unwrap();
-/// assert_eq!(parts, vec![Part::matching("exact")]);
-/// ```
-pub struct ExactMatchQueryProcessor<'a> {
-  pattern: &'a str,
-}
-
-impl<'a> ExactMatchQueryProcessor<'a> {
-  pub fn create(pattern: &'a str) -> Result<Self, DshApiError> {
-    Ok(Self { pattern })
-  }
-}
-
-impl QueryProcessor for ExactMatchQueryProcessor<'_> {
-  fn describe(&self) -> String {
-    format!("match the pattern \"{}\"", self.pattern)
-  }
-
-  fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>> {
-    if self.pattern == haystack {
-      Some(vec![Part::matching(haystack)])
-    } else {
-      None
+impl Display for Match {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Match::Expression(kind, first_parameter, second_parameter) => match second_parameter {
+        Some(second) => write!(f, "{{ {}('{}', '{}') }}", kind, first_parameter, second),
+        None => write!(f, "{{ {}('{}') }}", kind, first_parameter),
+      },
+      Match::Parts(parts) => write!(f, "{}", parts.iter().join("")),
+      Match::Simple => write!(f, "match"),
     }
-  }
-}
-
-/// # Query processor implementation based on regular expressions
-///
-/// # Examples
-/// ```
-/// use dsh_api::query_processor::{Part, QueryProcessor, RegexQueryProcessor};
-///
-/// let regex_query_processor = RegexQueryProcessor::create("a+").unwrap();
-/// let parts = regex_query_processor.matching_parts("bbabbbaab").unwrap();
-/// assert_eq!(parts, vec![
-///   Part::non_matching("bb"),
-///   Part::matching("a"),
-///   Part::non_matching("bbb"),
-///   Part::matching("aa"),
-///   Part::non_matching("b"),
-/// ]);
-/// ```
-pub struct RegexQueryProcessor {
-  regex: Regex,
-}
-
-impl RegexQueryProcessor {
-  pub fn create(pattern: &str) -> Result<Self, DshApiError> {
-    match Regex::new(pattern) {
-      Ok(regex) => Ok(Self { regex }),
-      Err(error) => Err(DshApiError::Configuration(error.to_string())),
-    }
-  }
-}
-
-impl QueryProcessor for RegexQueryProcessor {
-  fn describe(&self) -> String {
-    format!("match against regular expression \"{}\"", self.regex.as_str())
-  }
-
-  fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>> {
-    let mut parts: Vec<Part> = vec![];
-    let mut ptr: usize = 0;
-    let mut match_found = false;
-    for matching in self.regex.find_iter(haystack) {
-      if matching.start() > ptr {
-        parts.push(Part::non_matching(&haystack[ptr..matching.start()]))
-      }
-      match_found = true;
-      parts.push(Part::matching(matching.as_str()));
-      ptr = matching.end();
-    }
-    if haystack.len() > ptr {
-      parts.push(Part::non_matching(&haystack[ptr..haystack.len()]));
-    }
-    if match_found {
-      Some(parts)
-    } else {
-      None
-    }
-  }
-}
-
-/// # Dummy query processor implementation
-///
-/// This dummy query processor always returns the literal `haystack` as a
-/// single non-matching `Part`.
-/// This can be useful when you want to apply a function that expects a query processor,
-/// without actually applying the query.
-pub struct DummyQueryProcessor {}
-
-impl DummyQueryProcessor {
-  pub fn create() -> Result<Self, DshApiError> {
-    Ok(Self {})
-  }
-}
-
-impl QueryProcessor for DummyQueryProcessor {
-  fn describe(&self) -> String {
-    "accept all input".to_string()
-  }
-
-  fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>> {
-    Some(vec![Part::non_matching(haystack)])
-  }
-}
-
-#[test]
-fn test_exact_match_query_processor() {
-  let haystacks: [(&str, &str, Option<Vec<Part>>); 4] = [("aa", "", None), ("aa", "a", None), ("aa", "aa", Some(vec![Part::matching("aa")])), ("aa", "aaa", None)];
-  for (pattern, haystack, parts) in haystacks {
-    let exact_match_query_processor = ExactMatchQueryProcessor::create(pattern).unwrap();
-    assert_eq!(exact_match_query_processor.describe(), format!("match the pattern \"{}\"", pattern));
-    assert_eq!(exact_match_query_processor.matching_parts(haystack), parts);
-  }
-}
-
-#[test]
-fn test_regex_query_processor() {
-  let haystacks: [(&str, &str, Option<Vec<Part>>); 19] = [
-    ("a+", "", None),
-    ("a+", "b", None),
-    ("a+", "a", Some(vec![Part::matching("a")])),
-    ("a+", "aaa", Some(vec![Part::matching("aaa")])),
-    (
-      "a+",
-      "bbabbbaab",
-      Some(vec![
-        Part::non_matching("bb"),
-        Part::matching("a"),
-        Part::non_matching("bbb"),
-        Part::matching("aa"),
-        Part::non_matching("b"),
-      ]),
-    ),
-    (
-      "a+",
-      "aaabbabbbaab",
-      Some(vec![
-        Part::matching("aaa"),
-        Part::non_matching("bb"),
-        Part::matching("a"),
-        Part::non_matching("bbb"),
-        Part::matching("aa"),
-        Part::non_matching("b"),
-      ]),
-    ),
-    (
-      "a+",
-      "bbabbbaabaaa",
-      Some(vec![
-        Part::non_matching("bb"),
-        Part::matching("a"),
-        Part::non_matching("bbb"),
-        Part::matching("aa"),
-        Part::non_matching("b"),
-        Part::matching("aaa"),
-      ]),
-    ),
-    (
-      "a+",
-      "aaabbabbbaabaaa",
-      Some(vec![
-        Part::matching("aaa"),
-        Part::non_matching("bb"),
-        Part::matching("a"),
-        Part::non_matching("bbb"),
-        Part::matching("aa"),
-        Part::non_matching("b"),
-        Part::matching("aaa"),
-      ]),
-    ),
-    ("aa", "", None),
-    ("aa", "bbb", None),
-    ("aa", "aa", Some(vec![Part::matching("aa")])),
-    ("aa", "aaa", Some(vec![Part::matching("aa"), Part::non_matching("a")])),
-    ("aa", "aaaa", Some(vec![Part::matching("aa"), Part::matching("aa")])),
-    ("aa", "aaaaa", Some(vec![Part::matching("aa"), Part::matching("aa"), Part::non_matching("a")])),
-    ("aa", "aaabb", Some(vec![Part::matching("aa".to_string()), Part::non_matching("abb")])),
-    (
-      "aa",
-      "bbaaabbbaaab",
-      Some(vec![
-        Part::non_matching("bb"),
-        Part::matching("aa"),
-        Part::non_matching("abbb"),
-        Part::matching("aa"),
-        Part::non_matching("ab"),
-      ]),
-    ),
-    (
-      "aa",
-      "aaabbabbbaab",
-      Some(vec![
-        Part::matching("aa"),
-        Part::non_matching("abbabbb"),
-        Part::matching("aa"),
-        Part::non_matching("b"),
-      ]),
-    ),
-    (
-      "aa",
-      "bbabbbaabaaa",
-      Some(vec![
-        Part::non_matching("bbabbb"),
-        Part::matching("aa"),
-        Part::non_matching("b"),
-        Part::matching("aa"),
-        Part::non_matching("a"),
-      ]),
-    ),
-    (
-      "aa",
-      "aaabbabbbaabaaa",
-      Some(vec![
-        Part::matching("aa"),
-        Part::non_matching("abbabbb"),
-        Part::matching("aa"),
-        Part::non_matching("b"),
-        Part::matching("aa"),
-        Part::non_matching("a"),
-      ]),
-    ),
-  ];
-  for (pattern, haystack, parts) in haystacks {
-    let regex_query_processor = RegexQueryProcessor::create(pattern).unwrap();
-    assert_eq!(regex_query_processor.describe(), format!("match against regular expression \"{}\"", pattern));
-    assert_eq!(regex_query_processor.matching_parts(haystack), parts);
   }
 }

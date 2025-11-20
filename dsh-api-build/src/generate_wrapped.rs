@@ -4,6 +4,7 @@ use crate::dsh_api_operation::{method_api_operations, DshApiOperation, Parameter
 use crate::openapi_utils::{method_path_operations, OpenApiOperationKind};
 use crate::{capitalize, RequestBodyType, ResponseBodyType, MANAGED_PARAMETERS, METHODS};
 use indoc::formatdoc;
+use itertools::Itertools;
 use openapiv3::{OpenAPI, Operation};
 use std::error::Error;
 use std::io::Write;
@@ -101,7 +102,7 @@ fn wrapped_method(dsh_api_operation: &DshApiOperation) -> String {
         }
       },
     )
-    .collect::<Vec<_>>();
+    .collect_vec();
   if let Some(ref request_body_type) = dsh_api_operation.request_body {
     match request_body_type {
       RequestBodyType::String => signature_parameters.push("body: String".to_string()),
@@ -121,7 +122,7 @@ fn wrapped_method(dsh_api_operation: &DshApiOperation) -> String {
         }
       },
     )
-    .collect::<Vec<_>>();
+    .collect_vec();
   if dsh_api_operation.request_body.is_some() {
     call_parameters.push("body".to_string());
   }
@@ -144,7 +145,7 @@ fn wrapped_method(dsh_api_operation: &DshApiOperation) -> String {
                 )
                 .await
                 .map(|(_, result)| result)
-                .map(|ids| ids.iter().map(|id| id.to_string()).collect::<Vec<_>>()) {{
+                .map(|ids| ids.iter().map(|id| id.to_string()).collect_vec()) {{
                   Ok(mut ids) => {{
                     ids.sort();
                     Ok(ids)

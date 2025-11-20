@@ -10,6 +10,7 @@
 //! * Generate Progenitor client from an openapi specification
 //! * Update the openapi specification
 
+use itertools::Itertools;
 use std::fmt::{Display, Formatter};
 
 pub mod dsh_api_operation;
@@ -29,10 +30,10 @@ impl PathElement {
   pub(crate) fn vec_from_str(string: &str) -> Vec<PathElement> {
     string
       .split('/')
-      .collect::<Vec<_>>()
+      .collect_vec()
       .iter()
       .filter_map(|element| if element.is_empty() { None } else { Some(PathElement::from(*element)) })
-      .collect::<Vec<_>>()
+      .collect_vec()
   }
 }
 
@@ -148,7 +149,7 @@ fn revise<T: Into<String>>(description: T) -> String {
     description
   } else {
     let trimmed = description.trim();
-    match (trimmed.chars().collect::<Vec<_>>()[0].is_uppercase(), trimmed.ends_with('.')) {
+    match (trimmed.chars().collect_vec()[0].is_uppercase(), trimmed.ends_with('.')) {
       (false, false) => format!("{}.", capitalize(trimmed)),
       (false, true) => capitalize(trimmed),
       (true, false) => format!("{}.", trimmed),

@@ -1,49 +1,52 @@
 //! # `Display` implementations for selected types
 //!
 //! This module provides implementations of the [`Display`] trait for selected types.
+//! Note that if these implementations might change in a future version, this will not be
+//! considered a breaking change. Use these methods for documentation purposes only,
+//! not for business logic.
 //!
-//! * [`ActualCertificate`]
-//! * [`AllocationStatus`]
-//! * [`AppCatalogApp`]
-//! * [`AppCatalogAppConfiguration`]
-//! * [`AppCatalogAppResourcesValue`]
-//! * [`AppCatalogManifest`]
-//! * [`Application`]
-//! * [`ApplicationSecret`]
-//! * [`ApplicationVolumes`]
-//! * [`Bucket`]
-//! * [`BucketStatus`]
-//! * [`Certificate`]
-//! * [`CertificateStatus`]
-//! * [`Empty`]
-//! * [`HealthCheck`]
-//! * [`LimitValue`]
-//! * [`LimitValueCertificateCount`]
-//! * [`LimitValueConsumerRate`]
-//! * [`LimitValueCpu`]
-//! * [`LimitValueKafkaAclGroupCount`]
-//! * [`LimitValueMem`]
-//! * [`LimitValuePartitionCount`]
-//! * [`LimitValueProducerRate`]
-//! * [`LimitValueRequestRate`]
-//! * [`LimitValueSecretCount`]
-//! * [`LimitValueTopicCount`]
-//! * [`ManagedStream`]
-//! * [`ManagedStreamId`]
-//! * [`ManagedTenant`]
-//! * [`Metrics`]
-//! * [`Notification`]
-//! * [`PathSpec`]
-//! * [`PortMapping`]
-//! * [`PublicManagedStream`]
-//! * [`Secret`]
-//! * [`Task`]
-//! * [`TaskStatus`]
-//! * [`Topic`]
-//! * [`TopicStatus`]
-//! * [`Vhost`]
-//! * [`Volume`]
-//! * [`VolumeStatus`]
+//! * [`ActualCertificate::fmt()`](ActualCertificate::fmt)
+//! * [`AllocationStatus::fmt()`](AllocationStatus::fmt)
+//! * [`AppCatalogApp::fmt()`](AppCatalogApp::fmt)
+//! * [`AppCatalogAppConfiguration::fmt()`](AppCatalogAppConfiguration::fmt)
+//! * [`AppCatalogAppResourcesValue::fmt()`](AppCatalogAppResourcesValue::fmt)
+//! * [`AppCatalogManifest::fmt()`](AppCatalogManifest::fmt)
+//! * [`Application::fmt()`](Application::fmt)
+//! * [`ApplicationSecret::fmt()`](ApplicationSecret::fmt)
+//! * [`ApplicationVolumes::fmt()`](ApplicationVolumes::fmt)
+//! * [`Bucket::fmt()`](Bucket::fmt)
+//! * [`BucketStatus::fmt()`](BucketStatus::fmt)
+//! * [`Certificate::fmt()`](Certificate::fmt)
+//! * [`CertificateStatus::fmt()`](CertificateStatus::fmt)
+//! * [`Empty::fmt()`](Empty::fmt)
+//! * [`HealthCheck::fmt()`](HealthCheck::fmt)
+//! * [`LimitValue::fmt()`](LimitValue::fmt)
+//! * [`LimitValueCertificateCount::fmt()`](LimitValueCertificateCount::fmt)
+//! * [`LimitValueConsumerRate::fmt()`](LimitValueConsumerRate::fmt)
+//! * [`LimitValueCpu::fmt()`](LimitValueCpu::fmt)
+//! * [`LimitValueKafkaAclGroupCount::fmt()`](LimitValueKafkaAclGroupCount::fmt)
+//! * [`LimitValueMem::fmt()`](LimitValueMem::fmt)
+//! * [`LimitValuePartitionCount::fmt()`](LimitValuePartitionCount::fmt)
+//! * [`LimitValueProducerRate::fmt()`](LimitValueProducerRate::fmt)
+//! * [`LimitValueRequestRate::fmt()`](LimitValueRequestRate::fmt)
+//! * [`LimitValueSecretCount::fmt()`](LimitValueSecretCount::fmt)
+//! * [`LimitValueTopicCount::fmt()`](LimitValueTopicCount::fmt)
+//! * [`ManagedStream::fmt()`](ManagedStream::fmt)
+//! * [`ManagedStreamId::fmt()`](ManagedStreamId::fmt)
+//! * [`ManagedTenant::fmt()`](ManagedTenant::fmt)
+//! * [`Metrics::fmt()`](Metrics::fmt)
+//! * [`Notification::fmt()`](Notification::fmt)
+//! * [`PathSpec::fmt()`](PathSpec::fmt)
+//! * [`PortMapping::fmt()`](PortMapping::fmt)
+//! * [`PublicManagedStream::fmt()`](PublicManagedStream::fmt)
+//! * [`Secret::fmt()`](Secret::fmt)
+//! * [`Task::fmt()`](Task::fmt)
+//! * [`TaskStatus::fmt()`](TaskStatus::fmt)
+//! * [`Topic::fmt()`](Topic::fmt)
+//! * [`TopicStatus::fmt()`](TopicStatus::fmt)
+//! * [`Vhost::fmt()`](Vhost::fmt)
+//! * [`Volume::fmt()`](Volume::fmt)
+//! * [`VolumeStatus::fmt()`](VolumeStatus::fmt)
 
 use crate::types::{
   ActualCertificate, AllocationStatus, AppCatalogApp, AppCatalogAppConfiguration, AppCatalogAppResourcesValue, AppCatalogManifest, Application, ApplicationSecret,
@@ -51,6 +54,7 @@ use crate::types::{
   LimitValueKafkaAclGroupCount, LimitValueMem, LimitValuePartitionCount, LimitValueProducerRate, LimitValueRequestRate, LimitValueSecretCount, LimitValueTopicCount, ManagedStream,
   ManagedStreamId, ManagedTenant, Metrics, Notification, PathSpec, PortMapping, PublicManagedStream, Secret, Task, TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
 };
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
@@ -79,12 +83,7 @@ impl Display for AllocationStatus {
       write!(
         f,
         ", notifications: [{}]",
-        self
-          .notifications
-          .iter()
-          .map(|notification| notification.to_string())
-          .collect::<Vec<_>>()
-          .join(", ")
+        self.notifications.iter().map(|notification| notification.to_string()).collect_vec().join(", ")
       )?;
     };
     Ok(())
@@ -94,8 +93,8 @@ impl Display for AllocationStatus {
 impl Display for AppCatalogApp {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     write!(f, "name: {}", self.name)?;
-    if let Some(ref configuraton) = self.configuration {
-      write!(f, ", configuration: {}", configuraton)?;
+    if let Some(ref configuration) = self.configuration {
+      write!(f, ", configuration: {}", configuration)?;
     }
     write!(f, ", manifest urn: {}", self.manifest_urn)
   }
@@ -159,8 +158,13 @@ impl Display for ApplicationSecret {
       self
         .injections
         .iter()
-        .map(|injection| { format!("[{}]", injection.iter().map(|kv| { format!("{}->{}", kv.0, kv.1) }).collect::<Vec<_>>().join(", ")) })
-        .collect::<Vec<_>>()
+        .map(|injection| {
+          format!(
+            "[{}]",
+            injection.iter().map(|(key, value)| { format!("{}->{}", key, value) }).collect_vec().join(", ")
+          )
+        })
+        .collect_vec()
         .join("")
     )
   }
@@ -227,10 +231,10 @@ impl Display for Empty {
 
 impl Display for HealthCheck {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    if let Some(protocol) = self.protocol {
-      write!(f, "{}::", protocol.to_string())?
+    match self.protocol {
+      Some(protocol) => write!(f, "{}:{}{}", protocol.to_string(), self.port, self.path),
+      None => write!(f, "{}{}", self.port, self.path),
     }
-    write!(f, "{}:{}", self.path, self.port)
   }
 }
 
@@ -331,7 +335,7 @@ impl Display for ManagedTenant {
       .services
       .iter()
       .filter_map(|service| if service.enabled { Some(service.name.to_string()) } else { None })
-      .collect::<Vec<_>>();
+      .collect_vec();
     if enabled_services.is_empty() {
       Ok(())
     } else {
@@ -353,7 +357,7 @@ impl Display for Notification {
       write!(
         f,
         ", args: {}",
-        self.args.iter().map(|(key, value)| format!("{}->{}", key, value)).collect::<Vec<_>>().join(", ")
+        self.args.iter().map(|(key, value)| format!("{}->{}", key, value)).collect_vec().join(", ")
       )?;
     }
     write!(f, ", message: {}", self.message)
@@ -388,7 +392,7 @@ impl Display for PortMapping {
       fields.push(format!("whitelist: {}", whitelist))
     }
     if !self.paths.is_empty() {
-      fields.push(format!("paths: {}", self.paths.iter().map(|p| p.prefix.to_string()).collect::<Vec<_>>().join(", ")))
+      fields.push(format!("paths: {}", self.paths.iter().map(|p| p.prefix.to_string()).collect_vec().join(", ")))
     }
     write!(f, "{}", fields.join(", "))
   }
@@ -474,7 +478,7 @@ impl Display for VolumeStatus {
 
 fn write_topic(f: &mut Formatter<'_>, kind: Option<&str>, partitions: i64, replication_factor: i64, kafka_properties: &HashMap<String, String>) -> std::fmt::Result {
   if let Some(kind) = kind {
-    write!(f, "managed: {}", kind)?;
+    write!(f, "{} managed stream, ", kind)?;
   }
   write!(f, "partitions: {}", partitions)?;
   write!(f, ", replication factor: {}", replication_factor)?;

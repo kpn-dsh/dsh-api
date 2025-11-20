@@ -4,7 +4,8 @@ mod common;
 
 use crate::common::{initialize_logger, print_header};
 use dsh_api::dsh_api_client_factory::DshApiClientFactory;
-use dsh_api::UsedBy;
+use dsh_api::secret::SecretInjection;
+use dsh_api::Dependant;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -34,12 +35,12 @@ async fn main() -> Result<(), String> {
   println!("{}", client.get_secret_status(test_secret_id).await?);
 
   print_header("list_secrets_with_usage");
-  let secrets_with_usage: Vec<(String, Vec<UsedBy>)> = client.list_secrets_with_usage().await.unwrap();
-  for (secret_id, usage) in secrets_with_usage {
-    if !usage.is_empty() {
+  let secrets_with_dependants: Vec<(String, Vec<Dependant<SecretInjection>>)> = client.secrets_with_dependants().await.unwrap();
+  for (secret_id, dependants) in secrets_with_dependants {
+    if !dependants.is_empty() {
       println!("{}", secret_id);
-      for used_by in usage {
-        println!("  {}", used_by);
+      for dependant in dependants {
+        println!("  {}", dependant);
       }
     }
   }

@@ -13,7 +13,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.7.1" 
+dsh_api = "0.8.0" 
 ```
 
 The example will print a list of all the applications that are deployed

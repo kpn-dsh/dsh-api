@@ -43,6 +43,7 @@
 //! ```
 
 use crate::dsh_api_tenant::DshApiTenant;
+use crate::dsh_jwt::DshJwt;
 use crate::generated::Client as GeneratedClient;
 use crate::platform::DshPlatform;
 use crate::token_fetcher::ManagementApiTokenFetcher;
@@ -56,7 +57,8 @@ use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
 pub struct DshApiClient {
-  token_fetcher: ManagementApiTokenFetcher,
+  static_token: Option<String>,
+  token_fetcher: Option<ManagementApiTokenFetcher>,
   pub(crate) generated_client: GeneratedClient,
   tenant: DshApiTenant,
 }
@@ -72,8 +74,30 @@ pub(crate) enum DshApiResponseStatus {
 pub(crate) type DshApiProcessResult<T> = Result<(DshApiResponseStatus, T), DshApiError>;
 
 impl DshApiClient {
-  pub(crate) fn new(token_fetcher: ManagementApiTokenFetcher, generated_client: GeneratedClient, tenant: DshApiTenant) -> Self {
-    Self { token_fetcher, generated_client, tenant }
+  /// Create a `DshApiClient` from a static token
+  ///
+  /// # Parameters
+  /// `static_token` - Static token.
+  /// `generated_client` - Api functions generated from the openapi specification.
+  /// `tenant` - Dsh api client, containing tenant name and platform.
+  ///
+  /// # Returns
+  /// * [DshApiClient] - The created dsh api client.
+  pub(crate) fn from_static_token(static_token: String, generated_client: GeneratedClient, tenant: DshApiTenant) -> Self {
+    Self { static_token: Some(static_token), token_fetcher: None, generated_client, tenant }
+  }
+
+  /// Create a `DshApiClient` from a token fetcher
+  ///
+  /// # Parameters
+  /// `token_fetcher` - Token fetcher that creates a token when required.
+  /// `generated_client` - Api functions generated from the openapi specification.
+  /// `tenant` - Dsh api client, containing tenant name and platform.
+  ///
+  /// # Returns
+  /// * [DshApiClient] - The created dsh api client.
+  pub(crate) fn from_token_fetcher(token_fetcher: ManagementApiTokenFetcher, generated_client: GeneratedClient, tenant: DshApiTenant) -> Self {
+    Self { static_token: None, token_fetcher: Some(token_fetcher), generated_client, tenant }
   }
 
   /// # Returns the openapi spec used to generate the client code
@@ -136,8 +160,13 @@ impl DshApiClient {
     }
   }
 
+  /// Returns the static token
+  pub fn static_token(&self) -> &Option<String> {
+    &self.static_token
+  }
+
   /// Returns the token fetcher
-  pub fn token_fetcher(&self) -> &ManagementApiTokenFetcher {
+  pub fn token_fetcher(&self) -> &Option<ManagementApiTokenFetcher> {
     &self.token_fetcher
   }
 
@@ -156,6 +185,27 @@ impl DshApiClient {
     self.tenant.platform()
   }
 
+  /// Returns the Authorization header for the rest API
+  ///
+  /// This method returns a token that can be used to authenticate and authorize a call
+  /// to the DSH resource management web service. These header value are of the form
+  /// `Bearer ey...`.
+  ///
+  /// Since this token has a relatively short lifespan,
+  /// it is advised to request a new token from this method before each API call.
+  /// An internal caching mechanism will make sure that no unnecessary calls will be made.
+  pub async fn token(&self) -> Result<String, DshApiError> {
+    if let Some(static_token) = &self.static_token {
+      // The static token does not have the 'Bearer' prefix
+      Ok(format!("Bearer {}", static_token))
+    } else if let Some(token_fetcher) = &self.token_fetcher {
+      // The token_fetcher.get_token() method already includes the 'Bearer' prefix
+      token_fetcher.get_token().await.map_err(DshApiError::from)
+    } else {
+      Err(DshApiError::Unexpected("".to_string(), None))
+    }
+  }
+
   /// Returns a token for the rest API
   ///
   /// This method returns a token that can be used to authenticate and authorize a call
@@ -163,13 +213,17 @@ impl DshApiClient {
   /// Since this token has a relatively short lifespan,
   /// it is advised to request a new token from this method before each API call.
   /// An internal caching mechanism will make sure that no unnecessary calls will be made.
-  pub async fn token(&self) -> Result<String, DshApiError> {
-    match self.token_fetcher.get_token().await {
-      Ok(token) => {
-        debug!("token fetched");
-        Ok(token)
-      }
-      Err(error) => Err(DshApiError::from(error)),
+  pub async fn fresh_jwt(&self) -> Result<DshJwt, DshApiError> {
+    if let Some(static_token) = &self.static_token {
+      DshJwt::from_token(static_token.clone()).map_err(|_| DshApiError::Unexpected("could not parse jwt".to_string(), None))
+    } else if let Some(token_fetcher) = &self.token_fetcher {
+      token_fetcher
+        .fresh_token()
+        .await
+        .map_err(DshApiError::from)
+        .and_then(|token| DshJwt::from_token(token).map_err(|_| DshApiError::Unexpected("could not parse jwt".to_string(), None)))
+    } else {
+      Err(DshApiError::Unexpected("".to_string(), None))
     }
   }
 }

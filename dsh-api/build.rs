@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let out_dir = std::env::var("OUT_DIR").unwrap();
 
   // Read the openapi specification
-  let original_openapi_spec_file_name = "openapi_spec/openapi_1_9_0_patch.json";
+  let original_openapi_spec_file_name = "openapi_spec/openapi_1_10_0.json";
   println!("cargo:rerun-if-changed={}", original_openapi_spec_file_name);
   let original_openapi_spec_file = File::open(original_openapi_spec_file_name).unwrap();
   let mut openapi_spec: OpenAPI = serde_json::from_reader(original_openapi_spec_file).unwrap();

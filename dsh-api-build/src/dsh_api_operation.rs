@@ -46,7 +46,7 @@ fn create_api_operation(method: Method, path: String, operation: &Operation) -> 
     .iter()
     .skip(1)
     .map(|parameter| parameter_to_parameter_type(parameter, &operation_id))
-    .collect::<Vec<_>>();
+    .collect_vec();
   let request_body = operation.request_body.clone().map(|request_body| match request_body {
     ReferenceOr::Reference { reference } => RequestBodyType::SerializableType(reference_to_string(reference.as_ref())),
     ReferenceOr::Item(request_body_item) => RequestBodyType::from(&request_body_item),
@@ -87,11 +87,11 @@ fn create_api_operation(method: Method, path: String, operation: &Operation) -> 
 
 // Method will check whether duplicate selectors exist
 fn check_duplicate_selectors(method_operations: &[DshApiOperation], method: &Method) -> Result<(), Box<dyn Error>> {
-  let mut selectors = method_operations.iter().map(|operation| operation.selector.clone()).collect::<Vec<_>>();
+  let mut selectors = method_operations.iter().map(|operation| operation.selector.clone()).collect_vec();
   selectors.sort();
   let mut duplicate_selectors = Vec::new();
   for (selector, chunk) in &selectors.into_iter().chunk_by(|b| b.clone()) {
-    if chunk.collect::<Vec<_>>().len() > 1 {
+    if chunk.collect_vec().len() > 1 {
       duplicate_selectors.push(selector);
     }
   }
@@ -150,7 +150,7 @@ fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>, operation_id:
 }
 
 fn to_type_name(operation_id: &str, name: &str) -> String {
-  format!("{}{}", operation_id.split('_').map(capitalize).collect::<Vec<_>>().join(""), capitalize(name))
+  format!("{}{}", operation_id.split('_').map(capitalize).collect_vec().join(""), capitalize(name))
 }
 
 fn selector_from_path_elements(path_elements: &[PathElement], ok_response: &ResponseBodyType, include_variables: bool) -> String {
@@ -176,7 +176,7 @@ fn selector_from_path_elements(path_elements: &[PathElement], ok_response: &Resp
         }
       }
     })
-    .collect::<Vec<_>>();
+    .collect_vec();
   let selector = if selector_elements.len() >= 2 {
     let mut subject_elements_iter = selector_elements.iter();
     let first = subject_elements_iter.next().unwrap();

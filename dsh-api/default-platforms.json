@@ -1,11 +1,24 @@
 [
   {
+    "name": "k8s-dev-aws-lz-dsh",
+    "description": "Development platform for Klarrio",
+    "alias": "devlz",
+    "is-production": false,
+    "cloud-provider": "aws",
+    "region": "eu-west-1",
+    "issuer_endpoint": "https://auth.staging.dev-aws-cp.kpn-dsh.com/auth/realms/k8s-dev-aws-lz-dsh",
+    "realm": "k8s-dev-aws-lz-dsh",
+    "public-domain": "dev.dsh-k8s.np.aws.kpn.com",
+    "private-domain": "dev.dsh-k8s.np.aws.kpn.org"
+  },
+  {
     "name": "np-aws-lz-dsh",
     "description": "Staging platform for KPN internal tenants",
     "alias": "nplz",
     "is-production": false,
     "cloud-provider": "aws",
-    "access-token-endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/dev-lz-dsh/protocol/openid-connect/token",
+    "region": "eu-west-1",
+    "issuer_endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/dev-lz-dsh",
     "realm": "dev-lz-dsh",
     "public-domain": "dsh-dev.dsh.np.aws.kpn.com",
     "private-domain": "dsh-dev.dsh.np.aws.kpn.org"
@@ -16,7 +29,8 @@
     "alias": "poc",
     "is-production": true,
     "cloud-provider": "aws",
-    "access-token-endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/poc-dsh/protocol/openid-connect/token",
+    "region": "eu-west-1",
+    "issuer_endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/poc-dsh",
     "realm": "poc-dsh",
     "public-domain": "poc.kpn-dsh.com"
   },
@@ -26,7 +40,8 @@
     "alias": "prod",
     "is-production": true,
     "cloud-provider": "aws",
-    "access-token-endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/tt-dsh/protocol/openid-connect/token",
+    "region": "eu-west-1",
+    "issuer_endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/tt-dsh",
     "realm": "prod-dsh",
     "public-domain": "kpn-dsh.com"
   },
@@ -36,20 +51,11 @@
     "alias": "prodlz",
     "is-production": true,
     "cloud-provider": "aws",
-    "access-token-endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/prod-lz-dsh/protocol/openid-connect/token",
+    "region": "eu-west-1",
+    "issuer_endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/prod-lz-dsh",
     "realm": "prod-lz-dsh",
     "public-domain": "dsh-prod.dsh.prod.aws.kpn.com",
     "private-domain": "dsh-prod.dsh.prod.aws.kpn.org"
-  },
-  {
-    "name": "prod-aws-lz-laas",
-    "description": "Production platform for logstash as a service",
-    "alias": "prodls",
-    "is-production": true,
-    "cloud-provider": "aws",
-    "access-token-endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/prod-aws-lz-laas/protocol/openid-connect/token",
-    "realm": "prod-aws-lz-laas",
-    "public-domain": "laas-prod.dsh.prod.aws.kpn.com"
   },
   {
     "name": "prod-azure-dsh",
@@ -57,7 +63,7 @@
     "alias": "prodaz",
     "is-production": true,
     "cloud-provider": "azure",
-    "access-token-endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/prod-azure-dsh/protocol/openid-connect/token",
+    "issuer_endpoint": "https://auth.prod.cp.kpn-dsh.com/auth/realms/prod-azure-dsh",
     "realm": "prod-azure-dsh",
     "public-domain": "az.kpn-dsh.com"
   }

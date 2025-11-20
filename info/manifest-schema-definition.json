@@ -1,0 +1,134 @@
+{
+    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "$id": "https://to.be.defined/schema.json",
+    "title": "Appstore Manifest",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "name": {
+            "type": "string"
+        },
+        "version": {
+            "type": "string"
+        },
+        "vendor": {
+            "type": "string"
+        },
+        "kind": {
+            "type": "string",
+            "enum": [
+                "manifest"
+            ]
+        },
+        "apiVersion": {
+            "type": "string",
+            "enum": [
+                "v0-alpha"
+            ]
+        },
+        "description": {
+            "type": "string"
+        },
+        "moreInfo": {
+            "type": "string"
+        },
+        "license": {
+            "type": "string"
+        },
+        "contact": {
+            "type": "string"
+        },
+        "configuration": {
+            "type": "object",
+            "properties": {
+                "$schema": {
+                    "type": "string",
+                    "enum": [
+                        "https://json-schema.org/draft/2019-09/schema"
+                    ]
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "object"
+                    ]
+                },
+                "properties": {
+                    "type": "object",
+                    "patternProperties": {
+                        "^[A-Z0-9_]*$": {
+                            "type": "object",
+                            "properties": {
+                                "description": {
+                                    "type": "string"
+                                },
+                                "type": {
+                                    "type": "string",
+                                    "enum": [
+                                        "string",
+                                        "number",
+                                        "dns-zone"
+                                    ]
+                                },
+                                "enum": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "default": {
+                                    "type": [
+                                        "string",
+                                        "integer",
+                                        "number"
+                                    ]
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                                "description",
+                                "type"
+                            ]
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "$schema",
+                "type",
+                "properties"
+            ]
+        },
+        "resources": {
+            "type": "object",
+            "additionalProperties": false,
+            "patternProperties": {
+                "^allocation/.*$": {
+                    "type": [
+                        "object",
+                        "string"
+                    ]
+                }
+            }
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "id",
+        "name",
+        "version",
+        "vendor",
+        "kind",
+        "apiVersion",
+        "description",
+        "moreInfo",
+        "license",
+        "contact",
+        "configuration",
+        "resources"
+    ]
+}

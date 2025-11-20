@@ -4,6 +4,7 @@ use crate::dsh_api_operation::{method_api_operations, DshApiOperation, Parameter
 use crate::openapi_utils::{method_path_operations, OpenApiOperationKind};
 use crate::{article, revise, Method, RequestBodyType, ResponseBodyType, MANAGED_PARAMETERS, METHODS};
 use indoc::formatdoc;
+use itertools::Itertools;
 use openapiv3::{OpenAPI, Operation};
 use std::error::Error;
 use std::io::Write;
@@ -204,7 +205,7 @@ fn if_block(operation: &DshApiOperation) -> String {
         parameter_type_to_index_parameter(parameter_type, parameter_counter, parameter_name)
       }
     })
-    .collect::<Vec<_>>();
+    .collect_vec();
   if let Some(ref request_body_type) = operation.request_body {
     match request_body_type {
             RequestBodyType::String => parameters.push(
@@ -387,7 +388,7 @@ fn create_parameters(operation: &DshApiOperation) -> Vec<String> {
         description.clone().map(|d| format!("Some(\"{}\")", d)).unwrap_or("None".to_string())
       )
     })
-    .collect::<Vec<_>>()
+    .collect_vec()
 }
 
 fn parameter_type_to_index_parameter(parameter_type: &ParameterType, index: isize, name: &str) -> String {

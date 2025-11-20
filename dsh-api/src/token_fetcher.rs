@@ -12,7 +12,6 @@
 //!
 //! # Overview
 //!
-//! * [`AccessToken`] - Access token from the authentication server
 //! * [`ManagementApiTokenFetcher`] - A token fetcher that caches tokens and
 //!   refreshes them upon expiration
 //! * [`ManagementApiTokenFetcherBuilder`] - A builder for customizing the fetcher’s
@@ -52,37 +51,41 @@ use std::time::{Duration, Instant};
 
 /// # Representation of an access token
 ///
-/// This struct is a representation of an access token, as used by DSH's authentication services.
+/// This struct is a representation of an access token, as used by DSH authentication services.
 /// The fields include information about the token’s validity window,
-/// token type, and scope. Typically, you won't instantiate `AccessToken` directly but instead
+/// token type, and scope. Typically, you won't instantiate `FetcherToken` directly but instead
 /// use [`ManagementApiTokenFetcher::get_token`](ManagementApiTokenFetcher::get_token)
 /// to automatically obtain or refresh a valid token.
 ///
 /// * All fields are `pub`.
-/// * [`AccessToken`] has derived implementations of the [`Clone`], [`Debug`], [`Default`],
+/// * [`FetcherToken`] has derived implementations of the [`Clone`], [`Debug`], [`Default`],
 ///   [`Deserialize`], [`PartialEq`] and [`Serialize`] traits.
-/// * [`Display`] is implemented for [`AccessToken`].
+/// * [`Display`] is implemented for [`FetcherToken`].
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
-pub struct AccessToken {
+struct FetcherToken {
   /// Raw access token string (without the token type).
-  pub access_token: String,
+  access_token: String,
   /// Number of seconds until this token expires.
-  pub expires_in: u64,
+  expires_in: u64,
   /// Number of seconds until the refresh token expires.
-  pub refresh_expires_in: u32,
+  refresh_expires_in: u32,
   /// Token type (e.g., `"Bearer"`).
-  pub token_type: String,
+  token_type: String,
   /// “not before” policy timestamp from the authentication server.
   #[serde(rename(deserialize = "not-before-policy"))]
-  pub not_before_policy: u32,
+  not_before_policy: u32,
   /// Scope string (e.g., `"email"`).
-  pub scope: String,
+  scope: String,
 }
 
-impl AccessToken {
+impl FetcherToken {
   /// Returns a complete token string, i.e. `"{token_type} {access_token}"`
   pub fn formatted_token(&self) -> String {
     format!("{} {}", self.token_type, self.access_token)
+  }
+
+  pub fn secret(&self) -> String {
+    self.access_token.clone()
   }
 }
 
@@ -121,7 +124,7 @@ impl AccessToken {
 /// # }
 /// ```
 pub struct ManagementApiTokenFetcher {
-  access_token: Mutex<Option<(AccessToken, Instant)>>,
+  access_token: Mutex<Option<(FetcherToken, Instant)>>,
   client_id: String,
   client_secret: String,
   client: reqwest::Client,
@@ -279,9 +282,9 @@ impl ManagementApiTokenFetcher {
     }
   }
 
-  /// # Fetch a fresh `AccessToken`
+  /// # Fetch a fresh `FetcherToken`
   ///
-  /// Fetches a fresh `AccessToken` from the authentication server.
+  /// Fetches a fresh `FetcherToken` from the authentication server.
   ///
   /// # Errors
   ///
@@ -289,7 +292,7 @@ impl ManagementApiTokenFetcher {
   ///   If the network request fails or times out
   /// * [`ManagementApiTokenError::StatusCode`] -
   ///   If the server returns a non-success status code
-  pub async fn fetch_access_token_from_server(&self) -> Result<AccessToken, ManagementApiTokenError> {
+  async fn fetch_access_token_from_server(&self) -> Result<FetcherToken, ManagementApiTokenError> {
     let auth_url = &self.auth_url;
     let client_id = self.client_id.as_ref();
     let client_secret = self.client_secret.as_ref();
@@ -303,8 +306,22 @@ impl ManagementApiTokenFetcher {
     if !response.status().is_success() {
       Err(ManagementApiTokenError::StatusCode { status_code: response.status(), error_body: response.text().await.unwrap_or_default() })
     } else {
-      response.json::<AccessToken>().await.map_err(ManagementApiTokenError::FailureTokenFetch)
+      response.json::<FetcherToken>().await.map_err(ManagementApiTokenError::FailureTokenFetch)
     }
+  }
+
+  /// # Fetch a fresh token string
+  ///
+  /// Fetches a fresh token string from the authentication server.
+  ///
+  /// # Errors
+  ///
+  /// * [`ManagementApiTokenError::FailureTokenFetch`] -
+  ///   If the network request fails or times out
+  /// * [`ManagementApiTokenError::StatusCode`] -
+  ///   If the server returns a non-success status code
+  pub async fn fresh_token(&self) -> Result<String, ManagementApiTokenError> {
+    self.fetch_access_token_from_server().await.map(|fetcher_token| fetcher_token.secret())
   }
 }
 
@@ -479,7 +496,7 @@ mod test {
 
   fn create_mock_tf(expires_in: u64, fetched_at: Instant) -> ManagementApiTokenFetcher {
     ManagementApiTokenFetcher {
-      access_token: Mutex::new(Some((AccessToken { expires_in, ..AccessToken::default() }, fetched_at))),
+      access_token: Mutex::new(Some((FetcherToken { expires_in, ..FetcherToken::default() }, fetched_at))),
       client_id: "client_id".to_string(),
       client_secret: "client_secret".to_string(),
       client: reqwest::Client::new(),
@@ -487,7 +504,7 @@ mod test {
     }
   }
 
-  /// Ensures `AccessToken` is properly deserialized and returns expected fields.
+  /// Ensures `FetcherToken` is properly deserialized and returns expected fields.
   #[test]
   fn test_access_token() {
     let token_str = r#"{
@@ -498,7 +515,7 @@ mod test {
           "not-before-policy": 0,
           "scope": "email"
         }"#;
-    let token: AccessToken = serde_json::from_str(token_str).unwrap();
+    let token: FetcherToken = serde_json::from_str(token_str).unwrap();
     assert_eq!(token.access_token, "secret_access_token");
     assert_eq!(token.expires_in, 600);
     assert_eq!(token.refresh_expires_in, 0);

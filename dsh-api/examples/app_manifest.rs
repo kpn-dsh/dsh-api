@@ -3,7 +3,9 @@
 mod common;
 
 use crate::common::initialize_logger;
-use dsh_api::app_manifest::Manifest;
+use dsh_api::manifest::Manifest;
+use dsh_api::version::Version;
+use std::str::FromStr;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -12,51 +14,49 @@ async fn main() -> Result<(), String> {
   initialize_logger();
 
   let manifest_id = "kpn/eavesdropper";
-  let manifest_version = "0.9.2";
+  let manifest_version = Version::from_str("0.9.2")?;
 
   let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;
 
   println!("\n-------------------------------------------");
-  println!("list_app_catalog_manifest_ids");
+  println!("manifest_ids");
   println!("-------------------------------------------");
-  let manifest_ids: Vec<String> = client.list_app_catalog_manifest_ids().await?;
+  let manifest_ids: Vec<String> = client.manifest_ids().await?;
   for manifest_id in manifest_ids {
     println!("{}", manifest_id);
   }
 
   println!("\n-------------------------------------------");
-  println!("list_app_catalog_manifest_ids_with_versions");
+  println!("manifest_ids_with_versions");
   println!("-------------------------------------------");
-  let manifest_ids_with_versions: Vec<(String, Vec<String>)> = client.list_app_catalog_manifest_versions().await?;
-  for manifest_id_with_versions in manifest_ids_with_versions {
-    println!("{} -> {:?}", manifest_id_with_versions.0, manifest_id_with_versions.1);
-  }
-
-  println!("-------------------------------------------");
-  println!("list_app_catalog_manifests_with_versions");
-  println!("-------------------------------------------");
-  let manifests_with_versions: Vec<(String, Vec<(String, Manifest)>)> = client.list_app_catalog_manifests().await?;
-  for (manifest_id, versions) in manifests_with_versions {
-    println!("-------------------------------------------");
+  let manifest_ids_with_versions: Vec<(String, Vec<Manifest>)> = client.manifests_all_versions().await?;
+  for (manifest_id, manifest_versions) in manifest_ids_with_versions {
     println!("{}", manifest_id);
-    for (version, manifest) in versions {
-      println!("  {} -> {} : {}", version, manifest.name, manifest.description.unwrap_or_default());
+    for manifest_version in manifest_versions {
+      println!("  {}", manifest_version.version);
     }
   }
 
   println!("-------------------------------------------");
-  println!("get_app_catalog_manifests");
+  println!("manifests");
   println!("-------------------------------------------");
-  let manifests: Vec<(String, Manifest)> = client.get_app_catalog_manifests(manifest_id).await?;
-  for (version, manifest) in manifests {
-    println!("{}:{} -> {} : {}", manifest_id, version, manifest.name, manifest.description.unwrap_or_default());
+  let manifests: Vec<Manifest> = client.manifests().await?;
+  for manifest in manifests {
+    println!("-------------------------------------------");
+    println!("{} -> {}", manifest.name, manifest.version);
   }
 
   println!("-------------------------------------------");
-  println!("get_app_catalog_manifest");
+  println!("app_catalog_manifests");
   println!("-------------------------------------------");
-  let manifest = client.get_app_catalog_manifest(manifest_id, manifest_version).await?;
+  let manifest_latest_version: Manifest = client.manifest_latest_version(manifest_id, true).await?;
+  println!("{}", manifest_latest_version);
+
+  println!("-------------------------------------------");
+  println!("app_catalog_manifest");
+  println!("-------------------------------------------");
+  let manifest = client.manifest(manifest_id, &manifest_version).await?;
   println!(
     "{}:{} -> {} : {}",
     manifest.id,
@@ -66,9 +66,10 @@ async fn main() -> Result<(), String> {
   );
 
   println!("-------------------------------------------");
-  println!("get_raw_manifest");
+  println!("raw_manifest");
   println!("-------------------------------------------");
-  let manifest = client.get_raw_manifest(manifest_id, manifest_version).await?;
+  let (manifest, draft) = client.manifest_raw(manifest_id, &manifest_version).await?;
+  println!("{}", draft);
   println!("{}", manifest);
 
   Ok(())

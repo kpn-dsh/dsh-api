@@ -1,13 +1,14 @@
-use crate::common::{get_client, initialize_logger, print_header};
-use dsh_api::types::{GetTenantLimitByManagerByTenantByKindKind, LimitValue, LimitValueSecretCount, LimitValueSecretCountName};
-
 #[path = "common.rs"]
 mod common;
 
-const MANAGED_TENANT_UNDER_TEST: &str = "ajuc-test";
-
+#[cfg(feature = "manage")]
 #[tokio::main]
 async fn main() -> Result<(), String> {
+  use crate::common::{get_client, initialize_logger, print_header};
+  use dsh_api::types::{GetTenantLimitByManagerByTenantByKindKind, LimitValue, LimitValueSecretCount, LimitValueSecretCountName};
+
+  const MANAGED_TENANT_UNDER_TEST: &str = "ajuc-test";
+
   initialize_logger();
   let client = get_client().await?;
 
@@ -42,3 +43,6 @@ async fn main() -> Result<(), String> {
 
   Ok(())
 }
+
+#[cfg(not(feature = "manage"))]
+fn main() {}

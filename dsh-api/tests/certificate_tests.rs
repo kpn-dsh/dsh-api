@@ -1,6 +1,5 @@
 use crate::common::{get_client, print_header};
 
-#[path = "common.rs"]
 mod common;
 
 static CERTIFICATE_ID: &str = "broker-kafka-proxy-certificate";
@@ -50,10 +49,10 @@ async fn test_get_certificate_ids() {
 }
 
 #[tokio::test]
-async fn test_get_certificate_with_usage() {
+async fn test_certificate_with_dependants() {
   if let Ok(client) = get_client().await {
     print_header("get_certificate_with_usage");
-    match client.get_certificate_with_usage(CERTIFICATE_ID).await {
+    match client.certificate_with_dependant_apps(CERTIFICATE_ID).await {
       Ok(certificate_with_usage) => println!("{:#?}", certificate_with_usage),
       Err(_) => println!("certificate {} does not exist", CERTIFICATE_ID),
     }
@@ -61,10 +60,10 @@ async fn test_get_certificate_with_usage() {
 }
 
 #[tokio::test]
-async fn test_list_certificates_with_usage() {
+async fn test_certificates_with_dependants() {
   if let Ok(client) = get_client().await {
     print_header("list_certificates_with_usage");
-    match client.list_certificates_with_usage().await {
+    match client.certificates_with_dependant_apps().await {
       Ok(certificates_with_usage) => println!("{:#?}", certificates_with_usage),
       Err(_) => println!("could not get certificates"),
     }
