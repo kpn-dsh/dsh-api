@@ -1,6 +1,6 @@
-//! # Additional methods to manage certificates
-//!
 //! Module that contains methods and functions to manage certificates.
+//!
+#![doc=mermaid!("diagrams/certificate.mmd")]
 //!
 //! # Generated methods
 //!
@@ -10,7 +10,7 @@
 //! * [`get_certificate(id) -> CertificateStatus`](DshApiClient::get_certificate)
 //! * [`get_certificate_actual(id) -> Certificate`](DshApiClient::get_certificate_actual)
 //! * [`get_certificate_configuration(id) -> Certificate`](DshApiClient::get_certificate_configuration)
-//! * [`get_certificate_ids() -> [id]`](DshApiClient::get_certificate_ids)
+//! * [`get_certificate_ids() -> Vec<String>`](DshApiClient::get_certificate_ids)
 //! * [`get_certificate_status(id) -> AllocationStatus`](DshApiClient::get_certificate_status)
 //! * [`put_certificate_configuration(id, body)`](DshApiClient::put_certificate_configuration)
 //!
@@ -19,8 +19,8 @@
 //! [`DshApiClient`] methods that add extra capabilities but do not directly call the
 //! DSH resource management API. These derived methods depend on the API methods for this.
 //!
-//! * [`certificate_with_dependant_apps(certificate id) -> (certificate status, [app])`](DshApiClient::certificate_with_dependant_apps)
-//! * [`certificates_with_dependant_apps() -> [(certificate id, certificate status, [app])]`](DshApiClient::certificates_with_dependant_apps)
+//! * [`certificate_with_dependant_apps(id) -> (CertificateStatus, Vec<DependantApp>)`](DshApiClient::certificate_with_dependant_apps)
+//! * [`certificates_with_dependant_apps() -> Vec<(String, CertificateStatus, Vec<DependantApp>)>`](DshApiClient::certificates_with_dependant_apps)
 
 use crate::app::app_resources;
 use crate::dsh_api_client::DshApiClient;
@@ -31,6 +31,7 @@ use crate::DshApiError;
 use crate::{DependantApp, DshApiResult};
 use futures::future::try_join_all;
 use futures::try_join;
+use simple_mermaid::mermaid;
 use std::collections::HashMap;
 
 /// # Additional methods to manage certificates
@@ -44,8 +45,8 @@ use std::collections::HashMap;
 /// [`DshApiClient`] methods that add extra capabilities but do not directly call the
 /// DSH resource management API. These derived methods depend on the API methods for this.
 ///
-/// * [`certificate_with_dependant_apps(certificate id) -> (certificate status, [app])`](DshApiClient::certificate_with_dependant_apps)
-/// * [`certificates_with_dependant_apps() -> [(certificate id, certificate status, [app])]`](DshApiClient::certificates_with_dependant_apps)
+/// * [`certificate_with_dependant_apps(id) -> (CertificateStatus, Vec<DependantApp>)`](DshApiClient::certificate_with_dependant_apps)
+/// * [`certificates_with_dependant_apps() -> Vec<(String, CertificateStatus, Vec<DependantApp>)>`](DshApiClient::certificates_with_dependant_apps)
 impl DshApiClient {
   /// # Return certificate with usage
   ///

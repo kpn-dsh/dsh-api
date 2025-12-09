@@ -1,0 +1,37 @@
+classDiagram
+    CertificateStatus o-- ActualCertificate
+    CertificateStatus o-- Certificate
+    CertificateStatus *-- AllocationStatus
+
+    class Certificate {
+        cert_chain_secret: String
+        key_secret: String
+        passphrase_secret: Option~String~
+    }
+    link Certificate "../types/struct.Certificate.html"
+
+    class AllocationStatus {
+        derived_from: Option~String~
+        notifications: Vec~Notification~
+        provisioned: bool
+    }
+    link AllocationStatus "../types/struct.AllocationStatus.html"
+
+    class ActualCertificate {
+        cert_chain_secret: String
+        distinguished_name: String
+        dns_names: Vec~String~
+        key_secret: String
+        not_after: chrono:: DateTime
+        not_before: chrono:: DateTime
+        passphrase_secret: Option~String~
+        serial_number: String
+    }
+    link ActualCertificate "../types/struct.ActualCertificate.html"
+
+    class CertificateStatus {
+        actual: Option~ActualCertificate~
+        configuration: Option~Certificate~
+        status: AllocationStatus
+    }
+    link CertificateStatus "../types/struct.CertificateStatus.html"
