@@ -188,10 +188,10 @@ pub mod volume;
 /// ## Example
 ///
 /// ```
-/// assert_eq!(dsh_api::crate_version(), "0.8.0");
+/// assert_eq!(dsh_api::crate_version(), "0.8.1");
 /// ```
 pub fn crate_version() -> &'static str {
-  "0.8.0"
+  "0.8.1"
 }
 
 /// # Returns the version of the openapi spec
