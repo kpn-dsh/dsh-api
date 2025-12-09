@@ -87,7 +87,7 @@ impl DshApiClient {
   ///
   /// # Returns
   /// * `Ok<Vec<String>>` - vector containing the sorted application ids
-  /// * `Err<\[DshApiError\]>` - when the request could not be processed by the DSH
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn application_ids(&self) -> DshApiResult<Vec<String>> {
     let mut application_ids: Vec<String> = self
       .get_application_configuration_map()
@@ -102,8 +102,8 @@ impl DshApiClient {
   /// # List application ids with the corresponding allocation status
   ///
   /// # Returns
-  /// * `Ok<Vec<(String, \[AllocationStatus\])>>` - list of application ids and allocation statuses
-  /// * `Err<\[DshApiError\]>` - when the request could not be processed by the DSH
+  /// * `Ok<Vec<(String, `[`AllocationStatus`]`)>>` - list of application ids and allocation statuses
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn application_ids_with_allocation_statuses(&self) -> DshApiResult<Vec<(String, AllocationStatus)>> {
     let application_ids: Vec<String> = self.application_ids().await?;
     let allocation_statuses = try_join_all(application_ids.iter().map(|application_id| self.get_application_status(application_id.as_str()))).await?;
@@ -113,8 +113,8 @@ impl DshApiClient {
   /// # List all application configurations with their ids
   ///
   /// # Returns
-  /// * `Ok<Vec<(String, \[Application\])>>` - list of application ids and configurations
-  /// * `Err<\[DshApiError\]>` - when the request could not be processed by the DSH
+  /// * `Ok<Vec<(String, `[`Application`]`)>>` - list of application ids and configurations
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn applications(&self) -> DshApiResult<Vec<(String, Application)>> {
     self.applications_filtered(&|_| true).await
   }
@@ -125,8 +125,8 @@ impl DshApiClient {
   /// * `bucket_id` - Identifies the requested bucket.
   ///
   /// # Returns
-  /// * `Ok<Vec<DependantApplication>>` - usage.
-  /// * `Err<\[DshApiError\]>` - when the request could not be processed by the DSH
+  /// * `Ok<Vec<`[`DependantApplication`]`>>` - usage.
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn applications_dependant_on_bucket(&self, bucket_id: &str) -> DshApiResult<Vec<DependantApplication<BucketInjection>>> {
     let (applications, bucket_name) = match self.platform().cloud_provider() {
       CloudProvider::AWS => (self.get_application_configuration_map().await?, None),
@@ -155,8 +155,8 @@ impl DshApiClient {
   /// * `secret_id` - id of the requested secret
   ///
   /// # Returns
-  /// * `Ok<Vec<DependantApplication>>` - usage.
-  /// * `Err<\[DshApiError\]>` - when the request could not be processed by the DSH
+  /// * `Ok<Vec<`[`DependantApplication`]`>>` - usage.
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn applications_dependant_on_secret(&self, secret_id: &str) -> DshApiResult<Vec<DependantApplication<SecretInjection>>> {
     let applications = self.get_application_configuration_map().await?;
     Ok(
@@ -183,8 +183,8 @@ impl DshApiClient {
   /// * `vhost` - id of the requested vhost
   ///
   /// # Returns
-  /// * `Ok<Vec<DependantApplication>>` - usage.
-  /// * `Err<\[DshApiError\]>` - when the request could not be processed by the DSH
+  /// * `Ok<Vec<`[`DependantApplication`]`>>` - usage.
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn applications_dependant_on_scratch_topic(&self, topic: &str) -> DshApiResult<Vec<DependantApplication<TopicInjection>>> {
     let applications = self.get_application_configuration_map().await?;
     Ok(
@@ -201,8 +201,8 @@ impl DshApiClient {
   /// * `vhost` - id of the requested vhost
   ///
   /// # Returns
-  /// * `Ok<Vec<DependantApplication>>` - usage.
-  /// * `Err<\[DshApiError\]>` - when the request could not be processed by the DSH
+  /// * `Ok<Vec<`[`DependantApplication`]`>>` - usage.
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn applications_dependant_on_vhost(&self, vhost: &str) -> DshApiResult<Vec<DependantApplication<VhostInjection>>> {
     let applications = self.get_application_configuration_map().await?;
     Ok(
@@ -229,8 +229,8 @@ impl DshApiClient {
   /// * `volume` - id of the requested volume
   ///
   /// # Returns
-  /// * `Ok<Vec<DependantApplication>>` - usage.
-  /// * `Err<\[DshApiError\]>` - when the request could not be processed by the DSH
+  /// * `Ok<Vec<`[`DependantApplication`]`>>` - usage.
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn applications_dependant_on_volume(&self, volume: &str) -> DshApiResult<Vec<DependantApplication<VolumeInjection>>> {
     let applications = self.get_application_configuration_map().await?;
     Ok(
@@ -253,9 +253,9 @@ impl DshApiClient {
   /// * `predicate` - predicate that will be used to filter the applications
   ///
   /// # Returns
-  /// * `Ok<Vec<(String, \[Application\])>>` - list of id/application tuples
+  /// * `Ok<Vec<(String, `[`Application`]`)>>` - list of id/application tuples
   ///   for which the predicate returned `true`, sorted by id
-  /// * `Err<\[DshApiError\]>` - when the request could not be processed by the DSH
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn applications_filtered(&self, predicate: &dyn Fn(&Application) -> bool) -> DshApiResult<Vec<(String, Application)>> {
     let mut matching_applications: Vec<(String, Application)> = self
       .get_application_configuration_map()
@@ -270,16 +270,16 @@ impl DshApiClient {
   /// # Find application that use an environment variable value
   ///
   /// # Parameters
-  /// * `query_process` - \[QueryProcessor\] that is matched against all environment variables of all applications
+  /// * `query_process` - [`QueryProcessor`] that is matched against all environment variables of all applications
   ///
   /// # Returns
-  /// * `Vec<(String, \[Application\], Vec<(String, Vec<\[Part\]>)>)>` - list of tuples
+  /// * `Vec<(String, `[`Application`]`, Vec<(String, Vec<Part>)>)>` - list of tuples
   ///   that describe the matched environment variables.
   ///   Each tuple consist of
   ///   * `String` - id of the application that contains the value,
   ///   * `Application` - the application data and
-  ///   * `Vec<(String, Vec<\[Part\]>)>` - list of environment variable key/value pairs that matched the query
-  /// * `Err<\[DshApiError\]>` - when the request could not be processed by the DSH
+  ///   * `Vec<(String, Vec<Part>)>` - list of environment variable key/value pairs that matched the query
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   #[allow(clippy::type_complexity)]
   pub async fn applications_that_use_env_value(&self, query_processor: &dyn QueryProcessor) -> DshApiResult<Vec<(String, Application, Vec<(String, Match)>)>> {
     let mut matches: Vec<(String, Application, Vec<(String, Match)>)> = vec![];
@@ -306,7 +306,7 @@ impl DshApiClient {
   ///
   /// # Returns
   /// * `Ok<(gid, uid)>` - group and user id for the tenant, which are always the same vale
-  /// * `Err<\[DshApiError\]>` - when the request could not be processed by the DSH
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn guid(&self) -> DshApiResult<(usize, usize)> {
     lazy_static! {
       static ref GUID_REGEX: Regex = Regex::new(r"^([0-9]+):([0-9]+)$").unwrap();
@@ -327,15 +327,15 @@ impl DshApiClient {
 /// # Match environment variables in an application against query
 ///
 /// # Parameters
-/// * `query_processor` - \[QueryProcessor\] that is matched against all environment variables in
+/// * `query_processor` - [`QueryProcessor`] that is matched against all environment variables in
 ///   the application.
 /// * `application` - Reference to the `Application`.
 ///
 /// # Returns
-/// * `Vec<(String, Match)>` - List of tuples that describe the matched environment variables.
+/// * `Vec<(String, `[`Match`]`)>` - List of tuples that describe the matched environment variables.
 ///   Each tuple consist of
 ///   * `String` - Name of the matching environment variable.
-///   * `Match` - Type of the match.
+///   * `[`Match`]` - Type of the match.
 pub fn application_environment_variables(query_processor: &dyn QueryProcessor, application: &Application) -> Vec<(String, Match)> {
   let mut matching_envs: Vec<(String, Match)> = vec![];
   for (key, value) in &application.env {
@@ -367,16 +367,16 @@ pub fn application_resources_from_app(app: &AppCatalogApp) -> Vec<(&str, &Applic
 /// # Match all environment variables in all applications against query
 ///
 /// # Parameters
-/// * `query_process` - \[QueryProcessor\] that is matched against all environment variables in
+/// * `query_process` - [`QueryProcessor`] that is matched against all environment variables in
 ///   all applications.
 /// * `applications` - Hashmap containing the applications.
 ///
 /// # Returns
-/// * `Vec<(String, Vec<\[Part\]>)>` - list of tuples that describe the matched environment variables.
+/// * `Vec<(String, Vec<Part>)>` - list of tuples that describe the matched environment variables.
 ///   Each tuple consist of
 ///   * `String` - name of the matching environment variable
-///   * `Vec<\[Part\]>` - list of environment variable key/value pairs that matched the query
-/// * `Err<\[DshApiError\]>` - when the request could not be processed by the DSH
+///   * `Vec<Part>` - list of environment variable key/value pairs that matched the query
+/// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
 pub fn applications_environment_variables<'a>(query_processor: &dyn QueryProcessor, applications: &'a HashMap<String, Application>) -> Vec<ApplicationValues<'a, (String, Match)>> {
   let mut matching_applications: Vec<ApplicationValues<'a, (String, Match)>> = vec![];
   for (application_id, application) in applications {
