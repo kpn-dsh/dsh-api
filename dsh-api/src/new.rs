@@ -689,7 +689,8 @@ impl Notification {
   /// The other field of the `Notification` instance will be set to its default values.
   ///
   /// # Parameters
-  /// * `message` - description of the notification
+  /// * `args` - Attributes to be applied to the template.
+  /// * `message` - Template for the text of the notification.
   /// * `remove` - `true` if the notification has to do with removal of the allocation,
   ///   `false` if it relates to creation/update of the resource
   ///
@@ -699,17 +700,19 @@ impl Notification {
   /// # Example
   ///
   /// ```
-  /// # use dsh_api::types::Notification;
-  /// let notification = Notification::new("my notification", true);
+  /// # use std::collections::HashMap;
+  /// use dsh_api::types::Notification;
+  /// let args = HashMap::<String, String>::new();
+  /// let notification = Notification::new(args, "my notification", true);
   /// assert_eq!(notification.message, "my notification");
   /// assert!(notification.remove);
   /// assert!(notification.args.is_empty());
   /// ```
-  pub fn new<T>(message: T, remove: bool) -> Self
+  pub fn new<T>(args: HashMap<String, String>, message: T, remove: bool) -> Self
   where
     T: Into<String>,
   {
-    Self { message: message.into(), remove, ..Self::default() }
+    Self { args, message: message.into(), remove }
   }
 }
 
