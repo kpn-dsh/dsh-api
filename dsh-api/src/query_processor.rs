@@ -142,6 +142,137 @@ impl QueryProcessor for ExactMatchQueryProcessor {
   }
 }
 
+/// # Query processor implementation for string matches
+///
+/// # Parameters
+/// * `string` - The pattern that will be matched against.
+/// * `match_substring` - Whether matches on substring (`true`) or on the full string (`false`).
+/// * `ignore_case` - Whether matching is case-sensitive.
+///
+/// # Examples
+/// This example will demonstrate how to create and use a `StringQueryProcessor` that will
+/// perform a case-insensitive substring match on the `haystack` string.
+/// ```
+/// # use dsh_api::query_processor::{Match, Part, QueryProcessor, StringQueryProcessor};
+/// let string_query_processor = StringQueryProcessor::new("SUB", true, true);
+/// let parts = string_query_processor.matching("contains substring").unwrap();
+/// assert_eq!(
+///   parts,
+///   Match::parts(vec![
+///     Part::non_matching("contains "),
+///     Part::matching("sub"),
+///     Part::non_matching("string")
+///   ])
+/// );
+/// ```
+pub struct StringQueryProcessor {
+  string: String,
+  match_substring: bool,
+  ignore_case: bool,
+}
+
+impl StringQueryProcessor {
+  pub fn create<T: Into<String>>(string: T, match_substring: bool, ignore_case: bool) -> Result<Self, DshApiError> {
+    Ok(Self { string: string.into(), match_substring, ignore_case })
+  }
+
+  pub fn new<T: Into<String>>(string: T, match_substring: bool, ignore_case: bool) -> Self {
+    Self { string: string.into(), match_substring, ignore_case }
+  }
+}
+
+impl QueryProcessor for StringQueryProcessor {
+  fn describe(&self) -> String {
+    if self.match_substring {
+      if self.ignore_case {
+        format!("match substring \"{}\", case-insensitive", self.string,)
+      } else {
+        format!("match substring \"{}\", case-sensitive", self.string,)
+      }
+    } else if self.ignore_case {
+      format!("match full string \"{}\", case-insensitive", self.string,)
+    } else {
+      format!("match full string \"{}\", case-sensitive", self.string,)
+    }
+  }
+
+  fn matching(&self, haystack: &str) -> Option<Match> {
+    self.matching_parts(haystack).map(Match::parts)
+  }
+
+  fn matching_expression(&self, _haystack: &str) -> Option<(String, String, Option<String>)> {
+    None
+  }
+
+  fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>> {
+    fn find_ignore_case(ignore_case: bool, haystack: &str, pattern: &str) -> Option<usize> {
+      if ignore_case {
+        haystack.to_lowercase().find(pattern.to_lowercase().as_str())
+      } else {
+        haystack.find(pattern)
+      }
+    }
+
+    fn strip_prefix_ignore_case<'a>(ignore_case: bool, haystack: &'a str, prefix: &str) -> Option<(&'a str, &'a str)> {
+      if ignore_case {
+        if haystack.to_lowercase().starts_with(prefix.to_lowercase().as_str()) {
+          Some((&haystack[0..prefix.len()], &haystack[prefix.len()..]))
+        } else {
+          None
+        }
+      } else if let Some(stripped_prefix) = haystack.strip_prefix(prefix) {
+        Some((&haystack[0..prefix.len()], stripped_prefix))
+      } else {
+        None
+      }
+    }
+
+    if self.match_substring {
+      let mut parts: Vec<Part> = vec![];
+      let mut leftover = haystack;
+      let mut match_found = false;
+      while !leftover.is_empty() {
+        match strip_prefix_ignore_case(self.ignore_case, leftover, &self.string) {
+          Some((prefix, rest)) => {
+            match_found = true;
+            parts.push(Part::matching(prefix.to_string()));
+            leftover = rest;
+          }
+          None => match find_ignore_case(self.ignore_case, leftover, &self.string) {
+            Some(index) => {
+              parts.push(Part::non_matching(leftover[0..index].to_string()));
+              leftover = &leftover[index..];
+            }
+            None => {
+              parts.push(Part::non_matching(leftover.to_string()));
+              leftover = "";
+            }
+          },
+        }
+      }
+      if match_found {
+        Some(parts)
+      } else {
+        None
+      }
+    } else if self.ignore_case {
+      if self.string.eq_ignore_ascii_case(haystack) {
+        Some(vec![Matching(haystack.to_string())])
+      } else {
+        None
+      }
+    } else if self.string == haystack {
+      Some(vec![Matching(haystack.to_string())])
+    } else {
+      None
+    }
+  }
+
+  fn matching_simple(&self, haystack: &str) -> bool {
+    self.matching_parts(haystack).is_some()
+  }
+}
+
 /// # Query processor implementation for substring matches
 ///
 /// # Examples

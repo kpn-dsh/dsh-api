@@ -1,4 +1,6 @@
-use dsh_api::query_processor::{ExactMatchQueryProcessor, ExpressionQueryProcessor, Match, Part, QueryProcessor, RegexQueryProcessor, SubstringQueryProcessor};
+use dsh_api::query_processor::{
+  ExactMatchQueryProcessor, ExpressionQueryProcessor, Match, Part, QueryProcessor, RegexQueryProcessor, StringQueryProcessor, SubstringQueryProcessor,
+};
 
 #[test]
 fn test_exact_match_query_processor() {
@@ -7,6 +9,47 @@ fn test_exact_match_query_processor() {
     let exact_match_query_processor = ExactMatchQueryProcessor::create(pattern).unwrap();
     assert_eq!(exact_match_query_processor.describe(), format!("match the string \"{}\"", pattern));
     assert_eq!(exact_match_query_processor.matching(haystack), matching);
+  }
+}
+
+#[test]
+fn test_string_query_processor() {
+  let patterns_haystacks: [(&str, &str, Option<Match>); 14] = [
+    ("A", "", None),
+    ("A", "b", None),
+    ("A", "a", Some(Match::parts(vec![Part::matching("a")]))),
+    ("A", "aa", Some(Match::parts(vec![Part::matching("a"), Part::matching("a")]))),
+    ("AA", "aa", Some(Match::parts(vec![Part::matching("aa")]))),
+    ("AA", "aaa", Some(Match::parts(vec![Part::matching("aa"), Part::non_matching("a")]))),
+    ("A", "aaa", Some(Match::parts(vec![Part::matching("a"), Part::matching("a"), Part::matching("a")]))),
+    (
+      "A",
+      "aab",
+      Some(Match::parts(vec![Part::matching("a"), Part::matching("a"), Part::non_matching("b")])),
+    ),
+    (
+      "A",
+      "aba",
+      Some(Match::parts(vec![Part::matching("a"), Part::non_matching("b"), Part::matching("a")])),
+    ),
+    ("A", "abb", Some(Match::parts(vec![Part::matching("a"), Part::non_matching("bb")]))),
+    (
+      "A",
+      "baa",
+      Some(Match::parts(vec![Part::non_matching("b"), Part::matching("a"), Part::matching("a")])),
+    ),
+    (
+      "A",
+      "bab",
+      Some(Match::parts(vec![Part::non_matching("b"), Part::matching("a"), Part::non_matching("b")])),
+    ),
+    ("A", "bba", Some(Match::parts(vec![Part::non_matching("bb"), Part::matching("a")]))),
+    ("A", "bbb", None),
+  ];
+  for (pattern, haystack, matching) in patterns_haystacks {
+    println!("{} -> {}", pattern, haystack);
+    let string_query_processor = StringQueryProcessor::new(pattern, true, true);
+    assert_eq!(string_query_processor.matching(haystack), matching);
   }
 }
 
@@ -48,6 +91,8 @@ fn test_substring_query_processor() {
     let substring_query_processor = SubstringQueryProcessor::create(pattern).unwrap();
     assert_eq!(substring_query_processor.describe(), format!("match substring \"{}\"", pattern));
     assert_eq!(substring_query_processor.matching(haystack), matching);
+    let string_query_processor = StringQueryProcessor::create(pattern, true, false).unwrap();
+    assert_eq!(string_query_processor.matching(haystack), matching);
   }
 }
 
