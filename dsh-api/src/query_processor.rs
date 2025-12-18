@@ -98,6 +98,7 @@ pub trait QueryProcessor: Send + Sync {
 /// let matching = exact_match_query_processor.matching("exact").unwrap();
 /// assert_eq!(matching, Match::simple());
 /// ```
+#[derive(Clone, Debug, PartialEq)]
 pub struct ExactMatchQueryProcessor {
   exact_match: String,
 }
@@ -165,6 +166,7 @@ impl QueryProcessor for ExactMatchQueryProcessor {
 ///   ])
 /// );
 /// ```
+#[derive(Clone, Debug, PartialEq)]
 pub struct StringQueryProcessor {
   string: String,
   match_substring: bool,
@@ -291,6 +293,7 @@ impl QueryProcessor for StringQueryProcessor {
 ///   ])
 /// );
 /// ```
+#[derive(Clone, Debug, PartialEq)]
 pub struct SubstringQueryProcessor {
   substring: String,
 }
@@ -371,6 +374,7 @@ impl QueryProcessor for SubstringQueryProcessor {
 ///   ])
 /// );
 /// ```
+#[derive(Clone, Debug)]
 pub struct RegexQueryProcessor {
   regex: Regex,
 }
@@ -439,6 +443,7 @@ impl QueryProcessor for RegexQueryProcessor {
 /// let matching = expression_query_processor.matching("{ vhost('par1', 'par2') }").unwrap();
 /// assert_eq!(matching, Match::expression("vhost", "par1", Some("par2")));
 /// ```
+#[derive(Clone, Debug, PartialEq)]
 pub struct ExpressionQueryProcessor {
   kind: String,
 }
@@ -492,6 +497,7 @@ impl QueryProcessor for ExpressionQueryProcessor {
 /// single non-matching `Part`.
 /// This can be useful when you want to apply a function that expects a query processor,
 /// without actually applying the query.
+#[derive(Clone, Debug, PartialEq)]
 pub struct DummyQueryProcessor {}
 
 impl DummyQueryProcessor {

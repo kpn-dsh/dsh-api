@@ -7,14 +7,14 @@ use base64::Engine;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, PartialOrd)]
 pub struct Secret(String);
 
 impl Secret {
@@ -23,20 +23,36 @@ impl Secret {
   }
 }
 
-impl Debug for Secret {
-  fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-    write!(f, "[redacted]")
+const REDACTED: &str = "[redacted]";
+
+// Serializer should only be used for display and debugging purposes,
+// so the actual secret value will not be shown
+impl Serialize for Secret {
+  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    REDACTED.serialize(serializer)
   }
 }
 
+// Actual secret value will not be shown
+impl Debug for Secret {
+  fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    if f.alternate() {
+      write!(f, "Secret(\n    \"{}\",\n)", REDACTED)
+    } else {
+      write!(f, "Secret(\"{}\")", REDACTED)
+    }
+  }
+}
+
+// Actual secret value will not be shown
 impl Display for Secret {
   fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-    write!(f, "[redacted]")
+    write!(f, "{}", REDACTED)
   }
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DshJwt {
   token: Secret,
   header: DshJwtHeader,
@@ -198,7 +214,7 @@ impl Display for DshJwt {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DshJwtHeader {
   // Rfc7519
   #[serde(rename = "typ")]
@@ -246,7 +262,7 @@ impl Display for DshJwtHeader {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DshJwtPayload {
   // Rfc7519
   #[serde(rename = "iss")]
@@ -359,7 +375,7 @@ impl Display for DshJwtPayload {
   }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DshPermission {
   pub realm: String,
   pub tenant: String,
@@ -409,6 +425,15 @@ impl FromStr for DshPermission {
       None => Err("illegal permission representation".to_string()),
     }
   }
+}
+
+#[test]
+fn test_secret_rendering() {
+  let secret = Secret("SECRET".to_string());
+  assert_eq!(format!("{}", secret), "[redacted]".to_string());
+  assert_eq!(format!("{:?}", secret), "Secret(\"[redacted]\")".to_string());
+  assert_eq!(format!("{:#?}", secret), "Secret(\n    \"[redacted]\",\n)".to_string());
+  assert_eq!(serde_json::to_string(&secret).unwrap(), "\"[redacted]\"".to_string());
 }
 
 #[test]

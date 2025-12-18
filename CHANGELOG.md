@@ -4,6 +4,14 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.8.1] - YYYY-MM-DD
+
+### Added
+
+* `impl FromStr for DshPlatform`.
+* `StringQueryProcessor`.
+* Some derived trait implementations for some types.
+
 ## [0.8.0] - 2025-11-20
 
 ### Added

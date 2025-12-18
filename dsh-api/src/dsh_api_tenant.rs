@@ -3,10 +3,11 @@ use crate::platform::DshPlatform;
 use crate::{DshApiError, ENV_VAR_TENANT};
 use lazy_static::lazy_static;
 use log::{debug, info};
+use serde::Serialize;
 use std::env;
 use std::fmt::{Display, Formatter};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize)]
 pub struct DshApiTenant {
   name: String,
   platform: DshPlatform,

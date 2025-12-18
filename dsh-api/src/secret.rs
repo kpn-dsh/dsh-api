@@ -36,6 +36,7 @@ use crate::{Dependant, DependantApp, DependantApplication, DshApiResult};
 use futures::try_join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
@@ -211,9 +212,35 @@ pub fn secret_env_vars_from_applications<'a>(secret_id: &str, applications: &'a 
   application_tuples
 }
 
-/// # Checks if secret is a system secret
+/// # Checks if secret id is a system secret
+///
+/// Deprecated, use [is_system_id].
+#[deprecated]
 pub fn secret_is_system(secret_id: &str) -> bool {
   secret_id.contains('!')
+}
+
+/// # Checks if secret id is a system secret
+pub fn is_system_id(secret_id: &str) -> bool {
+  secret_id.contains('!')
+}
+
+/// # Converts secret id to secret name
+///
+/// Converts secret id to secret name, if not the same.
+///
+/// # Parameters
+/// `secret_id` - Secret id to be converted.
+///
+/// # Returns
+/// `Cow::Borrowed` - Secret id was already in the proper format.
+/// `Cow::Owned` - Secret id was not in the proper format.
+pub fn secret_id_to_secret_name(secret_id: &String) -> Cow<String> {
+  if is_system_id(secret_id) {
+    Cow::Owned(format!("system{}", secret_id.replace("!", "/")))
+  } else {
+    Cow::Borrowed(secret_id)
+  }
 }
 
 /// Get secret resources from `AppCatalogApp`

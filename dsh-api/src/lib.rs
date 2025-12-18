@@ -223,7 +223,7 @@ pub enum AccessRights {
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
 /// a volume or an environment variable) is used by a dependant app.
 /// This struct represents one usage of the resource by an app.
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct DependantApp {
   /// App identifier
   pub app_id: String,
@@ -243,12 +243,26 @@ impl Display for DependantApp {
   }
 }
 
+impl PartialOrd<Self> for DependantApp {
+  /// Ordering uses `app_id` only
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    Some(self.cmp(other))
+  }
+}
+
+impl Ord for DependantApp {
+  /// Ordering uses `app_id` only
+  fn cmp(&self, other: &Self) -> Ordering {
+    self.app_id.cmp(&other.app_id)
+  }
+}
+
 /// # Describes an application dependency
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
 /// a volume or an environment variable) is used by a dependant application.
 /// This struct represents one usage of the resource by an application.
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct DependantApplication<T> {
   /// Identifies the dependant application
   pub application_id: String,
@@ -274,12 +288,26 @@ impl<T: Display> Display for DependantApplication<T> {
   }
 }
 
+impl<T: Ord> PartialOrd<Self> for DependantApplication<T> {
+  /// Ordering uses `application_id` only
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    Some(self.cmp(other))
+  }
+}
+
+impl<T: Ord> Ord for DependantApplication<T> {
+  /// Ordering uses `application_id` only
+  fn cmp(&self, other: &Self) -> Ordering {
+    self.application_id.cmp(&other.application_id)
+  }
+}
+
 /// # Describes a app or application dependency
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
 /// a volume or an environment variable) is used by a dependant app or application.
 /// This enum represents one usage of the resource by an app or application.
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Dependant<T> {
   /// Identifies an app dependent on the resource
   App(DependantApp),
