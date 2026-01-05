@@ -18,18 +18,24 @@
 //! which has many associated methods.
 //! In order to use these methods, you first need to acquire an instance of the struct.
 //! This is a two-step process.
-//! * First you need to get a
-//!   [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory):
-//!   * Either use the
-//!     [`DshApiClientFactory::default()`](dsh_api_client_factory::DshApiClientFactory::default)
+//! * First you need to get an instance of
+//!   [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory). This can be obtained
+//!   in a number of ways:
+//!   * Use the
+//!     [`DshApiClientFactory::default`](dsh_api_client_factory::DshApiClientFactory::default)
 //!     function, which returns a client factory configured from
-//!     [environment variables](dsh_api_client_factory/index.html#environment-variables),
-//!   * or you can create a factory explicitly by providing the `platform`,
-//!     `tenant` and API `password` yourself and feeding them to the
-//!     [`DshApiClientFactory::create()`](dsh_api_client_factory::DshApiClientFactory::create)
+//!     [environment variables](dsh_api_client_factory/index.html#environment-variables).
+//!   * Create a factory by providing the platform and tenant in a [`dsh_api_tenant::DshApiTenant`]
+//!     struct and a single-sign-on `access_token` and feeding them to the
+//!     [`DshApiClientFactory::create_from_access_token`](dsh_api_client_factory::DshApiClientFactory::create_from_access_token)
 //!     function.
-//! * Once you have the [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory),
-//!   you can call its [`client()`](dsh_api_client_factory::DshApiClientFactory::client) method.
+//!   * Create a factory by providing the platform and tenant in a [`dsh_api_tenant::DshApiTenant`]
+//!     struct and the API/robot `password` and feeding them to the
+//!     [`DshApiClientFactory::create_with_token_fetcher`](dsh_api_client_factory::DshApiClientFactory::create_with_token_fetcher)
+//!     function.
+//! * Once you have the [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory)
+//!   instance, you can call its [`client()`](dsh_api_client_factory::DshApiClientFactory::client)
+//!   method.
 //!
 //! You can now call the client's methods to interact with the DSH resource management API.
 //!
@@ -171,6 +177,7 @@ pub mod manifest;
 pub mod new;
 pub mod parse;
 pub mod platform;
+pub mod proxy;
 pub mod query_processor;
 pub mod secret;
 #[cfg(feature = "manage")]
@@ -302,6 +309,45 @@ impl<T: Ord> Ord for DependantApplication<T> {
   }
 }
 
+/// # Describes a proxy dependency
+///
+/// There are a number of methods that return whether a certain resource (e.g. a secret,
+/// or a certificate) is used by a proxy.
+/// This struct represents one usage of the resource by a proxy.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct DependantProxy {
+  /// Identifies the dependant proxy
+  pub proxy_id: String,
+  /// Number of instances of the dependant application
+  pub instances: u64,
+}
+
+impl DependantProxy {
+  pub fn new(proxy_id: String, instances: u64) -> Self {
+    DependantProxy { proxy_id, instances }
+  }
+}
+
+impl Display for DependantProxy {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.proxy_id)
+  }
+}
+
+impl PartialOrd<Self> for DependantProxy {
+  /// Ordering uses `proxy_id` only
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    Some(self.cmp(other))
+  }
+}
+
+impl Ord for DependantProxy {
+  /// Ordering uses `proxy_id` only
+  fn cmp(&self, other: &Self) -> Ordering {
+    self.proxy_id.cmp(&other.proxy_id)
+  }
+}
+
 /// # Describes a app or application dependency
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
@@ -313,6 +359,8 @@ pub enum Dependant<T> {
   App(DependantApp),
   /// Identifies an application dependent on the resource
   Application(DependantApplication<T>),
+  /// Identifies a proxy dependent on the resource
+  Proxy(DependantProxy),
 }
 
 impl<T> Dependant<T> {
@@ -323,44 +371,58 @@ impl<T> Dependant<T> {
   pub fn application(application_id: String, instances: u64, injections: Vec<T>) -> Self {
     Dependant::Application(DependantApplication { application_id, instances, injections })
   }
+
+  pub fn proxy(proxy_id: String, instances: u64) -> Self {
+    Dependant::Proxy(DependantProxy { proxy_id, instances })
+  }
+
+  pub fn id(&self) -> &String {
+    match self {
+      Self::App(app) => &app.app_id,
+      Self::Application(application) => &application.application_id,
+      Self::Proxy(proxy) => &proxy.proxy_id,
+    }
+  }
 }
 
 impl<T: Display> Display for Dependant<T> {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Dependant::App(app) => Display::fmt(app, f),
-      Dependant::Application(application) => Display::fmt(application, f),
+      Self::App(app) => Display::fmt(app, f),
+      Self::Application(application) => Display::fmt(application, f),
+      Self::Proxy(proxy) => Display::fmt(proxy, f),
     }
   }
 }
 
 impl<T: PartialOrd> PartialOrd<Self> for Dependant<T> {
+  /// Ordering uses `id` only
+  // TODO More elegant solution
   fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
     match self {
       Dependant::App(app) => match other {
         Dependant::App(other_app) => Some(app.app_id.cmp(&other_app.app_id)),
         Dependant::Application(other_application) => Some(app.app_id.cmp(&other_application.application_id)),
+        Dependant::Proxy(other_proxy) => Some(app.app_id.cmp(&other_proxy.proxy_id)),
       },
       Dependant::Application(application) => match other {
         Dependant::App(other_app) => Some(application.application_id.cmp(&other_app.app_id)),
         Dependant::Application(other_application) => Some(application.application_id.cmp(&other_application.application_id)),
+        Dependant::Proxy(other_proxy) => Some(application.application_id.cmp(&other_proxy.proxy_id)),
+      },
+      Dependant::Proxy(proxy) => match other {
+        Dependant::App(other_app) => Some(proxy.proxy_id.cmp(&other_app.app_id)),
+        Dependant::Application(other_application) => Some(proxy.proxy_id.cmp(&other_application.application_id)),
+        Dependant::Proxy(other_proxy) => Some(proxy.proxy_id.cmp(&other_proxy.proxy_id)),
       },
     }
   }
 }
 
 impl<T: Ord> Ord for Dependant<T> {
+  /// Ordering uses `id` only
   fn cmp(&self, other: &Self) -> Ordering {
-    match self {
-      Dependant::App(self_app) => match other {
-        Dependant::App(other_app) => self_app.app_id.cmp(&other_app.app_id),
-        Dependant::Application(other_application) => self_app.app_id.cmp(&other_application.application_id),
-      },
-      Dependant::Application(self_application) => match other {
-        Dependant::App(other_app) => self_application.application_id.cmp(&other_app.app_id),
-        Dependant::Application(other_application) => self_application.application_id.cmp(&other_application.application_id),
-      },
-    }
+    self.id().cmp(other.id())
   }
 }
 

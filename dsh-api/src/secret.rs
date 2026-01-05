@@ -20,19 +20,21 @@
 //! [`DshApiClient`] methods that add extra capabilities but do not directly call the
 //! DSH resource management API. These derived methods depend on the API methods for this.
 //!
-//! * [`secrets_with_dependants() -> [id, [application|app]]`](DshApiClient::secrets_with_dependants)
-//! * [`secrets_with_dependant_applications() -> [id, [application]]`](DshApiClient::secrets_with_dependant_applications)
-//! * [`secrets_with_dependant_apps() -> [id, [app]]`](DshApiClient::secrets_with_dependant_apps)
+//! * [`secrets_with_dependants() -> Vec<(String, Vec<Dependant)>`](DshApiClient::secrets_with_dependants)
+//! * [`secrets_with_dependant_applications() -> Vec<(String, Vec<DependantApplication)>`](DshApiClient::secrets_with_dependant_applications)
+//! * [`secrets_with_dependant_apps() -> Vec<(String, Vec<DependantApp)>`](DshApiClient::secrets_with_dependant_apps)
+//! * [`secrets_with_dependant_proxies() -> Vec<(String, Vec<DependantProxy)>`](DshApiClient::secrets_with_dependant_proxies)
 
 use crate::app::{app_resources, apps_that_use_secret};
 use crate::application_types::{ApplicationValues, EnvVarInjection};
 use crate::dsh_api_client::DshApiClient;
+use crate::proxy::proxies_that_use_secret;
 #[allow(unused_imports)]
 use crate::types::{AllocationStatus, Empty, Secret};
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application};
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::{Dependant, DependantApp, DependantApplication, DshApiResult};
+use crate::{Dependant, DependantApp, DependantApplication, DependantProxy, DshApiResult};
 use futures::try_join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -68,34 +70,39 @@ impl Display for SecretInjection {
 /// [`DshApiClient`] methods that add extra capabilities but do not directly call the
 /// DSH resource management API. These derived methods depend on the API methods for this.
 ///
-/// * [`secrets_with_dependants() -> [id, [application|app]]`](DshApiClient::secrets_with_dependants)
-/// * [`secrets_with_dependant_applications() -> [id, [application]]`](DshApiClient::secrets_with_dependant_applications)
-/// * [`secrets_with_dependant_apps() -> [id, [app]]`](DshApiClient::secrets_with_dependant_apps)
+/// * [`secrets_with_dependants() -> Vec<(String, Vec<Dependant)>`](DshApiClient::secrets_with_dependants)
+/// * [`secrets_with_dependant_applications() -> Vec<(String, Vec<DependantApplication)>`](DshApiClient::secrets_with_dependant_applications)
+/// * [`secrets_with_dependant_apps() -> Vec<(String, Vec<DependantApp)>`](DshApiClient::secrets_with_dependant_apps)
+/// * [`secrets_with_dependant_proxies() -> Vec<(String, Vec<DependantProxy)>`](DshApiClient::secrets_with_dependant_proxies)
 impl DshApiClient {
-  /// # Returns all secrets with dependant applications and apps
+  /// # Returns all secrets with dependant applications, apps and proxies
   ///
   /// Returns a sorted list of all secrets together with the applications and apps that use them.
   pub async fn secrets_with_dependants(&self) -> DshApiResult<Vec<(String, Vec<Dependant<SecretInjection>>)>> {
-    let (secret_ids, applications, apps) = try_join!(
+    let (secret_ids, applications, apps, proxies) = try_join!(
       self.get_secret_ids(),
       self.get_application_configuration_map(),
-      self.get_appcatalogapp_configuration_map()
+      self.get_appcatalogapp_configuration_map(),
+      self.proxies()
     )?;
     let mut secrets = Vec::<(String, Vec<Dependant<SecretInjection>>)>::new();
     for secret_id in secret_ids {
       let mut dependants: Vec<Dependant<SecretInjection>> = vec![];
-      for application in secret_env_vars_from_applications(secret_id.as_str(), &applications) {
+      for application in secret_env_vars_from_applications(&secret_id, &applications) {
         dependants.push(Dependant::application(
           application.id.to_string(),
           application.application.instances,
           application.values.iter().map(|env_var| SecretInjection::EnvVar(env_var.to_string())).collect_vec(),
         ));
       }
-      for (app_id, _, resource_ids) in apps_that_use_secret(secret_id.as_str(), &apps) {
+      for (app_id, _, resource_ids) in apps_that_use_secret(&secret_id, &apps) {
         dependants.push(Dependant::app(
           app_id.to_string(),
           resource_ids.iter().map(|resource_id| resource_id.to_string()).collect_vec(),
         ));
+      }
+      for (proxy_id, proxy) in proxies_that_use_secret(&secret_id, &proxies) {
+        dependants.push(Dependant::proxy(proxy_id.to_string(), proxy.instances.get()));
       }
       secrets.push((secret_id, dependants));
     }
@@ -137,6 +144,22 @@ impl DshApiClient {
         ));
       }
       secrets.push((secret_id, dependant_apps));
+    }
+    Ok(secrets)
+  }
+
+  /// # Returns all secrets with dependant proxies
+  ///
+  /// Returns a sorted list of all secrets together with the proxies that use them.
+  pub async fn secrets_with_dependant_proxies(&self) -> DshApiResult<Vec<(String, Vec<DependantProxy>)>> {
+    let (secret_ids, proxies) = try_join!(self.get_secret_ids(), self.proxies())?;
+    let mut secrets = Vec::<(String, Vec<DependantProxy>)>::new();
+    for secret_id in secret_ids {
+      let mut dependant_proxies: Vec<DependantProxy> = vec![];
+      for (proxy_id, proxy) in proxies_that_use_secret(secret_id.as_str(), &proxies) {
+        dependant_proxies.push(DependantProxy::new(proxy_id.to_string(), proxy.instances.get()));
+      }
+      secrets.push((secret_id, dependant_proxies));
     }
     Ok(secrets)
   }
