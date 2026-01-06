@@ -18,24 +18,12 @@
 //! which has many associated methods.
 //! In order to use these methods, you first need to acquire an instance of the struct.
 //! This is a two-step process.
+//!
 //! * First you need to get an instance of
-//!   [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory). This can be obtained
-//!   in a number of ways:
-//!   * Use the
-//!     [`DshApiClientFactory::default`](dsh_api_client_factory::DshApiClientFactory::default)
-//!     function, which returns a client factory configured from
-//!     [environment variables](dsh_api_client_factory/index.html#environment-variables).
-//!   * Create a factory by providing the platform and tenant in a [`dsh_api_tenant::DshApiTenant`]
-//!     struct and a single-sign-on `access_token` and feeding them to the
-//!     [`DshApiClientFactory::create_from_access_token`](dsh_api_client_factory::DshApiClientFactory::create_from_access_token)
-//!     function.
-//!   * Create a factory by providing the platform and tenant in a [`dsh_api_tenant::DshApiTenant`]
-//!     struct and the API/robot `password` and feeding them to the
-//!     [`DshApiClientFactory::create_with_token_fetcher`](dsh_api_client_factory::DshApiClientFactory::create_with_token_fetcher)
-//!     function.
-//! * Once you have the [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory)
-//!   instance, you can call its [`client()`](dsh_api_client_factory::DshApiClientFactory::client)
-//!   method.
+//!   [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory) or [`DshApiPlatformClientFactory`](dsh_api_client_factory::DshApiPlatformClientFactory).
+//! * Once you have the client factory instance, you can call its
+//!   [`client()`](dsh_api_client_factory::DshApiClientFactory::client) method to create the
+//!   [`DshApiClient`].
 //!
 //! You can now call the client's methods to interact with the DSH resource management API.
 //!
@@ -101,11 +89,8 @@
 //! # use dsh_api::types::Application;
 //! # use dsh_api::DshApiError;
 //! # async fn hide() -> Result<(), DshApiError> {
-//! let tenant = DshApiTenant::new(
-//!   "my-tenant".to_string(),
-//!   DshPlatform::try_from("np-aws-lz-dsh")?
-//! );
-//! let password = "...".to_string();
+//! let tenant = DshApiTenant::new("my-tenant", DshPlatform::try_from("np-aws-lz-dsh")?);
+//! let password = "...";
 //! let client_factory = DshApiClientFactory::create(tenant, password)?;
 //! let client = client_factory.client().await?;
 //! let predicate = |application: &Application| application.needs_token;
@@ -125,9 +110,13 @@
 //!
 //! The following features are defined:
 //!
-//! * `generic` - Enables the generic methods.
-//! * `manage` -  Enables the manage methods.
-//! * `robot` - Enables the robot operation.
+//! * `generic` - Enables the [`generic`] module, which allows calling all api operations by name.
+//! * `manage` -  Enables the manage modules [`stream`] and [`tenant`], which support creating
+//!   managed streams and tenants. This feature is only useful when you have the proper
+//!   authorizations for these capabilities.
+//! * `robot` - Enables the
+//!   [`post_robot_generate_secret()`](DshApiClient::post_robot_generate_secret) operation, which
+//!   will generate a new robot password, invalidating the old password.
 /// # Types generated from openapi file
 pub use crate::generated::types;
 use std::cmp::Ordering;
