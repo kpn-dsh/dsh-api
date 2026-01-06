@@ -11,6 +11,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 * Module for proxies.
 * Additional methods for certificates and proxies.
 * Additional methods for secrets and proxies.
+* Method to get secret dependants.
 * `impl FromStr for DshPlatform`.
 * `StringQueryProcessor`.
 * Some derived trait implementations for some types.

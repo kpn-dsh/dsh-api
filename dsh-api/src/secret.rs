@@ -20,6 +20,7 @@
 //! [`DshApiClient`] methods that add extra capabilities but do not directly call the
 //! DSH resource management API. These derived methods depend on the API methods for this.
 //!
+//! * [`secret_dependants(id) -> Vec<Dependant>`](DshApiClient::secret_dependants)
 //! * [`secrets_with_dependants() -> Vec<(String, Vec<Dependant)>`](DshApiClient::secrets_with_dependants)
 //! * [`secrets_with_dependant_applications() -> Vec<(String, Vec<DependantApplication)>`](DshApiClient::secrets_with_dependant_applications)
 //! * [`secrets_with_dependant_apps() -> Vec<(String, Vec<DependantApp)>`](DshApiClient::secrets_with_dependant_apps)
@@ -70,6 +71,7 @@ impl Display for SecretInjection {
 /// [`DshApiClient`] methods that add extra capabilities but do not directly call the
 /// DSH resource management API. These derived methods depend on the API methods for this.
 ///
+/// * [`secret_dependants(id) -> Vec<Dependant>`](DshApiClient::secret_dependants)
 /// * [`secrets_with_dependants() -> Vec<(String, Vec<Dependant)>`](DshApiClient::secrets_with_dependants)
 /// * [`secrets_with_dependant_applications() -> Vec<(String, Vec<DependantApplication)>`](DshApiClient::secrets_with_dependant_applications)
 /// * [`secrets_with_dependant_apps() -> Vec<(String, Vec<DependantApp)>`](DshApiClient::secrets_with_dependant_apps)
@@ -77,7 +79,36 @@ impl Display for SecretInjection {
 impl DshApiClient {
   /// # Returns all secrets with dependant applications, apps and proxies
   ///
-  /// Returns a sorted list of all secrets together with the applications and apps that use them.
+  /// # Parameters
+  /// * `secret_id` - Id of the secret to get the dependants for.
+  ///
+  /// Returns the applications, apps and proxies that use the provided secret.
+  pub async fn secret_dependants(&self, secret_id: &str) -> DshApiResult<Vec<Dependant<SecretInjection>>> {
+    let (applications, apps, proxies) = try_join!(self.get_application_configuration_map(), self.get_appcatalogapp_configuration_map(), self.proxies())?;
+    let mut dependants: Vec<Dependant<SecretInjection>> = vec![];
+    for application in secret_env_vars_from_applications(secret_id, &applications) {
+      dependants.push(Dependant::application(
+        application.id.to_string(),
+        application.application.instances,
+        application.values.iter().map(|env_var| SecretInjection::EnvVar(env_var.to_string())).collect_vec(),
+      ));
+    }
+    for (app_id, _, resource_ids) in apps_that_use_secret(secret_id, &apps) {
+      dependants.push(Dependant::app(
+        app_id.to_string(),
+        resource_ids.iter().map(|resource_id| resource_id.to_string()).collect_vec(),
+      ));
+    }
+    for (proxy_id, proxy) in proxies_that_use_secret(secret_id, &proxies) {
+      dependants.push(Dependant::proxy(proxy_id.to_string(), proxy.instances.get()));
+    }
+    Ok(dependants)
+  }
+
+  /// # Returns all secrets with dependant applications, apps and proxies
+  ///
+  /// Returns a sorted list of all secrets together with the applications, apps and proxies that
+  /// use them.
   pub async fn secrets_with_dependants(&self) -> DshApiResult<Vec<(String, Vec<Dependant<SecretInjection>>)>> {
     let (secret_ids, applications, apps, proxies) = try_join!(
       self.get_secret_ids(),
@@ -170,8 +201,8 @@ impl DshApiClient {
 /// Get all environment variables from `application` referencing secret with `secret_id`.
 ///
 /// # Parameters
-/// * `secret_id` - id of the secret to look for
-/// * `application` - reference to the `Application`
+/// * `secret_id` - Id of the secret to look for.
+/// * `application` - Reference to the `Application`.
 ///
 /// # Returns
 /// * `Vec<EnvVarKey>` - list of all environment variables referencing secret `secret_id`
@@ -209,8 +240,8 @@ pub fn secret_env_vars_from_application<'a>(secret_id: &str, application: &'a Ap
 /// Applications are only included if they reference secret `secret_id` at least once.
 ///
 /// # Parameters
-/// * `secret_id` - id of the secret to look for
-/// * `applications` - hashmap containing id/application pairs
+/// * `secret_id` - Id of the secret to look for.
+/// * `applications` - Hashmap containing id/application pairs.
 ///
 /// # Returns
 /// `Vec<ApplicationTuple<EnvVarKey>>` - list of tuples containing:
@@ -269,7 +300,7 @@ pub fn secret_id_to_secret_name(secret_id: &String) -> Cow<String> {
 /// Get secret resources from `AppCatalogApp`
 ///
 /// # Parameters
-/// * `app` - app to get the secret resources from
+/// * `app` - App to get the secret resources from.
 ///
 /// # Returns
 /// Either `None` when the `app` does not have any secret resources,
@@ -288,7 +319,7 @@ pub fn secret_resources_from_app(app: &AppCatalogApp) -> Vec<(&str, &Secret)> {
 /// Get all environment variables from an `Application` that reference secrets.
 ///
 /// # Parameters
-/// * `application` - reference to the `Application`
+/// * `application` - Reference to the `Application`.
 ///
 /// # Returns
 /// `Vec<EnvInjection>` - list of tuples containing:
@@ -325,7 +356,7 @@ pub fn secrets_from_application(application: &Application) -> Vec<EnvVarInjectio
 /// Get all environment variables referencing secrets from all `Applications`
 ///
 /// # Parameters
-/// * `applications` - hashmap containing id/application pairs
+/// * `applications` - Hashmap containing id/application pairs.
 ///
 /// # Returns
 /// `Vec<ApplicationTuple<EnvInjection>>` - list of tuples containing:
@@ -353,8 +384,8 @@ pub fn secrets_from_applications(applications: &HashMap<String, Application>) ->
 /// Find apps that use any of a list of given secret
 ///
 /// # Parameters
-/// * `secrets` - ids of the secrets to look for
-/// * `apps` - hashmap of all apps
+/// * `secrets` - Ids of the secrets to look for.
+/// * `apps` - Hashmap of all apps.
 ///
 /// # Returns
 /// * `Vec<(app_id, app, resource_ids)>` - vector of apps that use the secret
