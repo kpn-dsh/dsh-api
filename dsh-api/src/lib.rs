@@ -416,7 +416,7 @@ impl<T: Ord> Ord for Dependant<T> {
 }
 
 /// Describes an API error
-#[derive(Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub enum DshApiError {
   BadRequest(String),
   Configuration(String),
