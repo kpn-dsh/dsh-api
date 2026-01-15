@@ -57,7 +57,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
 
 /// # Managed stream, either internal or public
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum Stream {
   Internal(ManagedStream),
   Public(PublicManagedStream),

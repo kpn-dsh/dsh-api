@@ -3,10 +3,11 @@ use crate::platform::DshPlatform;
 use crate::{DshApiError, ENV_VAR_TENANT};
 use lazy_static::lazy_static;
 use log::{debug, info};
+use serde::Serialize;
 use std::env;
 use std::fmt::{Display, Formatter};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize)]
 pub struct DshApiTenant {
   name: String,
   platform: DshPlatform,
@@ -16,16 +17,16 @@ impl DshApiTenant {
   /// # Create new DSH API tenant
   ///
   /// # Parameters
-  /// * `name` - client tenant's name
-  /// * `platform` - target platform for the API
+  /// * `name` - Client tenant's name.
+  /// * `platform` - Target platform for the API.
   ///
   /// # Examples
   ///
-  /// ```no_run
+  /// ```
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
   /// # use dsh_api::platform::DshPlatform;
-  /// let name = String::from("my-tenant");
+  /// let name = "my-tenant";
   /// let platform = DshPlatform::try_from("nplz")?;
   /// let dsh_api_tenant = DshApiTenant::new(name, platform);
   /// assert_eq!(
@@ -35,8 +36,11 @@ impl DshApiTenant {
   /// # Ok(())
   /// # }
   /// ```
-  pub fn new(name: String, platform: DshPlatform) -> Self {
-    Self { name, platform }
+  pub fn new<T>(name: T, platform: DshPlatform) -> Self
+  where
+    T: Into<String>,
+  {
+    Self { name: name.into(), platform }
   }
 
   /// # Create new DSH API tenant from tenant's name
@@ -49,11 +53,11 @@ impl DshApiTenant {
   /// or contains illegal values.
   ///
   /// # Parameters
-  /// * `tenant_name` - tenant's name
+  /// * `tenant_name` - Tenant's name.
   ///
   /// # Returns
-  /// * `Ok(tenant)` - tenant object
-  /// * `Err(error)` - error containing a configuration error
+  /// * `Ok(tenant)` - Tenant struct.
+  /// * `Err(error)` - Configuration error.
   ///
   /// # Examples
   ///
@@ -62,13 +66,16 @@ impl DshApiTenant {
   /// # use dsh_api::platform::DshPlatform;
   /// # use dsh_api::DshApiError;
   /// # fn main() -> Result<(), DshApiError> {
-  /// let tenant_name = String::from("my-tenant");
+  /// let tenant_name = "my-tenant";
   /// let dsh_api_tenant = DshApiTenant::from_tenant(tenant_name)?;
   /// println!("target platform: {}", dsh_api_tenant.platform());
   /// # Ok(())
   /// # }
   /// ```
-  pub fn from_tenant(tenant_name: String) -> Result<Self, DshApiError> {
+  pub fn from_tenant<T>(tenant_name: T) -> Result<Self, DshApiError>
+  where
+    T: Into<String>,
+  {
     let platform = DshPlatform::default();
     Ok(DshApiTenant::new(tenant_name, platform))
   }
@@ -80,16 +87,16 @@ impl DshApiTenant {
   /// The function will return an `Error<String>` if the environment variable is not set.
   ///
   /// # Parameters
-  /// * `tenant_name` - tenant's name
-  /// * `platform` - target platform for the API
+  /// * `tenant_name` - Tenant's name.
+  /// * `platform` - Target platform for the API.
   ///
   /// # Returns
-  /// * `Ok(tenant)` - tenant object
-  /// * `Err(error)` - error containing a configuration error
+  /// * `Ok(tenant)` - Tenant struct.
+  /// * `Err(error)` - Configuration error.
   ///
   /// # Examples
   ///
-  /// ```no_run
+  /// ```
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
   /// # use dsh_api::platform::DshPlatform;
   /// # use dsh_api::DshApiError;
@@ -101,7 +108,10 @@ impl DshApiTenant {
   /// # Ok(())
   /// # }
   /// ```
-  pub fn from_tenant_and_platform(tenant_name: String, platform: DshPlatform) -> Result<Self, DshApiError> {
+  pub fn from_tenant_and_platform<T>(tenant_name: T, platform: DshPlatform) -> Result<Self, DshApiError>
+  where
+    T: Into<String>,
+  {
     Ok(DshApiTenant::new(tenant_name, platform))
   }
 
@@ -112,11 +122,11 @@ impl DshApiTenant {
   /// The function will return an `Error<String>` if the environment variables are not set.
   ///
   /// # Parameters
-  /// * `platform` - target platform for the API
+  /// * `platform` - Target platform for the API
   ///
   /// # Returns
-  /// * `Ok(tenant)` - tenant object
-  /// * `Err(error)` - error containing a configuration error
+  /// * `Ok(tenant)` - Tenant struct.
+  /// * `Err(error)` - Configuration error.
   ///
   /// # Examples
   ///
@@ -125,9 +135,8 @@ impl DshApiTenant {
   /// # use dsh_api::platform::DshPlatform;
   /// # use dsh_api::DshApiError;
   /// # fn main() -> Result<(), DshApiError> {
-  /// let tenant_name = String::from("my-tenant");
   /// let platform = DshPlatform::try_from("nplz")?;
-  /// let dsh_api_tenant = DshApiTenant::from_tenant_and_platform(tenant_name, platform)?;
+  /// let dsh_api_tenant = DshApiTenant::from_platform(platform)?;
   /// println!("{}@{}", dsh_api_tenant.name(), dsh_api_tenant.platform());
   /// # Ok(())
   /// # }
@@ -148,10 +157,22 @@ impl DshApiTenant {
   /// contains an undefined value.
   ///
   /// # Returns
-  /// * `Ok<DshPlatform>` - when the environment variables are provided and contain valid values
+  /// * `Ok<tenant>` - When the environment variables are provided and contain valid values.
   /// * `Error<String>` - when one or more of the environment variables is not set or
   ///   contains an undefined value
-  pub fn try_default() -> Result<Self, String> {
+  ///
+  /// # Examples
+  ///
+  /// ```no_run
+  /// # use dsh_api::dsh_api_tenant::DshApiTenant;
+  /// # use dsh_api::DshApiError;
+  /// # fn main() -> Result<(), DshApiError> {
+  /// let default_tenant = DshApiTenant::try_default()?;
+  /// println!("{}@{}", default_tenant.name(), default_tenant.platform());
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn try_default() -> Result<Self, DshApiError> {
     let tenant_name = get_default_tenant_name()?;
     let platform = DshPlatform::try_default()?;
     Ok(DshApiTenant::new(tenant_name, platform))

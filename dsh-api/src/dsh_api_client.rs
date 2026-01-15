@@ -77,9 +77,9 @@ impl DshApiClient {
   /// Create a `DshApiClient` from a static token
   ///
   /// # Parameters
-  /// `static_token` - Static token.
-  /// `generated_client` - Api functions generated from the openapi specification.
-  /// `tenant` - Dsh api client, containing tenant name and platform.
+  /// * `static_token` - Static token.
+  /// * `generated_client` - Api functions generated from the openapi specification.
+  /// * `tenant` - Dsh api client, containing tenant name and platform.
   ///
   /// # Returns
   /// * [DshApiClient] - The created dsh api client.
@@ -90,9 +90,9 @@ impl DshApiClient {
   /// Create a `DshApiClient` from a token fetcher
   ///
   /// # Parameters
-  /// `token_fetcher` - Token fetcher that creates a token when required.
-  /// `generated_client` - Api functions generated from the openapi specification.
-  /// `tenant` - Dsh api client, containing tenant name and platform.
+  /// * `token_fetcher` - Token fetcher that creates a token when required.
+  /// * `generated_client` - Api functions generated from the openapi specification.
+  /// * `tenant` - Dsh api client, containing tenant name and platform.
   ///
   /// # Returns
   /// * [DshApiClient] - The created dsh api client.

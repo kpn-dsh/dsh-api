@@ -4,6 +4,23 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-01-15
+
+### Added
+
+* Module for proxies.
+* Additional methods for certificates and proxies.
+* Additional methods for secrets and proxies.
+* Method to get secret dependants.
+* `impl FromStr for DshPlatform`.
+* `StringQueryProcessor`.
+* Some derived trait implementations for some types.
+* Platform client factory.
+
+### Changed
+
+* Changed serializer for `Version`.
+
 ## [0.8.0] - 2025-11-20
 
 ### Added

@@ -7,13 +7,14 @@ use base64::Engine;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, PartialOrd)]
 pub struct Secret(String);
 
 impl Secret {
@@ -22,25 +23,41 @@ impl Secret {
   }
 }
 
-impl Debug for Secret {
-  fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-    write!(f, "[redacted]")
+const REDACTED: &str = "[redacted]";
+
+// Serializer should only be used for display and debugging purposes,
+// so the actual secret value will not be shown
+impl Serialize for Secret {
+  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    REDACTED.serialize(serializer)
   }
 }
 
+// Actual secret value will not be shown
+impl Debug for Secret {
+  fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    if f.alternate() {
+      write!(f, "Secret(\n    \"{}\",\n)", REDACTED)
+    } else {
+      write!(f, "Secret(\"{}\")", REDACTED)
+    }
+  }
+}
+
+// Actual secret value will not be shown
 impl Display for Secret {
   fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-    write!(f, "[redacted]")
+    write!(f, "{}", REDACTED)
   }
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DshJwt {
-  pub token: Secret,
-  pub header: DshJwtHeader,
-  pub payload: DshJwtPayload,
-  pub tenant_permissions: Vec<DshPermission>,
+  token: Secret,
+  header: DshJwtHeader,
+  payload: DshJwtPayload,
+  tenant_permissions: Vec<DshPermission>,
 }
 
 impl DshJwt {
@@ -76,31 +93,98 @@ impl DshJwt {
     }
   }
 
-  pub fn raw_header(&self) -> &str {
+  pub fn token(&self) -> &Secret {
+    &self.token
+  }
+
+  pub fn header(&self) -> &DshJwtHeader {
+    &self.header
+  }
+
+  pub fn payload(&self) -> &DshJwtPayload {
+    &self.payload
+  }
+
+  pub fn tenant_permissions(&self) -> &Vec<DshPermission> {
+    &self.tenant_permissions
+  }
+
+  pub fn header_base64(&self) -> &str {
     let parts: Vec<&str> = self.token.0.split('.').collect();
     if parts.len() == 3 {
       parts[0]
     } else {
-      ""
+      unreachable!()
     }
   }
 
-  pub fn raw_payload(&self) -> &str {
+  pub fn header_bytes(&self) -> Vec<u8> {
+    STANDARD_NO_PAD.decode(self.header_base64().as_bytes()).unwrap_or_else(|_| unreachable!())
+  }
+
+  pub fn header_json(&self) -> String {
+    let header_string = String::from_utf8(self.header_bytes()).unwrap_or_else(|_| unreachable!());
+    let header_value = serde_json::from_str::<Value>(&header_string).unwrap_or_else(|_| unreachable!());
+    serde_json::to_string_pretty(&header_value).unwrap_or_else(|_| unreachable!())
+  }
+
+  pub fn header_json_compact(&self) -> String {
+    let header_string = String::from_utf8(self.header_bytes()).unwrap_or_else(|_| unreachable!());
+    let header_value = serde_json::from_str::<Value>(&header_string).unwrap_or_else(|_| unreachable!());
+    serde_json::to_string(&header_value).unwrap_or_else(|_| unreachable!())
+  }
+
+  #[deprecated]
+  pub fn raw_header(&self) -> &str {
+    self.header_base64()
+  }
+
+  pub fn payload_base64(&self) -> &str {
     let parts: Vec<&str> = self.token.0.split('.').collect();
     if parts.len() == 3 {
       parts[1]
     } else {
-      ""
+      unreachable!()
     }
   }
 
-  pub fn raw_signature(&self) -> &str {
+  pub fn payload_bytes(&self) -> Vec<u8> {
+    STANDARD_NO_PAD.decode(self.payload_base64().as_bytes()).unwrap_or_else(|_| unreachable!())
+  }
+
+  pub fn payload_json(&self) -> String {
+    let payload_string = String::from_utf8(self.payload_bytes()).unwrap_or_else(|_| unreachable!());
+    let payload_value = serde_json::from_str::<Value>(&payload_string).unwrap_or_else(|_| unreachable!());
+    serde_json::to_string_pretty(&payload_value).unwrap_or_else(|_| unreachable!())
+  }
+
+  pub fn payload_json_compact(&self) -> String {
+    let payload_string = String::from_utf8(self.payload_bytes()).unwrap_or_else(|_| unreachable!());
+    let payload_value = serde_json::from_str::<Value>(&payload_string).unwrap_or_else(|_| unreachable!());
+    serde_json::to_string(&payload_value).unwrap_or_else(|_| unreachable!())
+  }
+
+  #[deprecated]
+  pub fn raw_payload(&self) -> &str {
+    self.payload_base64()
+  }
+
+  pub fn signature_base64(&self) -> &str {
     let parts: Vec<&str> = self.token.0.split('.').collect();
     if parts.len() == 3 {
       parts[2]
     } else {
-      ""
+      unreachable!()
     }
+  }
+
+  pub fn signature_bytes(&self) -> Vec<u8> {
+    STANDARD_NO_PAD.decode(self.signature_base64().as_bytes()).unwrap_or_else(|_| unreachable!())
+  }
+
+  #[deprecated]
+  pub fn raw_signature(&self) -> &str {
+    self.signature_base64()
   }
 
   pub fn expires_in(&self) -> i64 {
@@ -130,7 +214,7 @@ impl Display for DshJwt {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DshJwtHeader {
   // Rfc7519
   #[serde(rename = "typ")]
@@ -178,7 +262,7 @@ impl Display for DshJwtHeader {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DshJwtPayload {
   // Rfc7519
   #[serde(rename = "iss")]
@@ -291,7 +375,7 @@ impl Display for DshJwtPayload {
   }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DshPermission {
   pub realm: String,
   pub tenant: String,
@@ -341,6 +425,15 @@ impl FromStr for DshPermission {
       None => Err("illegal permission representation".to_string()),
     }
   }
+}
+
+#[test]
+fn test_secret_rendering() {
+  let secret = Secret("SECRET".to_string());
+  assert_eq!(format!("{}", secret), "[redacted]".to_string());
+  assert_eq!(format!("{:?}", secret), "Secret(\"[redacted]\")".to_string());
+  assert_eq!(format!("{:#?}", secret), "Secret(\n    \"[redacted]\",\n)".to_string());
+  assert_eq!(serde_json::to_string(&secret).unwrap(), "\"[redacted]\"".to_string());
 }
 
 #[test]

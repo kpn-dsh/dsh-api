@@ -2,17 +2,21 @@ use crate::types::{Application, ApplicationSecret, ApplicationVolumes, HealthChe
 #[allow(unused_imports)]
 use crate::DshApiError;
 use itertools::Itertools;
+use serde::Serialize;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize)]
 pub struct Database {}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize)]
 pub struct Vhost {}
 
 /// Represents a resource id and a list of environment variable keys
 ///
 /// Implements `Debug`, `Eq`, `From<(&str, Vec<&str>)>`, `PartialEq`, `PartialOrd` and `Ord` traits.
 /// Provides a `new` constructor associated function.
-#[derive(Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct EnvVarInjection<'a> {
   /// Id of the resource referenced by the environment variables in `env_keys`
   pub id: &'a str,
@@ -59,7 +63,7 @@ impl<'a> From<(&'a str, Vec<&'a str>)> for EnvVarInjection<'a> {
 ///
 /// Implements `Debug`, `Eq`, `PartialEq`, `PartialOrd` and `Ord` traits.
 /// Provides a `new` constructor associated function.
-#[derive(Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct ApplicationValues<'a, T> {
   /// Application id
   pub id: &'a str,
@@ -102,6 +106,7 @@ impl<T> Ord for ApplicationValues<'_, T> {
 ///
 /// Implements `Eq`, Vec<&str>)>`, `PartialEq`, `PartialOrd` and `Ord` traits.
 /// Provides a `new` constructor associated function.
+#[derive(Clone, Debug, Serialize)]
 pub struct ValueApplications<'a, T>
 where
   T: Eq + Ord,
@@ -154,7 +159,7 @@ where
 }
 
 /// Structure that contains the differences between two `Application`s
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct ApplicationDiff {
   pub cpus: Option<(f64, f64)>,
   pub env: Option<(HashMap<String, String>, HashMap<String, String>)>,

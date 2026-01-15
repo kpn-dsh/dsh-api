@@ -18,18 +18,12 @@
 //! which has many associated methods.
 //! In order to use these methods, you first need to acquire an instance of the struct.
 //! This is a two-step process.
-//! * First you need to get a
-//!   [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory):
-//!   * Either use the
-//!     [`DshApiClientFactory::default()`](dsh_api_client_factory::DshApiClientFactory::default)
-//!     function, which returns a client factory configured from
-//!     [environment variables](dsh_api_client_factory/index.html#environment-variables),
-//!   * or you can create a factory explicitly by providing the `platform`,
-//!     `tenant` and API `password` yourself and feeding them to the
-//!     [`DshApiClientFactory::create()`](dsh_api_client_factory::DshApiClientFactory::create)
-//!     function.
-//! * Once you have the [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory),
-//!   you can call its [`client()`](dsh_api_client_factory::DshApiClientFactory::client) method.
+//!
+//! * First you need to get an instance of
+//!   [`DshApiClientFactory`](dsh_api_client_factory::DshApiClientFactory) or [`DshApiPlatformClientFactory`](dsh_api_client_factory::DshApiPlatformClientFactory).
+//! * Once you have the client factory instance, you can call its
+//!   [`client()`](dsh_api_client_factory::DshApiClientFactory::client) method to create the
+//!   [`DshApiClient`].
 //!
 //! You can now call the client's methods to interact with the DSH resource management API.
 //!
@@ -95,11 +89,8 @@
 //! # use dsh_api::types::Application;
 //! # use dsh_api::DshApiError;
 //! # async fn hide() -> Result<(), DshApiError> {
-//! let tenant = DshApiTenant::new(
-//!   "my-tenant".to_string(),
-//!   DshPlatform::try_from("np-aws-lz-dsh")?
-//! );
-//! let password = "...".to_string();
+//! let tenant = DshApiTenant::new("my-tenant", DshPlatform::try_from("np-aws-lz-dsh")?);
+//! let password = "...";
 //! let client_factory = DshApiClientFactory::create(tenant, password)?;
 //! let client = client_factory.client().await?;
 //! let predicate = |application: &Application| application.needs_token;
@@ -119,9 +110,13 @@
 //!
 //! The following features are defined:
 //!
-//! * `generic` - Enables the generic methods.
-//! * `manage` -  Enables the manage methods.
-//! * `robot` - Enables the robot operation.
+//! * `generic` - Enables the [`generic`] module, which allows calling all api operations by name.
+//! * `manage` -  Enables the manage modules [`stream`] and [`tenant`], which support creating
+//!   managed streams and tenants. This feature is only useful when you have the proper
+//!   authorizations for these capabilities.
+//! * `robot` - Enables the
+//!   [`post_robot_generate_secret()`](DshApiClient::post_robot_generate_secret) operation, which
+//!   will generate a new robot password, invalidating the old password.
 /// # Types generated from openapi file
 pub use crate::generated::types;
 use std::cmp::Ordering;
@@ -171,6 +166,7 @@ pub mod manifest;
 pub mod new;
 pub mod parse;
 pub mod platform;
+pub mod proxy;
 pub mod query_processor;
 pub mod secret;
 #[cfg(feature = "manage")]
@@ -188,10 +184,10 @@ pub mod volume;
 /// ## Example
 ///
 /// ```
-/// assert_eq!(dsh_api::crate_version(), "0.8.0");
+/// assert_eq!(dsh_api::crate_version(), "0.8.1");
 /// ```
 pub fn crate_version() -> &'static str {
-  "0.8.0"
+  "0.8.1"
 }
 
 /// # Returns the version of the openapi spec
@@ -223,7 +219,7 @@ pub enum AccessRights {
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
 /// a volume or an environment variable) is used by a dependant app.
 /// This struct represents one usage of the resource by an app.
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct DependantApp {
   /// App identifier
   pub app_id: String,
@@ -243,12 +239,26 @@ impl Display for DependantApp {
   }
 }
 
+impl PartialOrd<Self> for DependantApp {
+  /// Ordering uses `app_id` only
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    Some(self.cmp(other))
+  }
+}
+
+impl Ord for DependantApp {
+  /// Ordering uses `app_id` only
+  fn cmp(&self, other: &Self) -> Ordering {
+    self.app_id.cmp(&other.app_id)
+  }
+}
+
 /// # Describes an application dependency
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
 /// a volume or an environment variable) is used by a dependant application.
 /// This struct represents one usage of the resource by an application.
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct DependantApplication<T> {
   /// Identifies the dependant application
   pub application_id: String,
@@ -274,17 +284,72 @@ impl<T: Display> Display for DependantApplication<T> {
   }
 }
 
+impl<T: Ord> PartialOrd<Self> for DependantApplication<T> {
+  /// Ordering uses `application_id` only
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    Some(self.cmp(other))
+  }
+}
+
+impl<T: Ord> Ord for DependantApplication<T> {
+  /// Ordering uses `application_id` only
+  fn cmp(&self, other: &Self) -> Ordering {
+    self.application_id.cmp(&other.application_id)
+  }
+}
+
+/// # Describes a proxy dependency
+///
+/// There are a number of methods that return whether a certain resource (e.g. a secret,
+/// or a certificate) is used by a proxy.
+/// This struct represents one usage of the resource by a proxy.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct DependantProxy {
+  /// Identifies the dependant proxy
+  pub proxy_id: String,
+  /// Number of instances of the dependant application
+  pub instances: u64,
+}
+
+impl DependantProxy {
+  pub fn new(proxy_id: String, instances: u64) -> Self {
+    DependantProxy { proxy_id, instances }
+  }
+}
+
+impl Display for DependantProxy {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.proxy_id)
+  }
+}
+
+impl PartialOrd<Self> for DependantProxy {
+  /// Ordering uses `proxy_id` only
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    Some(self.cmp(other))
+  }
+}
+
+impl Ord for DependantProxy {
+  /// Ordering uses `proxy_id` only
+  fn cmp(&self, other: &Self) -> Ordering {
+    self.proxy_id.cmp(&other.proxy_id)
+  }
+}
+
 /// # Describes a app or application dependency
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
 /// a volume or an environment variable) is used by a dependant app or application.
 /// This enum represents one usage of the resource by an app or application.
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Dependant<T> {
   /// Identifies an app dependent on the resource
   App(DependantApp),
   /// Identifies an application dependent on the resource
   Application(DependantApplication<T>),
+  /// Identifies a proxy dependent on the resource
+  Proxy(DependantProxy),
 }
 
 impl<T> Dependant<T> {
@@ -295,49 +360,63 @@ impl<T> Dependant<T> {
   pub fn application(application_id: String, instances: u64, injections: Vec<T>) -> Self {
     Dependant::Application(DependantApplication { application_id, instances, injections })
   }
+
+  pub fn proxy(proxy_id: String, instances: u64) -> Self {
+    Dependant::Proxy(DependantProxy { proxy_id, instances })
+  }
+
+  pub fn id(&self) -> &String {
+    match self {
+      Self::App(app) => &app.app_id,
+      Self::Application(application) => &application.application_id,
+      Self::Proxy(proxy) => &proxy.proxy_id,
+    }
+  }
 }
 
 impl<T: Display> Display for Dependant<T> {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Dependant::App(app) => Display::fmt(app, f),
-      Dependant::Application(application) => Display::fmt(application, f),
+      Self::App(app) => Display::fmt(app, f),
+      Self::Application(application) => Display::fmt(application, f),
+      Self::Proxy(proxy) => Display::fmt(proxy, f),
     }
   }
 }
 
 impl<T: PartialOrd> PartialOrd<Self> for Dependant<T> {
+  /// Ordering uses `id` only
+  // TODO More elegant solution
   fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
     match self {
       Dependant::App(app) => match other {
         Dependant::App(other_app) => Some(app.app_id.cmp(&other_app.app_id)),
         Dependant::Application(other_application) => Some(app.app_id.cmp(&other_application.application_id)),
+        Dependant::Proxy(other_proxy) => Some(app.app_id.cmp(&other_proxy.proxy_id)),
       },
       Dependant::Application(application) => match other {
         Dependant::App(other_app) => Some(application.application_id.cmp(&other_app.app_id)),
         Dependant::Application(other_application) => Some(application.application_id.cmp(&other_application.application_id)),
+        Dependant::Proxy(other_proxy) => Some(application.application_id.cmp(&other_proxy.proxy_id)),
+      },
+      Dependant::Proxy(proxy) => match other {
+        Dependant::App(other_app) => Some(proxy.proxy_id.cmp(&other_app.app_id)),
+        Dependant::Application(other_application) => Some(proxy.proxy_id.cmp(&other_application.application_id)),
+        Dependant::Proxy(other_proxy) => Some(proxy.proxy_id.cmp(&other_proxy.proxy_id)),
       },
     }
   }
 }
 
 impl<T: Ord> Ord for Dependant<T> {
+  /// Ordering uses `id` only
   fn cmp(&self, other: &Self) -> Ordering {
-    match self {
-      Dependant::App(self_app) => match other {
-        Dependant::App(other_app) => self_app.app_id.cmp(&other_app.app_id),
-        Dependant::Application(other_application) => self_app.app_id.cmp(&other_application.application_id),
-      },
-      Dependant::Application(self_application) => match other {
-        Dependant::App(other_app) => self_application.application_id.cmp(&other_app.app_id),
-        Dependant::Application(other_application) => self_application.application_id.cmp(&other_application.application_id),
-      },
-    }
+    self.id().cmp(other.id())
   }
 }
 
 /// Describes an API error
-#[derive(Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub enum DshApiError {
   BadRequest(String),
   Configuration(String),

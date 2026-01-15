@@ -2,13 +2,13 @@
 
 use lazy_static::lazy_static;
 use regex::Regex;
-use serde::{de, Deserializer};
+use serde::{de, Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Version {
   major: u32,
   minor: u32,
@@ -69,6 +69,15 @@ impl FromStr for Version {
       )),
       None => Err(format!("invalid version representation {}", representation)),
     }
+  }
+}
+
+impl Serialize for Version {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: Serializer,
+  {
+    self.to_string().serialize(serializer)
   }
 }
 

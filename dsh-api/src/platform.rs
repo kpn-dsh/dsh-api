@@ -6,6 +6,7 @@ use lazy_static::lazy_static;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 use std::{env, fs};
 
 /// # Describes the DSH platforms and their properties
@@ -793,14 +794,36 @@ impl TryFrom<&str> for DshPlatform {
   ///
   /// Both a full name and an alias are accepted.
   ///
+  /// Use [from_str()](Self::from_str) instead.
+  ///
   /// # Example
   /// ```rust
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(DshPlatform::new("np-aws-lz-dsh").alias(), "nplz");
-  /// assert_eq!(DshPlatform::new("nplz").name(), "np-aws-lz-dsh");
+  /// use dsh_api::platform::DshPlatform;
+  /// assert_eq!(DshPlatform::try_from("np-aws-lz-dsh").unwrap().alias(), "nplz");
+  /// assert_eq!(DshPlatform::try_from("nplz").unwrap().name(), "np-aws-lz-dsh");
   /// assert!(DshPlatform::try_from("illegal-platform-name").is_err());
   /// ```
   fn try_from(platform_name: &str) -> Result<Self, Self::Error> {
+    Self::from_str(platform_name)
+  }
+}
+
+impl FromStr for DshPlatform {
+  type Err = String;
+
+  /// # Converts a platform name to a `DshPlatform`
+  ///
+  /// Both a full name and an alias are accepted.
+  ///
+  /// # Example
+  /// ```rust
+  /// # use std::str::FromStr;
+  /// use dsh_api::platform::DshPlatform;
+  /// assert_eq!(DshPlatform::from_str("np-aws-lz-dsh").unwrap().alias(), "nplz");
+  /// assert_eq!(DshPlatform::from_str("nplz").unwrap().name(), "np-aws-lz-dsh");
+  /// assert!(DshPlatform::from_str("illegal-platform-name").is_err());
+  /// ```
+  fn from_str(platform_name: &str) -> Result<Self, Self::Err> {
     match DSH_PLATFORMS
       .iter()
       .find(|dsh_platform| dsh_platform.name() == platform_name || dsh_platform.alias() == platform_name)
