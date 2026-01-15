@@ -17,6 +17,10 @@ All notable changes to the DSH Api Client project will be documented in this fil
 * Some derived trait implementations for some types.
 * Platform client factory.
 
+### Changed
+
+* Changed serializer for `Version`.
+
 ## [0.8.0] - 2025-11-20
 
 ### Added

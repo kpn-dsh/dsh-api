@@ -1,5 +1,5 @@
 use dsh_api::version::Version;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 #[test]
@@ -64,7 +64,19 @@ fn test_deserialize_version_field() {
     version: Version,
   }
   assert_eq!(
-    serde_json::from_str::<StructContainingVersion>("{\"version\": \"1.2.3\"}").unwrap().version,
+    serde_json::from_str::<StructContainingVersion>("{\"version\":\"1.2.3\"}").unwrap().version,
     Version::new(1, 2, 3, None)
+  );
+}
+
+#[test]
+fn test_serialize_version_field() {
+  #[derive(Serialize)]
+  struct StructContainingVersion {
+    version: Version,
+  }
+  assert_eq!(
+    serde_json::to_string(&StructContainingVersion { version: Version::new(1, 2, 3, None) }).unwrap(),
+    "{\"version\":\"1.2.3\"}".to_string()
   );
 }
