@@ -316,6 +316,116 @@ impl DshPlatform {
     self.private_domain.as_deref()
   }
 
+  /// # Returns the proxy broker vhost
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
+  /// * `number` - Proxy broker number.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").proxy_broker_vhost("my-tenant", "my-proxy", 2),
+  ///   "my-proxy-2.my-tenant.np-aws-lz-dsh.kpn-dsh.com".to_string()
+  /// );
+  /// ```
+  pub fn proxy_broker_vhost(&self, tenant_name: impl Display, proxy_name: impl Display, number: usize) -> String {
+    format!("{}-{}.{}", proxy_name, number, self.proxy_vhost_domain(tenant_name))
+  }
+
+  /// # Returns the proxy common name
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").proxy_common_name("my-tenant"),
+  ///   "brokers.kafka.my-tenant.np-aws-lz-dsh.kpn-dsh.com".to_string()
+  /// );
+  /// ```
+  pub fn proxy_common_name(&self, tenant_name: impl Display) -> String {
+    format!("brokers.kafka.{}", self.proxy_vhost_domain(tenant_name))
+  }
+
+  /// # Returns the proxy consumer name
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
+  /// * `number` - Proxy broker number.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").proxy_consumer_name("my-tenant", "my-proxy", 2),
+  ///   "my-tenant_my-proxy_2".to_string()
+  /// );
+  /// ```
+  pub fn proxy_consumer_name(&self, tenant_name: impl Display, proxy_name: impl Display, number: usize) -> String {
+    format!("{}_{}_{}", tenant_name, proxy_name, number)
+  }
+
+  /// # Returns the proxy consumer name with acl groups
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
+  /// * `acl_group_name` - Acl group name.
+  /// * `number` - Proxy broker number.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").proxy_consumer_name_acl_group("my-tenant", "my-acl-group", "my-proxy", 2),
+  ///   "my-tenant.my-acl-group_my-proxy_2".to_string()
+  /// );
+  /// ```
+  pub fn proxy_consumer_name_acl_group(&self, tenant_name: impl Display, acl_group_name: impl Display, proxy_name: impl Display, number: usize) -> String {
+    format!("{}.{}_{}_{}", tenant_name, acl_group_name, proxy_name, number)
+  }
+
+  /// # Returns the proxy schema store vhost
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").proxy_schema_store_vhost("my-tenant", "my-proxy"),
+  ///   "my-proxy-schema-store.kafka.my-tenant.np-aws-lz-dsh.kpn-dsh.com".to_string()
+  /// );
+  /// ```
+  pub fn proxy_schema_store_vhost(&self, tenant_name: impl Display, proxy_name: impl Display) -> String {
+    format!("{}-schema-store.kafka.{}", proxy_name, self.proxy_vhost_domain(tenant_name))
+  }
+
+  /// # Returns the proxy vhost domain
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").proxy_vhost_domain("my-tenant"),
+  ///   "my-tenant.np-aws-lz-dsh.kpn-dsh.com".to_string()
+  /// );
+  /// ```
+  pub fn proxy_vhost_domain(&self, tenant_name: impl Display) -> String {
+    format!("{}.{}.kpn-dsh.com", tenant_name, &self.name)
+  }
+
   /// # Returns the domain used for public vhosts
   ///
   /// # Examples
