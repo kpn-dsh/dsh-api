@@ -53,10 +53,10 @@ pub struct DshPlatform {
 /// # Cloud service provider that hosts a platform
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum CloudProvider {
-  /// # Amazon Web Services
+  /// Amazon Web Services
   #[serde(rename = "aws")]
   AWS,
-  /// # Microsoft Azure
+  /// Microsoft Azure
   #[serde(rename = "azure")]
   Azure,
 }

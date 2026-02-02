@@ -418,19 +418,19 @@ impl<T: Ord> Ord for Dependant<T> {
 /// Describes an API error
 #[derive(Clone, Debug, Serialize)]
 pub enum DshApiError {
-  /// DSH Api indicated that the request was not correct (BAD_REQUEST)
+  /// DSH Api server indicated that the request was not correct (BAD_REQUEST).
   BadRequest(String),
-  /// Misconfiguration error, e.g. a missing environment variable
+  /// Misconfiguration error, e.g. a missing environment variable.
   Configuration(String),
-  /// Not authorized for the requested operation or resource
+  /// Not authorized for the requested operation or resource.
   NotAuthorized(Option<String>),
-  // Requested resourse does not exist
+  /// Requested resource does not exist.
   NotFound(Option<String>),
-  /// Wrong parameters provided
+  /// Wrong parameters provided.
   Parameter(String),
-  /// Unexpected error occurred
+  /// Unexpected error occurred.
   Unexpected(String, Option<String>),
-  /// DSH Api indicated that the request could not be processed (BAD_REQUEST)
+  /// DSH Api server indicated that the request could not be processed (UNPROCESSABLE_ENTITY).
   Unprocessable(Option<String>),
 }
 
