@@ -4,6 +4,18 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.8.2] - YYYY-MM-DD
+
+### Added
+
+* Platform naming methods for proxy.
+* Platform naming methods for messaging api.
+
+### Changed
+
+* Renamed `issuer_endpoint` field in platforms configuration to  `issuer-endpoint`
+  (`issuer_endpoint` is still allowed but deprecated).
+
 ## [0.8.1] - 2026-01-15
 
 ### Added

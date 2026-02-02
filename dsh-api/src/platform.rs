@@ -41,6 +41,7 @@ pub struct DshPlatform {
   #[serde(rename = "cloud-provider")]
   cloud_provider: CloudProvider,
   region: Option<String>,
+  #[serde(alias = "issuer-endpoint")]
   issuer_endpoint: String,
   realm: String,
   #[serde(rename = "public-domain")]
@@ -199,6 +200,40 @@ impl DshPlatform {
     &self.description
   }
 
+  /// Returns the endpoint for the http messaging api (multi)
+  ///
+  /// # Parameters
+  /// * `mqtt_topic` - Mqtt topic name.
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").http_messaging_api_url_multi("my-topic"),
+  ///   "https://api.dsh-dev.dsh.np.aws.kpn.com/data/v0/multi/my-topic".to_string()
+  /// );
+  /// ```
+  pub fn http_messaging_api_url_multi(&self, mqtt_topic: impl Display) -> String {
+    format!("https://{}/data/v0/multi/{}", self.rest_api_domain(), mqtt_topic)
+  }
+
+  /// Returns the endpoint for the http messaging api (single)
+  ///
+  /// # Parameters
+  /// * `mqtt_topic` - Mqtt topic name.
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").http_messaging_api_url_single("my-topic"),
+  ///   "https://api.dsh-dev.dsh.np.aws.kpn.com/data/v0/single/my-topic".to_string()
+  /// );
+  /// ```
+  pub fn http_messaging_api_url_single(&self, mqtt_topic: impl Display) -> String {
+    format!("https://{}/data/v0/single/{}", self.rest_api_domain(), mqtt_topic)
+  }
+
   /// # Returns the internal domain name for a tenant
   ///
   /// # Examples
@@ -250,6 +285,35 @@ impl DshPlatform {
   /// ```
   pub fn is_production(&self) -> bool {
     self.is_production
+  }
+
+  /// Returns the endpoint for the mqtt messaging api
+  ///
+  /// It is preferred to use the endpoint in the mqtt token.
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").mqtt_messaging_api_endpoint(),
+  ///   "mqtt.dsh-dev.dsh.np.aws.kpn.com".to_string()
+  /// );
+  /// ```
+  pub fn mqtt_messaging_api_endpoint(&self) -> String {
+    format!("mqtt.{}", self.public_domain())
+  }
+
+  /// Returns the port for the mqtt messaging api
+  ///
+  /// It is preferred to use the endpoint in the mqtt token.
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(DshPlatform::new("nplz").mqtt_messaging_api_port(), 8883);
+  /// ```
+  pub fn mqtt_messaging_api_port(&self) -> usize {
+    8883
   }
 
   /// Returns the endpoint for fetching an MQTT token
@@ -499,6 +563,20 @@ impl DshPlatform {
   /// ```
   pub fn rest_api_endpoint(&self) -> String {
     format!("https://{}/resources/v0", self.rest_api_domain())
+  }
+
+  /// Returns the endpoint for fetching a rest token
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").rest_token_endpoint(),
+  ///   "https://api.dsh-dev.dsh.np.aws.kpn.com/auth/v0/token".to_string()
+  /// );
+  /// ```
+  pub fn rest_token_endpoint(&self) -> String {
+    format!("https://{}/auth/v0/token", self.rest_api_domain())
   }
 
   /// # Returns the url of the platform swagger page
