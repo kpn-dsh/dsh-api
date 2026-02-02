@@ -3,11 +3,11 @@
 //! Module that contains parse functions for selected formatted strings as used in the DSH and
 //! the DSH resource management API.
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 /// Enum that describes an auth string. Auth strings are used in the `exposedPorts` section
 /// of a service definition file and are deserialized into the  `auth` field of the
@@ -261,11 +261,10 @@ impl From<&str> for ImageString {
   /// `ImageString::Registry` instance. When the string is invalid,
   /// a `ImageString::Unrecognized` will be returned.
   fn from(image_string: &str) -> Self {
-    lazy_static! {
-      static ref APP_CATALOG_IMAGE_REGEX: Regex =
-        Regex::new(r"APPCATALOG_REGISTRY/dsh-appcatalog/tenant/([a-z0-9-_]+)/([0-9]+)/([0-9]+)/(release|draft)/(klarrio|kpn)/([a-zA-Z][a-zA-Z0-9-_]*):([a-zA-Z0-9-_.]*)").unwrap();
-      static ref REGISTRY_IMAGE_REGEX: Regex = Regex::new(r"registry.cp.kpn-dsh.com/([a-z0-9-_]+)/([a-zA-Z][a-zA-Z0-9-_]*):([a-zA-Z0-9-_.]*)").unwrap();
-    }
+    static APP_CATALOG_IMAGE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+      Regex::new(r"APPCATALOG_REGISTRY/dsh-appcatalog/tenant/([a-z0-9-_]+)/([0-9]+)/([0-9]+)/(release|draft)/(klarrio|kpn)/([a-zA-Z][a-zA-Z0-9-_]*):([a-zA-Z0-9-_.]*)").unwrap()
+    });
+    static REGISTRY_IMAGE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"registry.cp.kpn-dsh.com/([a-z0-9-_]+)/([a-zA-Z][a-zA-Z0-9-_]*):([a-zA-Z0-9-_.]*)").unwrap());
     match APP_CATALOG_IMAGE_REGEX.captures(image_string) {
       Some(captures) => Self::app(
         captures.get(4).map(|stage| stage.as_str().to_string()).unwrap_or_default(),
@@ -383,10 +382,8 @@ pub fn parse_basic_authentication_string(basic_authentication_string: &str) -> R
 /// # Returns
 /// When the provided string is valid, the method returns the function parameter value
 pub fn parse_function1<'a>(string: &'a str, f_name: &str) -> Result<&'a str, String> {
-  lazy_static! {
-    static ref REGEX: Regex = Regex::new(r"\{\s*([a-z][a-z0-9_]*)\(\s*'([a-zA-Z0-9_\.-]*)'\s*\)\s*\}").unwrap();
-  }
-  match REGEX.captures(string).map(|captures| {
+  static FUNCTION1_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\s*([a-z][a-z0-9_]*)\(\s*'([a-zA-Z0-9_\.-]*)'\s*\)\s*\}").unwrap());
+  match FUNCTION1_REGEX.captures(string).map(|captures| {
     (
       captures.get(1).map(|first_match| first_match.as_str()),
       captures.get(2).map(|second_match| second_match.as_str()),
@@ -416,10 +413,8 @@ pub fn parse_function1<'a>(string: &'a str, f_name: &str) -> Result<&'a str, Str
 /// # Returns
 /// When the provided string is valid, the method returns the two function parameter values
 pub fn parse_function2<'a>(string: &'a str, f_name: &str) -> Result<(&'a str, &'a str), String> {
-  lazy_static! {
-    static ref REGEX: Regex = Regex::new(r"\{\s*([a-z][a-z0-9_]*)\(\s*'([a-zA-Z0-9_\.-]*)'\s*,\s*'([a-zA-Z0-9_\.-]*)'\s*\)\s*\}").unwrap();
-  }
-  match REGEX.captures(string).map(|captures| {
+  static FUNCTION2_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\s*([a-z][a-z0-9_]*)\(\s*'([a-zA-Z0-9_\.-]*)'\s*,\s*'([a-zA-Z0-9_\.-]*)'\s*\)\s*\}").unwrap());
+  match FUNCTION2_REGEX.captures(string).map(|captures| {
     (
       captures.get(1).map(|first_match| first_match.as_str()),
       captures.get(2).map(|second_match| second_match.as_str()),
@@ -499,10 +494,8 @@ pub fn parse_volume_string(volume_string: &str) -> Result<&str, String> {
 /// # Returns
 /// When the provided string is valid, the method returns the volume name
 pub fn parse_topic_string<'a>(topic_string: &'a str) -> Result<TopicString<'a>, String> {
-  lazy_static! {
-    static ref TOPIC_REGEX: Regex = Regex::new(r"(internal|stream|scratch)\.([a-z][a-z0-9-]*)\.([a-z][a-z0-9-]*)").unwrap();
-  }
-  match TOPIC_REGEX.captures(topic_string) {
+  static TOPIC_STRING_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(internal|stream|scratch)\.([a-z][a-z0-9-]*)\.([a-z][a-z0-9-]*)").unwrap());
+  match TOPIC_STRING_REGEX.captures(topic_string) {
     Some(registry_captures) => {
       let name = registry_captures.get(2).map(|name| name.as_str()).unwrap();
       let tenant = registry_captures.get(3).map(|tenant| tenant.as_str()).unwrap();

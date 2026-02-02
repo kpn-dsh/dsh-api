@@ -53,9 +53,9 @@ use crate::DshApiError::Unexpected;
 use crate::{bucket, secret, topic, vhost, volume, DependantApplication, DshApiResult};
 use futures::future::{join, try_join_all};
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 /// # Additional methods to manage applications
 ///
@@ -308,9 +308,8 @@ impl DshApiClient {
   /// * `Ok<(gid, uid)>` - group and user id for the tenant, which are always the same vale
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn guid(&self) -> DshApiResult<(usize, usize)> {
-    lazy_static! {
-      static ref GUID_REGEX: Regex = Regex::new(r"^([0-9]+):([0-9]+)$").unwrap();
-    }
+    static GUID_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^([0-9]+):([0-9]+)$").unwrap());
+
     match self.get_application_configuration_map().await?.iter().take(1).last() {
       Some((_, application)) => match GUID_REGEX.captures(application.user.as_str()) {
         Some(captures) => Ok((

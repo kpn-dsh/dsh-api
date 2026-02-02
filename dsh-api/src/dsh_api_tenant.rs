@@ -1,11 +1,11 @@
 //! # Client tenant
 use crate::platform::DshPlatform;
 use crate::{DshApiError, ENV_VAR_TENANT};
-use lazy_static::lazy_static;
 use log::{debug, info};
 use serde::Serialize;
 use std::env;
 use std::fmt::{Display, Formatter};
+use std::sync::LazyLock;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize)]
 pub struct DshApiTenant {
@@ -215,9 +215,15 @@ impl Display for DshApiTenant {
   }
 }
 
-lazy_static! {
-  pub static ref DEFAULT_DSH_API_TENANT: DshApiTenant = DshApiTenant::default();
-}
+/// Lazily initialized default tenant
+///
+/// This method will read the tenant name and platform form the respective
+/// environment variables and will create a`DshApiTenant` if possible.
+///
+/// # Panics
+/// Referencing this value will panic if the environment variable is not set or
+/// if it contains an invalid platform name.
+pub static DEFAULT_DSH_API_TENANT: LazyLock<DshApiTenant> = LazyLock::new(DshApiTenant::default);
 
 fn get_default_tenant_name() -> Result<String, DshApiError> {
   match env::var(ENV_VAR_TENANT) {

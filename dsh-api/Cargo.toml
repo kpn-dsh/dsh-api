@@ -30,7 +30,6 @@ chrono = { version = "0.4", features = ["serde"], default-features = false }
 erased-serde = { version = "0.4", optional = true, features = ["std"], default-features = false }
 futures = { version = "0.3", features = ["alloc", "async-await"], default-features = false }
 itertools = { version = "0.13", features = ["default"], default-features = false }
-lazy_static = { version = "1", default-features = false }
 log = { version = "0.4", default-features = false }
 progenitor-client = { version = "0.7", default-features = false }
 regex = { version = "1", default-features = false }

@@ -15,6 +15,8 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 * Renamed `issuer_endpoint` field in platforms configuration to  `issuer-endpoint`
   (`issuer_endpoint` is still allowed but deprecated).
+* Removed `lazy_static` dependency.
+* Changed rust version to `1.80.0`.
 
 ## [0.8.1] - 2026-01-15
 

@@ -5,13 +5,13 @@
 use base64::engine::general_purpose::STANDARD_NO_PAD;
 use base64::Engine;
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
+use std::sync::LazyLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Deserialize, PartialEq, PartialOrd)]
@@ -408,10 +408,7 @@ impl FromStr for DshPermission {
   type Err = String;
 
   fn from_str(permission_representation: &str) -> Result<Self, Self::Err> {
-    lazy_static! {
-      // Example: manage:dev-lz-dsh:greenbox-dev:view
-      static ref VALUE_REGEX: Regex = Regex::new(r"^manage:([a-z][a-z0-9-]*):([a-z][a-z0-9-]*):(manage|view)$").unwrap();
-    }
+    static VALUE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^manage:([a-z][a-z0-9-]*):([a-z][a-z0-9-]*):(manage|view)$").unwrap());
     match VALUE_REGEX.captures(permission_representation) {
       Some(captures) => {
         let kind = captures.get(3).map(|tenant_match| tenant_match.as_str()).unwrap_or_default();

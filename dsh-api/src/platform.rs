@@ -2,11 +2,11 @@
 
 use crate::{DEFAULT_PLATFORMS, ENV_VAR_PLATFORM, ENV_VAR_PLATFORMS_FILE_NAME};
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use std::sync::LazyLock;
 use std::{env, fs};
 
 /// # Describes the DSH platforms and their properties
@@ -1030,44 +1030,40 @@ impl FromStr for DshPlatform {
   }
 }
 
-lazy_static! {
-  // Static list of all recognized DSH platforms, lazily initialized
-  static ref DSH_PLATFORMS: Vec<DshPlatform> = {
-    match env::var(ENV_VAR_PLATFORMS_FILE_NAME) {
-      Ok(platform_file_name_from_env_var) => match fs::read_to_string(&platform_file_name_from_env_var) {
-        Ok(platform_list_from_file) => match serde_json::from_str(platform_list_from_file.as_str()) {
-          Ok(mut dsh_platforms_from_file) => {
-            if let Err(validation_error) = check_for_duplicate_names_or_aliases(&dsh_platforms_from_file) {
-              error!("{}", validation_error);
-              panic!("{}", validation_error)
-            }
-            dsh_platforms_from_file.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
-            info!("dsh platform list read from '{}'", platform_file_name_from_env_var);
-            dsh_platforms_from_file
-          },
-          Err(parse_error) => {
-            let message = format!("invalid platforms file '{}' ({})", platform_file_name_from_env_var, parse_error);
-            error!("{}", message);
-            panic!("{}", message)
-          }
-        },
-        Err(file_error) => {
-          let message = format!("unable to read platforms file '{}' ({})", platform_file_name_from_env_var, file_error);
-          error!("{}", message);
-          panic!("{}", message)
+// Static list of all recognized DSH platforms, lazily initialized
+static DSH_PLATFORMS: LazyLock<Vec<DshPlatform>> = LazyLock::new(|| match env::var(ENV_VAR_PLATFORMS_FILE_NAME) {
+  Ok(platform_file_name_from_env_var) => match fs::read_to_string(&platform_file_name_from_env_var) {
+    Ok(platform_list_from_file) => match serde_json::from_str(platform_list_from_file.as_str()) {
+      Ok(mut dsh_platforms_from_file) => {
+        if let Err(validation_error) = check_for_duplicate_names_or_aliases(&dsh_platforms_from_file) {
+          error!("{}", validation_error);
+          panic!("{}", validation_error)
         }
-      },
-      Err(_) => match serde_json::from_str::<Vec<DshPlatform>>(DEFAULT_PLATFORMS) {
-        Ok(mut default_dsh_platforms) => {
-          default_dsh_platforms.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
-          debug!("default dsh platform list used");
-          default_dsh_platforms
-        },
-        Err(_) => panic!()
+        dsh_platforms_from_file.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
+        info!("dsh platform list read from '{}'", platform_file_name_from_env_var);
+        dsh_platforms_from_file
       }
+      Err(parse_error) => {
+        let message = format!("invalid platforms file '{}' ({})", platform_file_name_from_env_var, parse_error);
+        error!("{}", message);
+        panic!("{}", message)
+      }
+    },
+    Err(file_error) => {
+      let message = format!("unable to read platforms file '{}' ({})", platform_file_name_from_env_var, file_error);
+      error!("{}", message);
+      panic!("{}", message)
     }
-  };
-}
+  },
+  Err(_) => match serde_json::from_str::<Vec<DshPlatform>>(DEFAULT_PLATFORMS) {
+    Ok(mut default_dsh_platforms) => {
+      default_dsh_platforms.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
+      debug!("default dsh platform list used");
+      default_dsh_platforms
+    }
+    Err(_) => panic!(),
+  },
+});
 
 // Check whether duplicate names or aliases exist
 #[allow(suspicious_double_ref_op)]

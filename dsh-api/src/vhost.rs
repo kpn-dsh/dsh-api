@@ -37,12 +37,12 @@ use crate::DshApiError;
 use crate::{Dependant, DependantApp, DependantApplication, DshApiResult};
 use futures::try_join;
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 /// # Describes an injection of a resource in an application
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -368,9 +368,8 @@ impl VhostString {
   /// When the provided string is valid, the method returns an instance of the `VhostString`
   /// struct, describing the auth string.
   pub fn from_resource_str(vhost_resource_string: &str) -> Result<Self, String> {
-    lazy_static! {
-      static ref VHOST_RESOURCE_STRING_REGEX: Regex = Regex::new(r"^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)@([a-zA-Z0-9_-]+)$").unwrap();
-    }
+    static VHOST_RESOURCE_STRING_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)@([a-zA-Z0-9_-]+)$").unwrap());
+
     VHOST_RESOURCE_STRING_REGEX
       .captures(vhost_resource_string)
       .map(|captures| {
@@ -419,9 +418,7 @@ impl FromStr for VhostString {
   /// When the provided string is valid, the method returns an instance of the `VhostString`
   /// struct, describing the auth string.
   fn from_str(vhost_string: &str) -> Result<Self, Self::Err> {
-    lazy_static! {
-      static ref VALUE_REGEX: Regex = Regex::new(r"([a-zA-Z0-9_-]+)(\.kafka)?(?:\.([a-zA-Z0-9_-]+))?").unwrap();
-    }
+    static VALUE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"([a-zA-Z0-9_-]+)(\.kafka)?(?:\.([a-zA-Z0-9_-]+))?").unwrap());
     let (value_string, zone) = parse_function(vhost_string, "vhost")?;
     VALUE_REGEX
       .captures(value_string)
