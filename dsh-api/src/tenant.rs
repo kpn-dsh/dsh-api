@@ -43,23 +43,38 @@
 //! * [`managed_tenant_limit(tenant name, kind) -> limit`](DshApiClient::managed_tenant_limit)
 //! * [`managed_tenant_limits(tenant name) -> limits`](DshApiClient::managed_tenant_limits)
 //! * [`managed_tenant_public_streams_access_rights(tenant name) -> [(stream id, rights)]`](DshApiClient::managed_tenant_public_streams_access_rights)
+//!
+//! # Known issue
+//!
+//! The openapi specification/schema for [`LimitValue`] is designed in such a way that the variant
+//! of the enum can only be determined from the value of a field inside the enum. This makes it
+//! impossible for `Typify` to generate a proper deserializable enum from it. Deserializing
+//! any [`LimitValue`] enum will therefor always result in a [`LimitValue::Cpu`] variant, which
+//! again results in incorrect output from the following generated functions:
+//!
+//! * [`get_tenant_limit(tenant, kind)`](DshApiClient::get_tenant_limit),
+//! * [`get_tenant_limits(tenant)`](DshApiClient::get_tenant_limits).
+//!
+//! Instead of these generated methods you can use the derived methods below, which do a proper
+//! conversion:
+//!
+//! * [`managed_tenant_limit(tenant, kind)`](DshApiClient::managed_tenant_limit),
+//! * [`managed_tenant_limits(tenant)`](DshApiClient::managed_tenant_limit).
 
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::stream::Stream;
-use crate::types::error::ConversionError;
-use crate::types::{
-  GetTenantLimitByManagerByTenantByKindKind, LimitValue, LimitValueCertificateCount, LimitValueCertificateCountName, LimitValueConsumerRate, LimitValueConsumerRateName,
-  LimitValueCpu, LimitValueCpuName, LimitValueKafkaAclGroupCount, LimitValueKafkaAclGroupCountName, LimitValueMem, LimitValueMemName, LimitValuePartitionCount,
-  LimitValuePartitionCountName, LimitValueProducerRate, LimitValueProducerRateName, LimitValueRequestRate, LimitValueRequestRateName, LimitValueSecretCount,
-  LimitValueSecretCountName, LimitValueTopicCount, LimitValueTopicCountName, ManagedStream, ManagedStreamId, PublicManagedStream,
-};
-use crate::{AccessRights, DshApiError, DshApiResult};
+use crate::types::*;
+use crate::{AccessRights, DshApiError};
 use futures::future::{try_join, try_join_all};
 use itertools::Itertools;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
+use std::num::NonZeroU64;
 
 /// # Additional methods and functions to manage tenants
+///
+/// _These functions are only available when the `manage` feature is enabled._
 ///
 /// Module that contains methods and functions to manage tenant and tenant limits.
 /// * Derived methods - DshApiClient methods that add extra capabilities
@@ -82,22 +97,39 @@ use std::fmt::{Display, Formatter};
 /// * [`managed_tenant_limit(tenant name, kind) -> limit`](DshApiClient::managed_tenant_limit)
 /// * [`managed_tenant_limits(tenant name) -> limits`](DshApiClient::managed_tenant_limits)
 /// * [`managed_tenant_public_streams_access_rights(tenant name) -> [(stream id, rights)]`](DshApiClient::managed_tenant_public_streams_access_rights)
+///
+/// # Known issue
+///
+/// The openapi specification/schema for [`LimitValue`] is designed in such a way that the variant
+/// of the enum can only be determined from the value of a field inside the enum. This makes it
+/// impossible for `Typify` to generate a proper deserializable enum from it. Deserializing
+/// any [`LimitValue`] enum will therefor always result in a [`LimitValue::Cpu`] variant, which
+/// again results in incorrect output from the following generated functions:
+///
+/// * [`get_tenant_limit(tenant, kind)`](DshApiClient::get_tenant_limit),
+/// * [`get_tenant_limits(tenant)`](DshApiClient::get_tenant_limits).
+///
+/// Instead of these generated methods you can use the derived methods below, which do a proper
+/// conversion:
+///
+/// * [`managed_tenant_limit(tenant, kind)`](DshApiClient::managed_tenant_limit),
+/// * [`managed_tenant_limits(tenant)`](DshApiClient::managed_tenant_limit).
 impl DshApiClient {
   /// # Get internal managed streams that the tenant has access to
   ///
   /// # Parameters
-  /// * `managed_tenant` - managed tenants id
+  /// * `managed_tenant` - Managed tenants id.
   ///
   /// # Returns
   /// * `Ok<Vec<(ManagedStreamId, `[`ManagedStream`]`, `[`AccessRights`]`)>>` -
-  ///   list of tuples consisting of stream ids, public streams and access rights
-  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
-  pub async fn managed_tenant_granted_internal_streams(&self, managed_tenant: &str) -> Result<Vec<(ManagedStreamId, ManagedStream, AccessRights)>, DshApiError> {
+  ///   List of tuples consisting of stream ids, public streams and access rights.
+  /// * `Err<DshApiError>` - When the request could not be processed by the DSH.
+  pub async fn managed_tenant_granted_internal_streams(&self, managed_tenant: &str) -> DshApiResult<Vec<(ManagedStreamId, ManagedStream, AccessRights)>> {
     let access_rights = self.managed_tenant_internal_streams_access_rights(managed_tenant).await?;
     let streams = try_join_all(
       access_rights
         .iter()
-        .map(|(managed_stream, _)| self.get_stream_internal_configuration(managed_stream)),
+        .map(|(managed_stream, _)| self.get_stream_internal_configuration(managed_stream.as_str())),
     )
     .await?;
     Ok(
@@ -112,12 +144,12 @@ impl DshApiClient {
   /// # Get managed streams that the tenant has access to
   ///
   /// # Parameters
-  /// * `managed_tenant` - managed tenants id
+  /// * `managed_tenant` - Managed tenants id.
   ///
   /// # Returns
   /// * `Ok<Vec<(ManagedStreamId, `[`Stream`]`, `[`AccessRights`]`)>>` -
-  ///   list of tuples consisting of stream ids, streams and access rights
-  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
+  ///   List of tuples consisting of stream ids, streams and access rights.
+  /// * `Err<DshApiError>` - When the request could not be processed by the DSH.
   pub async fn managed_tenant_granted_managed_streams(&self, managed_tenant: &str) -> DshApiResult<Vec<(ManagedStreamId, Stream, AccessRights)>> {
     let (internal_streams, public_streams) = try_join(
       self.managed_tenant_granted_internal_streams(managed_tenant),
@@ -134,15 +166,20 @@ impl DshApiClient {
   /// # Get public managed streams that the tenant has access to
   ///
   /// # Parameters
-  /// * `managed_tenant` - managed tenants id
+  /// * `managed_tenant` - Managed tenants id.
   ///
   /// # Returns
   /// * `Ok<Vec<(ManagedStreamId, `[`PublicManagedStream`]`, `[`AccessRights`]`)>>` -
-  ///   list of tuples consisting of stream ids, public streams and access rights
-  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
-  pub async fn managed_tenant_granted_public_streams(&self, managed_tenant: &str) -> Result<Vec<(ManagedStreamId, PublicManagedStream, AccessRights)>, DshApiError> {
+  ///   List of tuples consisting of stream ids, public streams and access rights.
+  /// * `Err<DshApiError>` - When the request could not be processed by the DSH.
+  pub async fn managed_tenant_granted_public_streams(&self, managed_tenant: &str) -> DshApiResult<Vec<(ManagedStreamId, PublicManagedStream, AccessRights)>> {
     let access_rights = self.managed_tenant_public_streams_access_rights(managed_tenant).await?;
-    let streams = try_join_all(access_rights.iter().map(|(managed_stream, _)| self.get_stream_public_configuration(managed_stream))).await?;
+    let streams = try_join_all(
+      access_rights
+        .iter()
+        .map(|(managed_stream, _)| self.get_stream_public_configuration(managed_stream.as_str())),
+    )
+    .await?;
     Ok(
       access_rights
         .into_iter()
@@ -162,12 +199,12 @@ impl DshApiClient {
   /// * `managed_stream` - Internal managed stream id.
   ///
   /// # Returns
-  /// * `Ok(true)` - when the managed tenant has read access to the internal managed stream
-  /// * `Ok(false)` - when the managed tenant does not have read access to the internal managed
-  ///   stream, or when the internal managed stream or the managed tenant does not exist
-  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
+  /// * `Ok(true)` - When the managed tenant has read access to the internal managed stream.
+  /// * `Ok(false)` - When the managed tenant does not have read access to the internal managed
+  ///   stream, or when the internal managed stream or the managed tenant does not exist.
+  /// * `Err<DshApiError>` - When the request could not be processed by the DSH.
   pub async fn managed_tenant_has_internal_read_access(&self, managed_tenant: &str, managed_stream: &ManagedStreamId) -> DshApiResult<bool> {
-    match self.head_stream_internal_access_read(managed_stream, managed_tenant).await {
+    match self.head_stream_internal_access_read(managed_stream.as_str(), managed_tenant).await {
       Ok(()) => Ok(true),
       Err(DshApiError::NotFound(_)) => Ok(false),
       Err(other_error) => Err(other_error),
@@ -184,12 +221,12 @@ impl DshApiClient {
   /// * `managed_stream` - Internal managed stream id.
   ///
   /// # Returns
-  /// * `Ok(true)` - when the managed tenant has write access to the internal managed stream
-  /// * `Ok(false)` - when the managed tenant does not have write access to the internal managed
-  ///   stream, or when the internal managed stream or the managed tenant does not exist
-  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
+  /// * `Ok(true)` - When the managed tenant has write access to the internal managed stream.
+  /// * `Ok(false)` - When the managed tenant does not have write access to the internal managed
+  ///   stream, or when the internal managed stream or the managed tenant does not exist.
+  /// * `Err<DshApiError>` - When the request could not be processed by the DSH.
   pub async fn managed_tenant_has_internal_write_access(&self, managed_tenant: &str, managed_stream: &ManagedStreamId) -> DshApiResult<bool> {
-    match self.head_stream_internal_access_write(managed_stream, managed_tenant).await {
+    match self.head_stream_internal_access_write(managed_stream.as_str(), managed_tenant).await {
       Ok(()) => Ok(true),
       Err(DshApiError::NotFound(_)) => Ok(false),
       Err(other_error) => Err(other_error),
@@ -206,12 +243,12 @@ impl DshApiClient {
   /// * `managed_stream` - Public managed stream id.
   ///
   /// # Returns
-  /// * `Ok(true)` - when the managed tenant has read access to the public managed stream
-  /// * `Ok(false)` - when the managed tenant does not have read access to the public managed
-  ///   stream, or when the public managed stream or the managed tenant does not exist
-  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
+  /// * `Ok(true)` - When the managed tenant has read access to the public managed stream.
+  /// * `Ok(false)` - When the managed tenant does not have read access to the public managed
+  ///   stream, or when the public managed stream or the managed tenant does not exist.
+  /// * `Err<DshApiError>` - When the request could not be processed by the DSH.
   pub async fn managed_tenant_has_public_read_access(&self, managed_tenant: &str, managed_stream: &ManagedStreamId) -> DshApiResult<bool> {
-    match self.head_stream_public_access_read(managed_stream, managed_tenant).await {
+    match self.head_stream_public_access_read(managed_stream.as_str(), managed_tenant).await {
       Ok(()) => Ok(true),
       Err(DshApiError::NotFound(_)) => Ok(false),
       Err(other_error) => Err(other_error),
@@ -228,12 +265,12 @@ impl DshApiClient {
   /// * `managed_stream` - Public managed stream id.
   ///
   /// # Returns
-  /// * `Ok(true)` - when the managed tenant has write access to the public managed stream
-  /// * `Ok(false)` - when the managed tenant does not have write access to the public managed
-  ///   stream, or when the public managed stream or the managed tenant does not exist
-  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
+  /// * `Ok(true)` - When the managed tenant has write access to the public managed stream.
+  /// * `Ok(false)` - When the managed tenant does not have write access to the public managed
+  ///   stream, or when the public managed stream or the managed tenant does not exist.
+  /// * `Err<DshApiError>` - When the request could not be processed by the DSH.
   pub async fn managed_tenant_has_public_write_access(&self, managed_tenant: &str, managed_stream: &ManagedStreamId) -> DshApiResult<bool> {
-    match self.head_stream_public_access_write(managed_stream, managed_tenant).await {
+    match self.head_stream_public_access_write(managed_stream.as_str(), managed_tenant).await {
       Ok(()) => Ok(true),
       Err(DshApiError::NotFound(_)) => Ok(false),
       Err(other_error) => Err(other_error),
@@ -243,13 +280,13 @@ impl DshApiClient {
   /// # Get ids of internal managed streams that the tenant has access to
   ///
   /// # Parameters
-  /// * `managed_tenant` - managed tenants id
+  /// * `managed_tenant` - Managed tenant id.
   ///
   /// # Returns
   /// * `Ok<Vec<(ManagedStreamId, `[`AccessRights`]`)>>` -
-  ///   list of tuples consisting of stream ids and access rights
-  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
-  pub async fn managed_tenant_internal_streams_access_rights(&self, managed_tenant: &str) -> Result<Vec<(ManagedStreamId, AccessRights)>, DshApiError> {
+  ///   List of tuples consisting of stream ids and access rights.
+  /// * `Err<DshApiError>` - When the request could not be processed by the DSH.
+  pub async fn managed_tenant_internal_streams_access_rights(&self, managed_tenant: &str) -> DshApiResult<Vec<(ManagedStreamId, AccessRights)>> {
     let internal_managed_streams = self.get_stream_internals().await?;
     let internal_access = try_join_all(internal_managed_streams.iter().map(|managed_stream| {
       try_join(
@@ -275,31 +312,29 @@ impl DshApiClient {
   /// # Get managed tenant limit
   ///
   /// # Parameters
-  /// * `managed_tenant` - managed tenants id
-  /// * `kind` - represents requested limit [kind](GetTenantLimitByManagerByTenantByKindKind)
+  /// * `managed_tenant` - Managed tenant id.
+  /// * `kind` - Requested limit kind.
   ///
   /// # Returns
-  /// * `Ok<`[`LimitValue`]`>` - limit of the managed tenant
-  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
-  pub async fn managed_tenant_limit<T: TryInto<GetTenantLimitByManagerByTenantByKindKind>>(&self, managed_tenant: &str, kind: T) -> DshApiResult<LimitValue> {
-    let kind = kind.try_into().map_err(|_| ConversionError::from("invalid limit kind"))?;
+  /// * `Ok<`[`LimitValue`]`>` - Limit of the managed tenant.
+  /// * `Err<DshApiError>` - When the request could not be processed by the DSH.
+  pub async fn managed_tenant_limit(&self, managed_tenant: &str, kind: &str) -> DshApiResult<LimitValue> {
     let limit = self.get_tenant_limit(managed_tenant, kind).await?;
     match limit {
-      // The code (generated by Progenitor) for the LimitValue enum is incorrect and will
-      // deserialize all kind of limit value into a LimitValueCpu.
-      // Explicit conversion is therefor required.
-      LimitValue::Cpu(cpu) => Ok(Self::convert(&kind, cpu.value)?),
-      // The patterns below will never occur with the current deserializer.
+      // For reasons explained in the module comments, deserializing any LimitValue enum will
+      // always result in a LimitValue::Cpu. Explicit conversion is therefor required.
+      LimitValue::Cpu(cpu) => Ok(Self::proper_limit_value_variant(kind, cpu.value)?),
+      // The variants below will never occur with the current deserializer.
       // They are included for completeness.
-      LimitValue::CertificateCount(certificate_count) => Ok(LimitValue::from(certificate_count)),
-      LimitValue::ConsumerRate(consumer_rate) => Ok(LimitValue::from(consumer_rate)),
-      LimitValue::KafkaAclGroupCount(kafka_acl_group_count) => Ok(LimitValue::from(kafka_acl_group_count)),
-      LimitValue::Mem(mem) => Ok(LimitValue::from(mem)),
-      LimitValue::PartitionCount(partition_count) => Ok(LimitValue::from(partition_count)),
-      LimitValue::ProducerRate(producer_rate) => Ok(LimitValue::from(producer_rate)),
-      LimitValue::RequestRate(request_rate) => Ok(LimitValue::from(request_rate)),
-      LimitValue::SecretCount(secret_count) => Ok(LimitValue::from(secret_count)),
-      LimitValue::TopicCount(topic_count) => Ok(LimitValue::from(topic_count)),
+      LimitValue::CertificateCount(_certificate_count) => unreachable!(),
+      LimitValue::ConsumerRate(_consumer_rate) => unreachable!(),
+      LimitValue::KafkaAclGroupCount(_kafka_acl_group_count) => unreachable!(),
+      LimitValue::Mem(_mem) => unreachable!(),
+      LimitValue::PartitionCount(_partition_count) => unreachable!(),
+      LimitValue::ProducerRate(_producer_rate) => unreachable!(),
+      LimitValue::RequestRate(_request_rate) => unreachable!(),
+      LimitValue::SecretCount(_secret_count) => unreachable!(),
+      LimitValue::TopicCount(_topic_count) => unreachable!(),
     }
   }
 
@@ -324,7 +359,7 @@ impl DshApiClient {
   /// * `Ok<Vec<(ManagedStreamId, `[`AccessRights`]`)>>` -
   ///   list of tuples consisting of stream ids and access rights
   /// * `Err<DshApiError>` - when the request could not be processed by the DSH
-  pub async fn managed_tenant_public_streams_access_rights(&self, managed_tenant: &str) -> Result<Vec<(ManagedStreamId, AccessRights)>, DshApiError> {
+  pub async fn managed_tenant_public_streams_access_rights(&self, managed_tenant: &str) -> DshApiResult<Vec<(ManagedStreamId, AccessRights)>> {
     let public_managed_streams = self.get_stream_publics().await?;
     let public_access = try_join_all(public_managed_streams.iter().map(|managed_stream| {
       try_join(
@@ -347,51 +382,56 @@ impl DshApiClient {
     Ok(public_access_rights)
   }
 
-  fn convert(kind: &GetTenantLimitByManagerByTenantByKindKind, float_value: f64) -> Result<LimitValue, ConversionError> {
-    match kind {
-      GetTenantLimitByManagerByTenantByKindKind::Certificatecount => Ok(LimitValue::CertificateCount(LimitValueCertificateCount {
+  // Convert the cpu value to the proper LimitValue variant
+  fn proper_limit_value_variant(kind: &str, cpu_value: f64) -> DshApiResult<LimitValue> {
+    match kind.to_lowercase().as_str() {
+      "certificatecount" => Ok(LimitValue::CertificateCount(LimitValueCertificateCount {
         name: LimitValueCertificateCountName::CertificateCount,
-        value: float_value as i64,
+        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion("illegal certificate count value".to_string()))?,
       })),
-      GetTenantLimitByManagerByTenantByKindKind::Consumerrate => Ok(LimitValue::ConsumerRate(LimitValueConsumerRate {
+      "consumerrate" => Ok(LimitValue::ConsumerRate(LimitValueConsumerRate {
         name: LimitValueConsumerRateName::ConsumerRate,
-        value: float_value as i64,
+        value: cpu_value as i64,
       })),
-      GetTenantLimitByManagerByTenantByKindKind::Cpu => Ok(LimitValue::Cpu(LimitValueCpu { name: LimitValueCpuName::Cpu, value: float_value })),
-      GetTenantLimitByManagerByTenantByKindKind::Kafkaaclgroupcount => Ok(LimitValue::KafkaAclGroupCount(LimitValueKafkaAclGroupCount {
+      "cpu" => Ok(LimitValue::Cpu(LimitValueCpu { name: LimitValueCpuName::Cpu, value: cpu_value })),
+      "kafkaaclgroupcount" => Ok(LimitValue::KafkaAclGroupCount(LimitValueKafkaAclGroupCount {
         name: LimitValueKafkaAclGroupCountName::KafkaAclGroupCount,
-        value: float_value as i64,
+        value: cpu_value as i64,
       })),
-      GetTenantLimitByManagerByTenantByKindKind::Mem => Ok(LimitValue::Mem(LimitValueMem { name: LimitValueMemName::Mem, value: float_value as i64 })),
-      GetTenantLimitByManagerByTenantByKindKind::Partitioncount => Ok(LimitValue::PartitionCount(LimitValuePartitionCount {
+      "mem" => Ok(LimitValue::Mem(LimitValueMem {
+        name: LimitValueMemName::Mem,
+        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion("illegal mem value".to_string()))?,
+      })),
+      "partitioncount" => Ok(LimitValue::PartitionCount(LimitValuePartitionCount {
         name: LimitValuePartitionCountName::PartitionCount,
-        value: float_value as i64,
+        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion("illegal partition count value".to_string()))?,
       })),
-      GetTenantLimitByManagerByTenantByKindKind::Producerrate => Ok(LimitValue::ProducerRate(LimitValueProducerRate {
+      "producerrate" => Ok(LimitValue::ProducerRate(LimitValueProducerRate {
         name: LimitValueProducerRateName::ProducerRate,
-        value: float_value as i64,
+        value: cpu_value as i64,
       })),
-      GetTenantLimitByManagerByTenantByKindKind::Requestrate => Ok(LimitValue::RequestRate(LimitValueRequestRate {
+      "requestrate" => Ok(LimitValue::RequestRate(LimitValueRequestRate {
         name: LimitValueRequestRateName::RequestRate,
-        value: float_value as i64,
+        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion("illegal request rate value".to_string()))?,
       })),
-      GetTenantLimitByManagerByTenantByKindKind::Secretcount => Ok(LimitValue::SecretCount(LimitValueSecretCount {
+      "secretcount" => Ok(LimitValue::SecretCount(LimitValueSecretCount {
         name: LimitValueSecretCountName::SecretCount,
-        value: float_value as i64,
+        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion("illegal secret count value".to_string()))?,
       })),
-      GetTenantLimitByManagerByTenantByKindKind::Topiccount => Ok(LimitValue::TopicCount(LimitValueTopicCount {
+      "topiccount" => Ok(LimitValue::TopicCount(LimitValueTopicCount {
         name: LimitValueTopicCountName::TopicCount,
-        value: float_value as i64,
+        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion("illegal topic count value".to_string()))?,
       })),
+      unrecognized_kind => Err(DshApiError::Conversion(format!("unrecognized limit value kind '{}'", unrecognized_kind))),
     }
   }
 }
 
-/// Structure that describes the resource limits for a managed tenant
+/// Structure that describes all resource limits for a managed tenant
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TenantLimits {
   /// Limit for the number of certificates available for the managed tenant
-  pub certificate_count: Option<i64>,
+  pub certificate_count: Option<NonZeroU64>,
   /// Limit for the maximum allowed consumer rate (bytes/sec)
   pub consumer_rate: Option<i64>,
   /// Limit for the number of cpus to provision for the managed tenant (factions of a vCPU core, 1.0 equals 1 vCPU)
@@ -399,27 +439,31 @@ pub struct TenantLimits {
   /// Limit for the number of Kafka ACL groups available for the managed tenant
   pub kafka_acl_group_count: Option<i64>,
   /// Limit for the amount of memory available for the managed tenant (MiB)
-  pub mem: Option<i64>,
+  pub mem: Option<NonZeroU64>,
   /// Limit for the number of partitions available for the managed tenant
-  pub partition_count: Option<i64>,
+  pub partition_count: Option<NonZeroU64>,
   /// Limit for the maximum allowed producer rate (bytes/sec)
   pub producer_rate: Option<i64>,
   /// Limit for the maximum allowed request rate (%)
-  pub request_rate: Option<i64>,
+  pub request_rate: Option<NonZeroU64>,
   /// Limit for the number of secrets available for the managed tenant
-  pub secret_count: Option<i64>,
+  pub secret_count: Option<NonZeroU64>,
   /// Limit for the number of topics available for the managed tenant
-  pub topic_count: Option<i64>,
+  pub topic_count: Option<NonZeroU64>,
 }
 
-// Serializer for `TenantLimits` first converts to a `Vec<LimitValue>` and then serializes.
+// Serializer for TenantLimits
+//
+// First converts the TenantLimits to a Vec<LimitValue> and then serializes.
 impl Serialize for TenantLimits {
   fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
     <&TenantLimits as Into<Vec<LimitValue>>>::into(self).serialize(serializer)
   }
 }
 
-// Deserializer for `TenantLimits` first deserializes a `Vec<LimitValue>` and then converts.
+// Deserializer for TenantLimits
+//
+// First deserializes a Vec<LimitValue> and then converts.
 impl<'de> Deserialize<'de> for TenantLimits {
   fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
     Ok(TenantLimits::from(&Vec::deserialize(d)?))
@@ -497,17 +541,17 @@ impl From<&Vec<LimitValue>> for TenantLimits {
     let mut tenant_limits = TenantLimits::default();
     for limit in limits {
       match limit {
-        LimitValue::Cpu(cpu) => match cpu.name.to_string().as_str() {
-          "certificateCount" => tenant_limits.certificate_count = if cpu.value != 0.0 { Some(cpu.value as i64) } else { None },
-          "consumerRate" => tenant_limits.consumer_rate = if cpu.value != 0.0 { Some(cpu.value as i64) } else { None },
+        LimitValue::Cpu(cpu) => match cpu.name.to_string().to_lowercase().as_str() {
+          "certificatecount" => tenant_limits.certificate_count = if cpu.value != 0.0 { Some(convert(cpu.value)) } else { None },
+          "consumerrate" => tenant_limits.consumer_rate = if cpu.value != 0.0 { Some(cpu.value as i64) } else { None },
           "cpu" => tenant_limits.cpu = if cpu.value != 0.0 { Some(cpu.value) } else { None },
-          "kafkaAclGroupCount" => tenant_limits.kafka_acl_group_count = if cpu.value != 0.0 { Some(cpu.value as i64) } else { None },
-          "mem" => tenant_limits.mem = if cpu.value != 0.0 { Some(cpu.value as i64) } else { None },
-          "partitionCount" => tenant_limits.partition_count = if cpu.value != 0.0 { Some(cpu.value as i64) } else { None },
-          "producerRate" => tenant_limits.producer_rate = if cpu.value != 0.0 { Some(cpu.value as i64) } else { None },
-          "requestRate" => tenant_limits.request_rate = if cpu.value != 0.0 { Some(cpu.value as i64) } else { None },
-          "secretCount" => tenant_limits.secret_count = if cpu.value != 0.0 { Some(cpu.value as i64) } else { None },
-          "topicCount" => tenant_limits.topic_count = if cpu.value != 0.0 { Some(cpu.value as i64) } else { None },
+          "kafkaaclgroupcount" => tenant_limits.kafka_acl_group_count = if cpu.value != 0.0 { Some(cpu.value as i64) } else { None },
+          "mem" => tenant_limits.mem = if cpu.value != 0.0 { Some(convert(cpu.value)) } else { None },
+          "partitioncount" => tenant_limits.partition_count = if cpu.value != 0.0 { Some(convert(cpu.value)) } else { None },
+          "producerrate" => tenant_limits.producer_rate = if cpu.value != 0.0 { Some(cpu.value as i64) } else { None },
+          "requestrate" => tenant_limits.request_rate = if cpu.value != 0.0 { Some(convert(cpu.value)) } else { None },
+          "secretcount" => tenant_limits.secret_count = if cpu.value != 0.0 { Some(convert(cpu.value)) } else { None },
+          "topiccount" => tenant_limits.topic_count = if cpu.value != 0.0 { Some(convert(cpu.value)) } else { None },
           _ => {}
         },
         other => panic!("unexpected limit value {:?}", other),
@@ -517,58 +561,62 @@ impl From<&Vec<LimitValue>> for TenantLimits {
   }
 }
 
+fn convert(cpu_value: f64) -> NonZeroU64 {
+  NonZeroU64::new(cpu_value as u64).unwrap()
+}
+
 impl From<&TenantLimits> for Vec<LimitValue> {
-  fn from(value: &TenantLimits) -> Self {
+  fn from(tenant_limits: &TenantLimits) -> Self {
     let mut limit_values = vec![];
-    if let Some(certificate_count) = value.certificate_count {
+    if let Some(certificate_count) = tenant_limits.certificate_count {
       limit_values.push(LimitValue::CertificateCount(LimitValueCertificateCount {
         name: LimitValueCertificateCountName::CertificateCount,
         value: certificate_count,
       }))
     }
-    if let Some(consumer_rate) = value.consumer_rate {
+    if let Some(consumer_rate) = tenant_limits.consumer_rate {
       limit_values.push(LimitValue::ConsumerRate(LimitValueConsumerRate {
         name: LimitValueConsumerRateName::ConsumerRate,
         value: consumer_rate,
       }))
     }
-    if let Some(cpu) = value.cpu {
+    if let Some(cpu) = tenant_limits.cpu {
       limit_values.push(LimitValue::Cpu(LimitValueCpu { name: LimitValueCpuName::Cpu, value: cpu }))
     }
-    if let Some(kafka_acl_group_count) = value.kafka_acl_group_count {
+    if let Some(kafka_acl_group_count) = tenant_limits.kafka_acl_group_count {
       limit_values.push(LimitValue::KafkaAclGroupCount(LimitValueKafkaAclGroupCount {
         name: LimitValueKafkaAclGroupCountName::KafkaAclGroupCount,
         value: kafka_acl_group_count,
       }))
     }
-    if let Some(mem) = value.mem {
+    if let Some(mem) = tenant_limits.mem {
       limit_values.push(LimitValue::Mem(LimitValueMem { name: LimitValueMemName::Mem, value: mem }))
     }
-    if let Some(partition_count) = value.partition_count {
+    if let Some(partition_count) = tenant_limits.partition_count {
       limit_values.push(LimitValue::PartitionCount(LimitValuePartitionCount {
         name: LimitValuePartitionCountName::PartitionCount,
         value: partition_count,
       }))
     }
-    if let Some(producer_rate) = value.producer_rate {
+    if let Some(producer_rate) = tenant_limits.producer_rate {
       limit_values.push(LimitValue::ProducerRate(LimitValueProducerRate {
         name: LimitValueProducerRateName::ProducerRate,
         value: producer_rate,
       }))
     }
-    if let Some(request_rate) = value.request_rate {
+    if let Some(request_rate) = tenant_limits.request_rate {
       limit_values.push(LimitValue::RequestRate(LimitValueRequestRate {
         name: LimitValueRequestRateName::RequestRate,
         value: request_rate,
       }))
     }
-    if let Some(secret_count) = value.secret_count {
+    if let Some(secret_count) = tenant_limits.secret_count {
       limit_values.push(LimitValue::SecretCount(LimitValueSecretCount {
         name: LimitValueSecretCountName::SecretCount,
         value: secret_count,
       }))
     }
-    if let Some(topic_count) = value.topic_count {
+    if let Some(topic_count) = tenant_limits.topic_count {
       limit_values.push(LimitValue::TopicCount(LimitValueTopicCount {
         name: LimitValueTopicCountName::TopicCount,
         value: topic_count,

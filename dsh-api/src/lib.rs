@@ -63,8 +63,8 @@
 //! ```ignore
 //! use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 //!
-//! # use dsh_api::DshApiError;
-//! # async fn hide() -> Result<(), DshApiError> {
+//! # use dsh_api::error::DshApiResult;
+//! # async fn hide() -> DshApiResult<()> {
 //! let client = DshApiClientFactory::default().client().await?;
 //! for (application_id, application) in client.list_applications()? {
 //!   println!("{} -> {}", application_id, application);
@@ -87,8 +87,8 @@
 //! # use dsh_api::dsh_api_tenant::DshApiTenant;
 //! # use dsh_api::platform::DshPlatform;
 //! # use dsh_api::types::Application;
-//! # use dsh_api::DshApiError;
-//! # async fn hide() -> Result<(), DshApiError> {
+//! # use dsh_api::error::DshApiResult;
+//! # async fn hide() -> DshApiResult<()> {
 //! let tenant = DshApiTenant::new("my-tenant", DshPlatform::try_from("np-aws-lz-dsh")?);
 //! let password = "...";
 //! let client_factory = DshApiClientFactory::create(tenant, password)?;
@@ -110,7 +110,7 @@
 //!
 //! The following features are defined:
 //!
-//! * `generic` - Enables the [`generic`] module, which allows calling all api operations by name.
+//! * `generic` - Enables the generic methods, which allows calling all api operations by name.
 //! * `manage` -  Enables the manage modules [`stream`] and [`tenant`], which support creating
 //!   managed streams and tenants. This feature is only useful when you have the proper
 //!   authorizations for these capabilities.
@@ -118,35 +118,30 @@
 //!   [`post_robot_generate_secret()`](DshApiClient::post_robot_generate_secret) operation, which
 //!   will generate a new robot password, invalidating the old password.
 /// # Types generated from openapi file
-pub use crate::generated::types;
 use std::cmp::Ordering;
 
-#[allow(dead_code)]
-pub(crate) mod generated {
-  include!(concat!(env!("OUT_DIR"), "/progenitor_client.rs"));
+#[allow(clippy::clone_on_copy)]
+#[allow(clippy::derivable_impls)]
+#[allow(clippy::large_enum_variant)]
+pub mod types {
+  include!(concat!(env!("OUT_DIR"), "/types.rs"));
 }
 
-include!(concat!(env!("OUT_DIR"), "/wrapped.rs"));
+include!(concat!(env!("OUT_DIR"), "/methods.rs"));
 
-/// Openapi specification version 1.10.0
+/// Openapi specification version 1.11.1
 pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/openapi.json"));
 
 /// Specification of default platforms
 pub static DEFAULT_PLATFORMS: &str = include_str!("../default-platforms.json");
 
-use crate::token_fetcher::ManagementApiTokenError;
-use crate::types::error::ConversionError;
+use crate::error::DshApiError;
+use crate::version::Version;
 use chrono::{TimeZone, Utc};
 use itertools::Itertools;
-use log::{debug, error, trace};
-use progenitor_client::Error as ProgenitorError;
-use reqwest::StatusCode as ReqwestStatusCode;
-use reqwest::{Error as ReqwestError, Response};
 use serde::{Deserialize, Serialize};
-use serde_json::Error as SerdeJsonError;
-use std::error::Error as StdError;
 use std::fmt::{Debug, Display, Formatter};
-use std::str::Utf8Error;
+use std::sync::LazyLock;
 
 pub mod app;
 pub mod application;
@@ -160,10 +155,12 @@ pub mod dsh_api_client;
 pub mod dsh_api_client_factory;
 pub mod dsh_api_tenant;
 pub mod dsh_jwt;
+pub mod error;
 #[cfg(feature = "generic")]
 pub mod generic;
 pub mod manifest;
 pub mod new;
+pub mod nodepool;
 pub mod parse;
 pub mod platform;
 pub mod proxy;
@@ -184,10 +181,12 @@ pub mod volume;
 /// ## Example
 ///
 /// ```
-/// assert_eq!(dsh_api::crate_version(), "0.8.1");
+/// # use dsh_api::version::Version;
+/// assert_eq!(dsh_api::crate_version(), &Version::new(0, 9, 0, None));
 /// ```
-pub fn crate_version() -> &'static str {
-  "0.8.1"
+pub fn crate_version() -> &'static Version {
+  static CRATE_VERSION: LazyLock<Version> = LazyLock::new(|| Version::new(0, 9, 0, None));
+  &CRATE_VERSION
 }
 
 /// # Returns the version of the openapi spec
@@ -197,10 +196,11 @@ pub fn crate_version() -> &'static str {
 /// ## Example
 ///
 /// ```
-/// assert_eq!(dsh_api::openapi_version(), "1.10.0");
+/// # use dsh_api::version::Version;
+/// assert_eq!(dsh_api::openapi_version(), &Version::new(1, 11, 1, None));
 /// ```
-pub fn openapi_version() -> &'static str {
-  generated::Client::new("").api_version()
+pub fn openapi_version() -> &'static Version {
+  DshApiClient::api_version()
 }
 
 /// # Indicates access rights
@@ -386,7 +386,6 @@ impl<T: Display> Display for Dependant<T> {
 
 impl<T: PartialOrd> PartialOrd<Self> for Dependant<T> {
   /// Ordering uses `id` only
-  // TODO More elegant solution
   fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
     match self {
       Dependant::App(app) => match other {
@@ -414,28 +413,6 @@ impl<T: Ord> Ord for Dependant<T> {
     self.id().cmp(other.id())
   }
 }
-
-/// Describes an API error
-#[derive(Clone, Debug, Serialize)]
-pub enum DshApiError {
-  /// DSH Api server indicated that the request was not correct (BAD_REQUEST).
-  BadRequest(String),
-  /// Misconfiguration error, e.g. a missing environment variable.
-  Configuration(String),
-  /// Not authorized for the requested operation or resource.
-  NotAuthorized(Option<String>),
-  /// Requested resource does not exist.
-  NotFound(Option<String>),
-  /// Wrong parameters provided.
-  Parameter(String),
-  /// Unexpected error occurred.
-  Unexpected(String, Option<String>),
-  /// DSH Api server indicated that the request could not be processed (UNPROCESSABLE_ENTITY).
-  Unprocessable(Option<String>),
-}
-
-/// Generic result type
-pub type DshApiResult<T> = Result<T, DshApiError>;
 
 impl AccessRights {
   /// Checks whether read access is granted
@@ -465,150 +442,6 @@ impl Display for AccessRights {
       Self::ReadWrite => write!(f, "read/write"),
       Self::Write => write!(f, "write"),
     }
-  }
-}
-
-impl StdError for DshApiError {}
-
-impl Display for DshApiError {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    match self {
-      DshApiError::BadRequest(message) => write!(f, "{}", message),
-      DshApiError::Configuration(message) => write!(f, "{}", message),
-      DshApiError::NotAuthorized(cause) => match cause {
-        Some(cause_message) => write!(f, "not authorized ({})", cause_message),
-        None => write!(f, "not authorized"),
-      },
-      DshApiError::NotFound(cause) => match cause {
-        Some(cause_message) => write!(f, "not found ({})", cause_message),
-        None => write!(f, "not found"),
-      },
-      DshApiError::Parameter(message) => write!(f, "{}", message),
-      DshApiError::Unexpected(message, cause) => match cause {
-        Some(cause) => write!(f, "unexpected error ({}, {})", message, cause),
-        None => write!(f, "unexpected error ({})", message),
-      },
-      DshApiError::Unprocessable(message) => match message {
-        Some(message) => write!(f, "unprocessable entity ({})", message),
-        None => write!(f, "unprocessable entity"),
-      },
-    }
-  }
-}
-
-impl From<SerdeJsonError> for DshApiError {
-  fn from(error: SerdeJsonError) -> Self {
-    DshApiError::Unexpected("json error".to_string(), Some(error.to_string()))
-  }
-}
-
-impl From<ManagementApiTokenError> for DshApiError {
-  fn from(error: ManagementApiTokenError) -> Self {
-    match error {
-      ManagementApiTokenError::UnknownClientId => DshApiError::Unexpected("unknown client id".to_string(), Some(error.to_string())),
-      ManagementApiTokenError::UnknownClientSecret => DshApiError::Unexpected("unknown client secret".to_string(), Some(error.to_string())),
-      ManagementApiTokenError::FailureTokenFetch(_) => DshApiError::Unexpected("could not fetch token".to_string(), Some(error.to_string())),
-      ManagementApiTokenError::StatusCode { status_code, ref error_body } => {
-        if status_code == 401 {
-          DshApiError::NotAuthorized(None)
-        } else {
-          let message = format!("unexpected error fetching token (status code {})", status_code);
-          error!("{}", message);
-          debug!("{:?}", error_body);
-          DshApiError::Unexpected(message, Some(error.to_string()))
-        }
-      }
-    }
-  }
-}
-
-impl From<ReqwestError> for DshApiError {
-  fn from(error: ReqwestError) -> Self {
-    DshApiError::Unexpected(error.to_string(), None)
-  }
-}
-
-impl From<Utf8Error> for DshApiError {
-  fn from(error: Utf8Error) -> Self {
-    DshApiError::Unexpected(error.to_string(), None)
-  }
-}
-
-impl From<String> for DshApiError {
-  fn from(value: String) -> Self {
-    DshApiError::Unexpected(value, None)
-  }
-}
-
-impl From<&str> for DshApiError {
-  fn from(value: &str) -> Self {
-    DshApiError::Unexpected(value.to_string(), None)
-  }
-}
-
-impl From<DshApiError> for String {
-  fn from(value: DshApiError) -> Self {
-    value.to_string()
-  }
-}
-
-impl From<ConversionError> for DshApiError {
-  fn from(value: ConversionError) -> Self {
-    DshApiError::Unexpected(value.to_string(), None)
-  }
-}
-
-impl DshApiError {
-  // async version of impl From<ProgenitorError> for DshApiError
-  pub(crate) async fn async_from_progenitor_error(progenitor_error: ProgenitorError) -> Self {
-    match progenitor_error {
-      ProgenitorError::InvalidRequest(ref string) => Self::Unexpected(format!("invalid request ({})", string), Some(progenitor_error.to_string())),
-      ProgenitorError::CommunicationError(ref reqwest_error) => Self::Unexpected(
-        format!("communication error (reqwest error: {})", reqwest_error),
-        Some(progenitor_error.to_string()),
-      ),
-      ProgenitorError::InvalidUpgrade(ref reqwest_error) => Self::Unexpected(format!("invalid upgrade (reqwest error: {})", reqwest_error), Some(progenitor_error.to_string())),
-      ProgenitorError::ErrorResponse(progenitor_response_value) => match progenitor_response_value.status() {
-        ReqwestStatusCode::BAD_REQUEST => Self::BadRequest("".to_string()),
-        ReqwestStatusCode::FORBIDDEN => Self::NotAuthorized(None),
-        ReqwestStatusCode::METHOD_NOT_ALLOWED => Self::NotAuthorized(None),
-        ReqwestStatusCode::NOT_FOUND => Self::NotFound(None),
-        ReqwestStatusCode::UNAUTHORIZED => Self::NotAuthorized(None),
-        ReqwestStatusCode::UNPROCESSABLE_ENTITY => Self::Unprocessable(None),
-        other_status_code => Self::Unexpected(format!("unexpected response {}", other_status_code), None),
-      },
-      ProgenitorError::ResponseBodyError(ref reqwest_error) => Self::Unexpected(
-        format!("response body error (reqwest error: {})", reqwest_error),
-        Some(progenitor_error.to_string()),
-      ),
-      ProgenitorError::InvalidResponsePayload(ref _bytes, ref json_error) => {
-        Self::Unexpected(format!("invalid response payload (json error: {})", json_error), Some(progenitor_error.to_string()))
-      }
-      ProgenitorError::UnexpectedResponse(reqwest_response) => {
-        trace!("unexpected progenitor response\n{:#?}", &reqwest_response);
-        match &reqwest_response.status().clone() {
-          &ReqwestStatusCode::BAD_REQUEST => Self::BadRequest(Self::error_from_reqwest_response(reqwest_response).await.unwrap_or_default()),
-          &ReqwestStatusCode::FORBIDDEN => Self::NotAuthorized(Self::error_from_reqwest_response(reqwest_response).await),
-          &ReqwestStatusCode::METHOD_NOT_ALLOWED => Self::NotAuthorized(Self::error_from_reqwest_response(reqwest_response).await),
-          &ReqwestStatusCode::NOT_FOUND => Self::NotFound(Self::error_from_reqwest_response(reqwest_response).await),
-          &ReqwestStatusCode::UNAUTHORIZED => Self::NotAuthorized(Self::error_from_reqwest_response(reqwest_response).await),
-          &ReqwestStatusCode::UNPROCESSABLE_ENTITY => Self::Unprocessable(Self::error_from_reqwest_response(reqwest_response).await),
-          other_status_code => Self::Unexpected(
-            format!("unexpected response {}", other_status_code),
-            Self::error_from_reqwest_response(reqwest_response).await,
-          ),
-        }
-      }
-      ProgenitorError::PreHookError(string) => Self::Unexpected(format!("pre-hook error ({})", string), None),
-    }
-  }
-
-  async fn error_from_reqwest_response(reqwest_response: Response) -> Option<String> {
-    match reqwest_response.text().await {
-      Ok(error_text) => Some(error_text),
-      Err(response_error) => Some(response_error.to_string()),
-    }
-    .filter(|m| !m.is_empty())
   }
 }
 
@@ -647,16 +480,4 @@ fn test_epoch_milliseconds_to_string() {
   assert_eq!(epoch_milliseconds_to_string(946684800000_u64 as i64), REPRESENTATION);
   assert_eq!(epoch_milliseconds_to_string(946684800000_u128 as i64), REPRESENTATION);
   assert_eq!(epoch_milliseconds_to_string(946684800000.0_f64 as i64), REPRESENTATION);
-}
-
-#[test]
-fn test_dsh_api_error_is_send() {
-  fn assert_send<T: Send>() {}
-  assert_send::<DshApiError>();
-}
-
-#[test]
-fn test_dsh_api_error_is_sync() {
-  fn assert_sync<T: Sync>() {}
-  assert_sync::<DshApiError>();
 }

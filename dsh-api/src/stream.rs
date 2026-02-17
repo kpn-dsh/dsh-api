@@ -143,8 +143,8 @@ impl DshApiClient {
   /// * `Err<DshApiError>` - when the request could not be processed by the DSH
   pub async fn managed_stream_configuration(&self, managed_stream_id: &ManagedStreamId) -> DshApiResult<Option<Stream>> {
     let r = join!(
-      self.get_stream_internal_configuration(managed_stream_id),
-      self.get_stream_public_configuration(managed_stream_id)
+      self.get_stream_internal_configuration(managed_stream_id.as_str()),
+      self.get_stream_public_configuration(managed_stream_id.as_str())
     );
     match r {
       (Err(internal_stream_error), Err(public_stream_error)) => match (internal_stream_error, public_stream_error) {
@@ -184,9 +184,13 @@ impl DshApiClient {
       try_join_all(
         internal_ids
           .iter()
-          .map(|managed_stream_id| self.get_stream_internal_configuration(managed_stream_id))
+          .map(|managed_stream_id| self.get_stream_internal_configuration(managed_stream_id.as_str()))
       ),
-      try_join_all(public_ids.iter().map(|managed_stream_id| self.get_stream_public_configuration(managed_stream_id))),
+      try_join_all(
+        public_ids
+          .iter()
+          .map(|managed_stream_id| self.get_stream_public_configuration(managed_stream_id.as_str()))
+      ),
     )?;
     let mut tuples: Vec<(ManagedStreamId, Stream)> = internal_ids
       .into_iter()
@@ -214,7 +218,12 @@ impl DshApiClient {
   /// * `Err<DshApiError>` - when the request could not be processed by the DSH
   pub async fn managed_stream_configurations_internal(&self) -> DshApiResult<Vec<(ManagedStreamId, ManagedStream)>> {
     let internal_stream_ids = self.get_stream_internals().await?;
-    let internal_streams = try_join_all(internal_stream_ids.iter().map(|stream_id| self.get_stream_internal_configuration(stream_id))).await?;
+    let internal_streams = try_join_all(
+      internal_stream_ids
+        .iter()
+        .map(|stream_id| self.get_stream_internal_configuration(stream_id.as_str())),
+    )
+    .await?;
     let mut tuples = internal_stream_ids.into_iter().zip(internal_streams).collect_vec();
     tuples.sort_by(|(stream_id_a, _), (stream_id_b, _)| stream_id_a.cmp(stream_id_b));
     Ok(tuples)
@@ -232,7 +241,7 @@ impl DshApiClient {
   /// * `Err<DshApiError>` - when the request could not be processed by the DSH
   pub async fn managed_stream_configurations_public(&self) -> DshApiResult<Vec<(ManagedStreamId, PublicManagedStream)>> {
     let public_stream_ids = self.get_stream_publics().await?;
-    let public_streams = try_join_all(public_stream_ids.iter().map(|stream_id| self.get_stream_public_configuration(stream_id))).await?;
+    let public_streams = try_join_all(public_stream_ids.iter().map(|stream_id| self.get_stream_public_configuration(stream_id.as_str()))).await?;
     let mut tuples = public_stream_ids.into_iter().zip(public_streams).collect_vec();
     tuples.sort_by(|(stream_id_a, _), (stream_id_b, _)| stream_id_a.cmp(stream_id_b));
     Ok(tuples)
@@ -254,27 +263,27 @@ impl DshApiClient {
     match self.managed_stream_configuration(managed_stream_id).await? {
       Some(Stream::Internal(internal)) => {
         match access_rights {
-          AccessRights::Read => self.put_stream_internal_access_read(managed_stream_id, managed_tenant_id).await?,
+          AccessRights::Read => self.put_stream_internal_access_read(managed_stream_id.as_str(), managed_tenant_id).await?,
           AccessRights::ReadWrite => {
             try_join!(
-              self.put_stream_internal_access_read(managed_stream_id, managed_tenant_id),
-              self.put_stream_internal_access_write(managed_stream_id, managed_tenant_id),
+              self.put_stream_internal_access_read(managed_stream_id.as_str(), managed_tenant_id),
+              self.put_stream_internal_access_write(managed_stream_id.as_str(), managed_tenant_id),
             )?;
           }
-          AccessRights::Write => self.put_stream_internal_access_write(managed_stream_id, managed_tenant_id).await?,
+          AccessRights::Write => self.put_stream_internal_access_write(managed_stream_id.as_str(), managed_tenant_id).await?,
         }
         Ok(Stream::Internal(internal))
       }
       Some(Stream::Public(public)) => {
         match access_rights {
-          AccessRights::Read => self.put_stream_public_access_read(managed_stream_id, managed_tenant_id).await?,
+          AccessRights::Read => self.put_stream_public_access_read(managed_stream_id.as_str(), managed_tenant_id).await?,
           AccessRights::ReadWrite => {
             try_join!(
-              self.put_stream_public_access_read(managed_stream_id, managed_tenant_id),
-              self.put_stream_public_access_write(managed_stream_id, managed_tenant_id),
+              self.put_stream_public_access_read(managed_stream_id.as_str(), managed_tenant_id),
+              self.put_stream_public_access_write(managed_stream_id.as_str(), managed_tenant_id),
             )?;
           }
-          AccessRights::Write => self.put_stream_public_access_write(managed_stream_id, managed_tenant_id).await?,
+          AccessRights::Write => self.put_stream_public_access_write(managed_stream_id.as_str(), managed_tenant_id).await?,
         }
         Ok(Stream::Public(public))
       }
@@ -298,27 +307,27 @@ impl DshApiClient {
     match self.managed_stream_configuration(managed_stream_id).await? {
       Some(Stream::Internal(internal)) => {
         match access_rights {
-          AccessRights::Read => self.delete_stream_internal_access_read(managed_stream_id, managed_tenant_id).await?,
+          AccessRights::Read => self.delete_stream_internal_access_read(managed_stream_id.as_str(), managed_tenant_id).await?,
           AccessRights::ReadWrite => {
             try_join!(
-              self.delete_stream_internal_access_read(managed_stream_id, managed_tenant_id),
-              self.delete_stream_internal_access_write(managed_stream_id, managed_tenant_id),
+              self.delete_stream_internal_access_read(managed_stream_id.as_str(), managed_tenant_id),
+              self.delete_stream_internal_access_write(managed_stream_id.as_str(), managed_tenant_id),
             )?;
           }
-          AccessRights::Write => self.delete_stream_internal_access_write(managed_stream_id, managed_tenant_id).await?,
+          AccessRights::Write => self.delete_stream_internal_access_write(managed_stream_id.as_str(), managed_tenant_id).await?,
         }
         Ok(Stream::Internal(internal))
       }
       Some(Stream::Public(public)) => {
         match access_rights {
-          AccessRights::Read => self.delete_stream_public_access_read(managed_stream_id, managed_tenant_id).await?,
+          AccessRights::Read => self.delete_stream_public_access_read(managed_stream_id.as_str(), managed_tenant_id).await?,
           AccessRights::ReadWrite => {
             try_join!(
-              self.delete_stream_public_access_read(managed_stream_id, managed_tenant_id),
-              self.delete_stream_public_access_write(managed_stream_id, managed_tenant_id),
+              self.delete_stream_public_access_read(managed_stream_id.as_str(), managed_tenant_id),
+              self.delete_stream_public_access_write(managed_stream_id.as_str(), managed_tenant_id),
             )?;
           }
-          AccessRights::Write => self.delete_stream_public_access_write(managed_stream_id, managed_tenant_id).await?,
+          AccessRights::Write => self.delete_stream_public_access_write(managed_stream_id.as_str(), managed_tenant_id).await?,
         }
         Ok(Stream::Public(public))
       }
@@ -339,12 +348,12 @@ impl DshApiClient {
     let (tenant_ids_reads, tenant_ids_writes) = match self.managed_stream_configuration(managed_stream_id).await? {
       Some(stream_configuration) => match stream_configuration {
         Stream::Internal(_) => try_join!(
-          self.get_stream_internal_access_reads(managed_stream_id),
-          self.get_stream_internal_access_writes(managed_stream_id)
+          self.get_stream_internal_access_reads(managed_stream_id.as_str()),
+          self.get_stream_internal_access_writes(managed_stream_id.as_str())
         )?,
         Stream::Public(_) => try_join!(
-          self.get_stream_public_access_reads(managed_stream_id),
-          self.get_stream_public_access_writes(managed_stream_id)
+          self.get_stream_public_access_reads(managed_stream_id.as_str()),
+          self.get_stream_public_access_writes(managed_stream_id.as_str())
         )?,
       },
       None => return Err(DshApiError::NotFound(Some(format!("managed stream '{}' does not exist", managed_stream_id)))),
