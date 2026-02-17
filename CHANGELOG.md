@@ -4,19 +4,33 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
-## [0.8.2] - YYYY-MM-DD
+## [0.9.0] - YYYY-MM-DD
 
 ### Added
 
 * Platform naming methods for proxy.
 * Platform naming methods for messaging api.
+* Module `nodepool`.
+* Builder pattern to create type instances.
+* Known issues.
+* Added `debug` and `trace` logging to the generated code.
 
 ### Changed
 
+* New open api specification version `1.11.1`.
+* Removed dependency on `Progenitor`.
+* Improved error handling and logging.
+* Changed regular expression dependency from `regex` to `regress`.
 * Renamed `issuer_endpoint` field in platforms configuration to  `issuer-endpoint`
   (`issuer_endpoint` is still allowed but deprecated).
 * Removed `lazy_static` dependency.
 * Changed rust version to `1.80.0`.
+* Create and open api versions are returned as a `Version` reference.
+* Set dependencies to latest versions.
+
+### Fixed
+
+* Fixed bug in the description of return type in method descriptors.
 
 ## [0.8.1] - 2026-01-15
 
