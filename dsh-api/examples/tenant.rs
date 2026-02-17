@@ -1,3 +1,8 @@
+use dsh_api::types::{
+  LimitValueCertificateCountName, LimitValueConsumerRateName, LimitValueCpuName, LimitValueKafkaAclGroupCountName, LimitValueMemName, LimitValuePartitionCountName,
+  LimitValueProducerRateName, LimitValueRequestRateName, LimitValueSecretCountName, LimitValueTopicCountName, ManagedTenant, ManagedTenantServices, ManagedTenantServicesName,
+};
+
 #[path = "common.rs"]
 mod common;
 
@@ -5,8 +10,6 @@ mod common;
 #[tokio::main]
 async fn main() -> Result<(), String> {
   use crate::common::{get_client, initialize_logger, print_header};
-  use dsh_api::types::{GetTenantLimitByManagerByTenantByKindKind, ManagedTenant, ManagedTenantServices, ManagedTenantServicesName};
-
   const MANAGED_TENANT_UNDER_TEST: &str = "ajuc-test";
   const MANAGED_TENANT_TO_CREATE: &str = "ajuc-create";
   const MANAGED_TENANT_TO_DELETE: &str = "ajuc-delete";
@@ -93,82 +96,100 @@ async fn main() -> Result<(), String> {
     println!("{} -> {}", stream_id, access_rights);
   }
 
-  print_header("get_managed_tenant_limits");
+  print_header("get_tenant_limits");
+  let managed_tenant_limits = client.get_tenant_limits(MANAGED_TENANT_TO_CREATE).await?;
+  for limit_value in managed_tenant_limits {
+    println!("{:?}", limit_value);
+  }
+
+  print_header("get_tenant_limit (str)");
+  println!("{:?}", client.get_tenant_limit(MANAGED_TENANT_UNDER_TEST, "certificatecount").await?);
+  println!("{:?}", client.get_tenant_limit(MANAGED_TENANT_UNDER_TEST, "consumerrate").await?);
+  println!("{:?}", client.get_tenant_limit(MANAGED_TENANT_UNDER_TEST, "cpu").await?);
+  println!("{:?}", client.get_tenant_limit(MANAGED_TENANT_UNDER_TEST, "kafkaaclgroupcount").await?);
+  println!("{:?}", client.get_tenant_limit(MANAGED_TENANT_UNDER_TEST, "mem").await?);
+  println!("{:?}", client.get_tenant_limit(MANAGED_TENANT_UNDER_TEST, "partitioncount").await?);
+  println!("{:?}", client.get_tenant_limit(MANAGED_TENANT_UNDER_TEST, "producerrate").await?);
+  println!("{:?}", client.get_tenant_limit(MANAGED_TENANT_UNDER_TEST, "requestrate").await?);
+  println!("{:?}", client.get_tenant_limit(MANAGED_TENANT_UNDER_TEST, "secretcount").await?);
+  println!("{:?}", client.get_tenant_limit(MANAGED_TENANT_UNDER_TEST, "topiccount").await?);
+
+  print_header("managed_tenant_limits");
   let managed_tenant_limits = client.managed_tenant_limits(MANAGED_TENANT_TO_CREATE).await?;
   println!("{}", managed_tenant_limits);
-  println!("{:#}", managed_tenant_limits);
+  println!("{:?}", managed_tenant_limits);
 
-  print_header("get_managed_tenant_limit (str)");
-  println!("{}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "certificatecount").await?);
-  println!("{}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "consumerrate").await?);
-  println!("{}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "cpu").await?);
-  println!("{}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "kafkaaclgroupcount").await?);
-  println!("{}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "mem").await?);
-  println!("{}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "partitioncount").await?);
-  println!("{}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "producerrate").await?);
-  println!("{}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "requestrate").await?);
-  println!("{}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "secretcount").await?);
-  println!("{}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "topiccount").await?);
+  print_header("managed_tenant_limit (str)");
+  println!("{:?}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "certificatecount").await?);
+  println!("{:?}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "consumerrate").await?);
+  println!("{:?}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "cpu").await?);
+  println!("{:?}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "kafkaaclgroupcount").await?);
+  println!("{:?}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "mem").await?);
+  println!("{:?}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "partitioncount").await?);
+  println!("{:?}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "producerrate").await?);
+  println!("{:?}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "requestrate").await?);
+  println!("{:?}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "secretcount").await?);
+  println!("{:?}", client.managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, "topiccount").await?);
 
-  print_header("get_managed_tenant_limit (kind)");
+  print_header("managed_tenant_limit (kind)");
   println!(
     "{:?}",
     client
-      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, GetTenantLimitByManagerByTenantByKindKind::Certificatecount)
+      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, LimitValueCertificateCountName::CertificateCount.to_string().as_str())
       .await?
   );
   println!(
     "{:?}",
     client
-      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, GetTenantLimitByManagerByTenantByKindKind::Consumerrate)
+      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, LimitValueConsumerRateName::ConsumerRate.to_string().as_str())
       .await?
   );
   println!(
     "{:?}",
     client
-      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, GetTenantLimitByManagerByTenantByKindKind::Cpu)
+      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, LimitValueCpuName::Cpu.to_string().as_str())
       .await?
   );
   println!(
     "{:?}",
     client
-      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, GetTenantLimitByManagerByTenantByKindKind::Kafkaaclgroupcount)
+      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, LimitValueKafkaAclGroupCountName::KafkaAclGroupCount.to_string().as_str())
       .await?
   );
   println!(
     "{:?}",
     client
-      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, GetTenantLimitByManagerByTenantByKindKind::Mem)
+      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, LimitValueMemName::Mem.to_string().as_str())
       .await?
   );
   println!(
     "{:?}",
     client
-      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, GetTenantLimitByManagerByTenantByKindKind::Partitioncount)
+      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, LimitValuePartitionCountName::PartitionCount.to_string().as_str())
       .await?
   );
   println!(
     "{:?}",
     client
-      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, GetTenantLimitByManagerByTenantByKindKind::Producerrate)
+      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, LimitValueProducerRateName::ProducerRate.to_string().as_str())
       .await?
   );
   println!(
     "{:?}",
     client
-      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, GetTenantLimitByManagerByTenantByKindKind::Requestrate)
+      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, LimitValueRequestRateName::RequestRate.to_string().as_str())
       .await?
   );
   println!(
     "{:?}",
     client
-      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, GetTenantLimitByManagerByTenantByKindKind::Secretcount)
+      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, LimitValueSecretCountName::SecretCount.to_string().as_str())
       .await?
   );
   println!(
     "{:?}",
     client
-      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, GetTenantLimitByManagerByTenantByKindKind::Topiccount)
+      .managed_tenant_limit(MANAGED_TENANT_UNDER_TEST, LimitValueTopicCountName::TopicCount.to_string().as_str())
       .await?
   );
   Ok(())

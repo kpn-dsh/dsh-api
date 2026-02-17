@@ -35,6 +35,8 @@
 //! * [`ManagedStreamId::fmt()`](ManagedStreamId::fmt)
 //! * [`ManagedTenant::fmt()`](ManagedTenant::fmt)
 //! * [`Metrics::fmt()`](Metrics::fmt)
+//! * [`NodeFeatures::fmt()`](NodeFeatures::fmt)
+//! * [`NodepoolActual::fmt()`](NodepoolActual::fmt)
 //! * [`Notification::fmt()`](Notification::fmt)
 //! * [`PathSpec::fmt()`](PathSpec::fmt)
 //! * [`PortMapping::fmt()`](PortMapping::fmt)
@@ -52,7 +54,8 @@ use crate::types::{
   ActualCertificate, AllocationStatus, AppCatalogApp, AppCatalogAppConfiguration, AppCatalogAppResourcesValue, AppCatalogManifest, Application, ApplicationSecret,
   ApplicationVolumes, Bucket, BucketStatus, Certificate, CertificateStatus, Empty, HealthCheck, LimitValue, LimitValueCertificateCount, LimitValueConsumerRate, LimitValueCpu,
   LimitValueKafkaAclGroupCount, LimitValueMem, LimitValuePartitionCount, LimitValueProducerRate, LimitValueRequestRate, LimitValueSecretCount, LimitValueTopicCount, ManagedStream,
-  ManagedStreamId, ManagedTenant, Metrics, Notification, PathSpec, PortMapping, PublicManagedStream, Secret, Task, TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
+  ManagedStreamId, ManagedTenant, Metrics, NodeFeatures, NodepoolActual, Notification, PathSpec, PortMapping, PublicManagedStream, Secret, Task, TaskStatus, Topic, TopicStatus,
+  Vhost, Volume, VolumeStatus,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -232,7 +235,7 @@ impl Display for Empty {
 impl Display for HealthCheck {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self.protocol {
-      Some(protocol) => write!(f, "{}:{}{}", protocol.to_string(), self.port, self.path),
+      Some(protocol) => write!(f, "{}:{}{}", protocol, self.port, self.path),
       None => write!(f, "{}{}", self.port, self.path),
     }
   }
@@ -350,6 +353,24 @@ impl Display for Metrics {
   }
 }
 
+impl Display for NodeFeatures {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "{}:{}:{}",
+      self.nodepool,
+      self.gpus.map(|gpus| gpus.to_string()).unwrap_or_default(),
+      self.gpu_driver.map(|driver| driver.to_string()).unwrap_or_default()
+    )
+  }
+}
+
+impl Display for NodepoolActual {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}:{}", self.max_instances, self.gpu_driver)
+  }
+}
+
 impl Display for Notification {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     write!(f, "remove: {}", self.remove)?;
@@ -383,7 +404,7 @@ impl Display for PortMapping {
       fields.push(format!("service group: {}", service_group))
     }
     if let Some(ref tls) = self.tls {
-      fields.push(format!("port mapping: {}", tls.to_string()))
+      fields.push(format!("port mapping: {}", tls))
     }
     if let Some(ref vhost) = self.vhost {
       fields.push(format!("vhost: {}", vhost))
@@ -416,7 +437,7 @@ impl Display for Secret {
 
 impl Display for Task {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "host: {}, state: {}", self.host, self.state.to_string())
+    write!(f, "host: {}, state: {}", self.host, self.state)
   }
 }
 
