@@ -162,6 +162,7 @@ fn application(id: Option<String>) -> Application {
     mem: 0,
     metrics: None,
     needs_token: false,
+    node_features: None,
     readable_streams: vec![],
     secrets: vec![
       secret(pfl("secret1"), pfu("SECRET_KEY12")),
