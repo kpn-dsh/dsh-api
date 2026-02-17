@@ -1,4 +1,4 @@
-use dsh_api_build_helpers::generate_generic::generate_generic;
+use dsh_api_build_helpers::generate_methods::generate_methods;
 use openapiv3::OpenAPI;
 use std::error::Error;
 use std::fs::File;
@@ -11,6 +11,6 @@ fn main() -> Result<(), Box<dyn Error>> {
   let openapi_spec: OpenAPI = serde_json::from_reader(original_openapi_spec_file).unwrap();
   let mut writer: BufWriter<std::io::Stdout> = BufWriter::new(std::io::stdout());
   // let mut writer: BufWriter<std::io::Sink> = BufWriter::new(std::io::sink());
-  generate_generic(&mut writer, &openapi_spec)?;
+  generate_methods(&mut writer, &openapi_spec)?;
   Ok(())
 }

@@ -14,13 +14,18 @@ pub(crate) struct DshApiOperation {
   pub(crate) description: Option<String>,
   pub(crate) parameters: Vec<(String, ParameterType, Option<String>)>,
   pub(crate) request_body: Option<RequestBodyType>,
-  pub(crate) operation_id: String,
   pub(crate) ok_response: ResponseBodyType,
   #[allow(dead_code)]
   pub(crate) ok_responses: Vec<(u16, ResponseBodyType)>,
   #[allow(dead_code)]
   pub(crate) error_responses: Vec<(u16, ResponseBodyType)>,
   pub(crate) kind: OpenApiOperationKind,
+}
+
+impl DshApiOperation {
+  pub(crate) fn method_name(&self) -> String {
+    format!("{}_{}", self.method, self.selector.to_lowercase().replace('-', "_"))
+  }
 }
 
 pub(crate) fn method_api_operations(method: &Method, path_operations: &Vec<(&String, &Operation)>) -> Result<Vec<DshApiOperation>, Box<dyn Error>> {
@@ -40,13 +45,7 @@ pub(crate) fn method_api_operations(method: &Method, path_operations: &Vec<(&Str
 }
 
 fn create_api_operation(method: Method, path: String, operation: &Operation) -> Result<DshApiOperation, Box<dyn Error>> {
-  let operation_id = operation.operation_id.clone().expect("missing operation id");
-  let parameters: Vec<(String, ParameterType, Option<String>)> = operation
-    .parameters
-    .iter()
-    .skip(1)
-    .map(|parameter| parameter_to_parameter_type(parameter, &operation_id))
-    .collect_vec();
+  let parameters: Vec<(String, ParameterType, Option<String>)> = operation.parameters.iter().skip(1).map(parameter_to_parameter_type).collect_vec();
   let request_body = operation.request_body.clone().map(|request_body| match request_body {
     ReferenceOr::Reference { reference } => RequestBodyType::SerializableType(reference_to_string(reference.as_ref())),
     ReferenceOr::Item(request_body_item) => RequestBodyType::from(&request_body_item),
@@ -64,11 +63,13 @@ fn create_api_operation(method: Method, path: String, operation: &Operation) -> 
   }
   let ok_response = ok_responses.iter().min_by_key(|(status_code, _)| status_code).ok_or("")?.1.clone();
   let path_elements = PathElement::vec_from_str(&path);
+
   let selector = selector_from_path_elements(&path_elements, &ok_response, false);
   let kind = match path_elements.first().unwrap() {
     PathElement::Literal(first) => OpenApiOperationKind::from(first.as_str()),
     PathElement::Variable(_) => unreachable!(),
   };
+
   Ok(DshApiOperation {
     method,
     selector,
@@ -77,7 +78,6 @@ fn create_api_operation(method: Method, path: String, operation: &Operation) -> 
     description: operation.summary.clone().map(revise),
     parameters,
     request_body,
-    operation_id,
     ok_response,
     ok_responses,
     error_responses,
@@ -106,7 +106,7 @@ fn check_duplicate_selectors(method_operations: &[DshApiOperation], method: &Met
   }
 }
 
-fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>, operation_id: &str) -> (String, ParameterType, Option<String>) {
+fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>) -> (String, ParameterType, Option<String>) {
   match parameter {
     ReferenceOr::Reference { .. } => unimplemented!(),
     ReferenceOr::Item(parameter_item) => {
@@ -115,7 +115,7 @@ fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>, operation_id:
         ParameterSchemaOrContent::Schema(ref schema) => match schema {
           ReferenceOr::Reference { reference } => (
             parameter_data.name,
-            ParameterType::SerializableType(reference_to_string(reference)),
+            ParameterType::WrappedType(reference_to_string(reference)),
             parameter_data.description.map(capitalize),
           ),
           ReferenceOr::Item(item) => match &item.schema_kind {
@@ -125,17 +125,9 @@ fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>, operation_id:
                 let has_enumeration = !string_type.enumeration.is_empty();
                 match (has_pattern, has_enumeration) {
                   (false, false) => (parameter_data.name, ParameterType::RefStr, parameter_data.description.map(capitalize)), // No pattern, no enumeration -> &str
-                  (false, true) => (
-                    parameter_data.name.clone(),
-                    ParameterType::ConstructedTypeOwned(to_type_name(operation_id, parameter_data.name.as_str())),
-                    parameter_data.description.map(capitalize),
-                  ), // No pattern, enumeration -> Constructed owned type
-                  (true, false) => (
-                    parameter_data.name.clone(),
-                    ParameterType::ConstructedTypeRef(to_type_name(operation_id, parameter_data.name.as_str())),
-                    parameter_data.description.map(capitalize),
-                  ), // Pattern, no enumeration -> Constructed ref type
-                  (true, true) => unimplemented!(),                                                                           // Pattern and enumeration -> Should not occur
+                  (false, true) => (parameter_data.name.clone(), ParameterType::RefStr, parameter_data.description.map(capitalize)), // No pattern, enumeration -> Constructed owned type
+                  (true, false) => (parameter_data.name.clone(), ParameterType::RefStr, parameter_data.description.map(capitalize)), // Pattern, no enumeration -> Constructed ref type
+                  (true, true) => unimplemented!(),                                                                                  // Pattern and enumeration -> Should not occur
                 }
               }
               _ => unimplemented!(),
@@ -147,10 +139,6 @@ fn parameter_to_parameter_type(parameter: &ReferenceOr<Parameter>, operation_id:
       }
     }
   }
-}
-
-fn to_type_name(operation_id: &str, name: &str) -> String {
-  format!("{}{}", operation_id.split('_').map(capitalize).collect_vec().join(""), capitalize(name))
 }
 
 fn selector_from_path_elements(path_elements: &[PathElement], ok_response: &ResponseBodyType, include_variables: bool) -> String {
@@ -199,19 +187,17 @@ fn selector_from_path_elements(path_elements: &[PathElement], ok_response: &Resp
 }
 
 pub enum ParameterType {
-  ConstructedTypeOwned(String),
-  ConstructedTypeRef(String),
-  SerializableType(String),
   RefStr,
+  SerializableType(String),
+  WrappedType(String),
 }
 
 impl Display for ParameterType {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::ConstructedTypeOwned(parameter_type) => write!(f, "{}", parameter_type),
-      Self::ConstructedTypeRef(parameter_type) => write!(f, "&{}", parameter_type),
-      Self::SerializableType(parameter_type) => write!(f, "&{}", parameter_type),
       Self::RefStr => write!(f, "&str"),
+      Self::SerializableType(parameter_type) => write!(f, "&{}", parameter_type),
+      Self::WrappedType(parameter_type) => write!(f, "&{}", parameter_type),
     }
   }
 }
