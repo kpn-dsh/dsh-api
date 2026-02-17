@@ -30,11 +30,10 @@ use crate::application_types::ApplicationValues;
 /// # Derived methods
 /// * [`list_vhosts_with_usage() -> [id, [usage]]`](DshApiClient::list_vhosts_with_usage)
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::parse::parse_function;
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application, PortMapping, Vhost};
-#[allow(unused_imports)]
-use crate::DshApiError;
-use crate::{Dependant, DependantApp, DependantApplication, DshApiResult};
+use crate::{Dependant, DependantApp, DependantApplication};
 use futures::try_join;
 use itertools::Itertools;
 use regex::Regex;

@@ -1,4 +1,5 @@
 //! # Enums, traits and structs used by the various find methods
+use crate::error::DshApiResult;
 use crate::parse::{parse_function1, parse_function2};
 use crate::query_processor::Part::{Matching, NonMatching};
 use crate::DshApiError;
@@ -104,7 +105,7 @@ pub struct ExactMatchQueryProcessor {
 }
 
 impl ExactMatchQueryProcessor {
-  pub fn create<T: Into<String>>(exact_match: T) -> Result<Self, DshApiError> {
+  pub fn create<T: Into<String>>(exact_match: T) -> DshApiResult<Self> {
     Ok(Self { exact_match: exact_match.into() })
   }
 
@@ -174,7 +175,7 @@ pub struct StringQueryProcessor {
 }
 
 impl StringQueryProcessor {
-  pub fn create<T: Into<String>>(string: T, match_substring: bool, ignore_case: bool) -> Result<Self, DshApiError> {
+  pub fn create<T: Into<String>>(string: T, match_substring: bool, ignore_case: bool) -> DshApiResult<Self> {
     Ok(Self { string: string.into(), match_substring, ignore_case })
   }
 
@@ -299,7 +300,7 @@ pub struct SubstringQueryProcessor {
 }
 
 impl SubstringQueryProcessor {
-  pub fn create<T: Into<String>>(substring: T) -> Result<Self, DshApiError> {
+  pub fn create<T: Into<String>>(substring: T) -> DshApiResult<Self> {
     Ok(Self { substring: substring.into() })
   }
 
@@ -384,7 +385,7 @@ impl RegexQueryProcessor {
     Self { regex }
   }
 
-  pub fn create<T: TryInto<Regex>>(pattern: T) -> Result<Self, DshApiError> {
+  pub fn create<T: TryInto<Regex>>(pattern: T) -> DshApiResult<Self> {
     match pattern.try_into() {
       Ok(regex) => Ok(Self { regex }),
       Err(_) => Err(DshApiError::Configuration("illegal regular expression".to_string())),
@@ -453,7 +454,7 @@ impl ExpressionQueryProcessor {
     Self { kind: kind.into() }
   }
 
-  pub fn create<T: Into<String>>(kind: T) -> Result<Self, DshApiError> {
+  pub fn create<T: Into<String>>(kind: T) -> DshApiResult<Self> {
     Ok(Self { kind: kind.into() })
   }
 }
@@ -501,7 +502,7 @@ impl QueryProcessor for ExpressionQueryProcessor {
 pub struct DummyQueryProcessor {}
 
 impl DummyQueryProcessor {
-  pub fn create() -> Result<Self, DshApiError> {
+  pub fn create() -> DshApiResult<Self> {
     Ok(Self {})
   }
 }

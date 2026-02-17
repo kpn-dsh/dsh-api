@@ -21,10 +21,11 @@
 //! * [`proxies_dependant_on_secret(id) -> Vec<DependantProxy>`](DshApiClient::proxies_dependant_on_secret)
 
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::types::KafkaProxy;
+use crate::DependantProxy;
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::{DependantProxy, DshApiResult};
 use futures::future::try_join_all;
 use itertools::Itertools;
 

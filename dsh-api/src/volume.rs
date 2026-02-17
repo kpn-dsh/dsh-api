@@ -27,11 +27,10 @@
 use crate::app::{app_resources, apps_that_use_volume};
 use crate::application_types::ApplicationValues;
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::parse::parse_volume_string;
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application, Volume, VolumeStatus};
-#[allow(unused_imports)]
-use crate::DshApiError;
-use crate::{Dependant, DependantApp, DependantApplication, DshApiResult};
+use crate::{Dependant, DependantApp, DependantApplication};
 use futures::try_join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -91,7 +90,7 @@ impl DshApiClient {
   ///
   /// # Returns
   /// * `Ok<(VolumeStatus, Vec<UsedBy>)>` - volume status and usage.
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
   pub async fn volume_with_dependants(&self, volume_id: &str) -> DshApiResult<(VolumeStatus, Vec<Dependant<VolumeInjection>>)> {
     let (volume_status, applications, apps) = try_join!(
       self.get_volume(volume_id),

@@ -24,11 +24,12 @@
 //! * [`manifest_all_versions() -> [(manifest id, [manifest])]`](DshApiClient::manifest_all_versions)
 //! * [`manifests_latest_version(draft) -> [(manifest id, manifest)]`](DshApiClient::manifests_latest_version)
 use crate::dsh_api_client::DshApiClient;
+use crate::epoch_milliseconds_to_string;
+use crate::error::DshApiResult;
 use crate::types::AppCatalogManifest;
 use crate::version::Version;
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::{epoch_milliseconds_to_string, DshApiResult};
 use itertools::Itertools;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -511,7 +512,6 @@ impl Display for BucketResource {
   }
 }
 
-// TODO Proper implementation when format is known
 /// Manifest certificate dependency (plain string since this dependency is undocumented)
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct CertificateResource {
@@ -545,7 +545,6 @@ impl Display for DatabaseResource {
   }
 }
 
-// TODO Proper implementation when format is known
 /// Manifest secret dependency (plain string since this dependency is undocumented)
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct SecretResource {
@@ -575,7 +574,6 @@ impl Display for TopicResource {
   }
 }
 
-// TODO Proper implementation when format is known
 /// Manifest vhost dependency (plain string since this dependency is undocumented)
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct VhostResource {

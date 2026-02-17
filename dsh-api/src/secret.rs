@@ -29,13 +29,14 @@
 use crate::app::{app_resources, apps_that_use_secret};
 use crate::application_types::{ApplicationValues, EnvVarInjection};
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::proxy::proxies_that_use_secret;
 #[allow(unused_imports)]
 use crate::types::{AllocationStatus, Empty, Secret};
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application};
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::{Dependant, DependantApp, DependantApplication, DependantProxy, DshApiResult};
+use crate::{Dependant, DependantApp, DependantApplication, DependantProxy};
 use futures::try_join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};

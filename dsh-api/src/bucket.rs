@@ -53,12 +53,13 @@
 use crate::app::{app_resources, apps_that_use_resource};
 use crate::application_types::{ApplicationValues, EnvVarInjection};
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::parse::parse_function1;
 use crate::platform::CloudProvider;
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application, Bucket, BucketStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::{Dependant, DependantApp, DependantApplication, DshApiResult};
+use crate::{Dependant, DependantApp, DependantApplication};
 use futures::future::try_join_all;
 use futures::try_join;
 use itertools::Itertools;
@@ -457,27 +458,3 @@ pub fn buckets_from_applications(applications: &HashMap<String, Application>) ->
   application_tuples.sort();
   application_tuples
 }
-
-// /// # Parse bucket string
-// ///
-// /// # Example
-// ///
-// /// ```
-// /// # use std::str::FromStr;
-// /// use dsh_api::bucket::parse_bucket_string;
-// /// assert_eq!(parse_bucket_string("{ bucket_name('my_bucket_name') }"), Ok("my_bucket_name"));
-// /// ```
-// ///
-// /// # Parameters
-// /// * `bucket_string` - the bucket string to be parsed
-// ///
-// /// # Returns
-// /// When the provided string is valid, the method returns the bucket name
-// pub fn parse_bucket_string(bucket_string: &str) -> Result<&str, String> {
-//   parse_function1(bucket_string, "bucket_name")
-// }
-//
-// #[test]
-// fn test_parse_bucket_string() {
-//   assert_eq!(parse_bucket_string("{ bucket_name('my_bucket_name') }"), Ok("my_bucket_name"));
-// }

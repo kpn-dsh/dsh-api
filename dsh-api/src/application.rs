@@ -40,6 +40,7 @@ use crate::app::app_resources;
 use crate::application_types::ApplicationValues;
 use crate::bucket::BucketInjection;
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::platform::CloudProvider;
 use crate::query_processor::{Match, QueryProcessor};
 use crate::secret::SecretInjection;
@@ -50,7 +51,7 @@ use crate::volume::VolumeInjection;
 #[allow(unused_imports)]
 use crate::DshApiError;
 use crate::DshApiError::Unexpected;
-use crate::{bucket, secret, topic, vhost, volume, DependantApplication, DshApiResult};
+use crate::{bucket, secret, topic, vhost, volume, DependantApplication};
 use futures::future::{join, try_join_all};
 use itertools::Itertools;
 use regex::Regex;

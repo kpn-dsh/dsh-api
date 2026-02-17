@@ -26,11 +26,12 @@
 
 use crate::app::app_resources;
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::secret::secrets_resources_from_apps;
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Certificate, CertificateStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::{Dependant, DependantApp, DependantProxy, DshApiResult};
+use crate::{Dependant, DependantApp, DependantProxy};
 use futures::future::try_join_all;
 use futures::try_join;
 use itertools::Itertools;

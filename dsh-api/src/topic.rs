@@ -29,11 +29,10 @@
 use crate::app::{app_resources, apps_that_use_topic};
 use crate::application_types::ApplicationValues;
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::parse::TopicString;
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application, Topic};
-#[allow(unused_imports)]
-use crate::DshApiError;
-use crate::{Dependant, DependantApp, DependantApplication, DshApiResult};
+use crate::{Dependant, DependantApp, DependantApplication};
 use futures::try_join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
