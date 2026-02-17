@@ -915,7 +915,7 @@ impl DshPlatform {
     match env::var(ENV_VAR_PLATFORM) {
       Ok(platform_name_from_env_var) => match DshPlatform::try_from(platform_name_from_env_var.as_str()) {
         Ok(platform) => {
-          debug!("default platform '{}' read from environment variable '{}'", platform, ENV_VAR_PLATFORM);
+          debug!("platform '{}' (environment variable '{}')", platform, ENV_VAR_PLATFORM);
           Ok(platform)
         }
         Err(_) => Err(format!(
@@ -1058,7 +1058,7 @@ static DSH_PLATFORMS: LazyLock<Vec<DshPlatform>> = LazyLock::new(|| match env::v
   Err(_) => match serde_json::from_str::<Vec<DshPlatform>>(DEFAULT_PLATFORMS) {
     Ok(mut default_dsh_platforms) => {
       default_dsh_platforms.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
-      debug!("default dsh platform list used");
+      debug!("default platform list");
       default_dsh_platforms
     }
     Err(_) => panic!(),
