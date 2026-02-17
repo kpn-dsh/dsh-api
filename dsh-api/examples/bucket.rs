@@ -13,7 +13,7 @@ use std::collections::HashMap;
 async fn main() -> Result<(), String> {
   initialize_logger();
 
-  let bucket_id = "cpr";
+  let bucket_id = "eds";
 
   let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;

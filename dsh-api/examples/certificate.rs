@@ -8,13 +8,17 @@ use dsh_api::types::AllocationStatus;
 use dsh_api::types::{Certificate, CertificateStatus};
 use dsh_api::DependantApp;
 
-static CERTIFICATE_ID: &str = "broker-kafka-proxy-certificate";
+static CERTIFICATE_ID: &str = "explorer";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
   initialize_logger();
 
   let client = DshApiClientFactory::default().client().await?;
+
+  print_header("get_certificate_ids");
+  let certificate_ids: Vec<String> = client.get_certificate_ids().await.unwrap();
+  println!("{:#?}", certificate_ids);
 
   print_header("get_certificate");
   let certificate: CertificateStatus = client.get_certificate(CERTIFICATE_ID).await.unwrap();
@@ -27,10 +31,6 @@ async fn main() -> Result<(), String> {
   print_header("get_certificate_configuration");
   let certificate: Certificate = client.get_certificate_configuration(CERTIFICATE_ID).await.unwrap();
   println!("{:#?}", certificate);
-
-  print_header("get_certificate_ids");
-  let certificate_ids: Vec<String> = client.get_certificate_ids().await.unwrap();
-  println!("{:#?}", certificate_ids);
 
   print_header("get_certificate_with_usage");
   let certificate_with_dependants: (CertificateStatus, Vec<DependantApp>) = client.certificate_with_dependant_apps(CERTIFICATE_ID).await.unwrap();
