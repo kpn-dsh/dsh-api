@@ -267,8 +267,9 @@ impl TokenFetcher {
         if !response.status().is_success() {
           Err(DshApiError::Unexpected(format!("statuscode {}", response.status()), response.text().await.ok()))
         } else {
-          let container = response.json::<AccessTokenContainer>().await?;
-          trace!("fetch access token from server -> {:#?}", container);
+          let json = response.text().await?;
+          trace!("fetch access token from server -> {}", json);
+          let container = serde_json::from_str::<AccessTokenContainer>(&json)?;
           Ok(container)
         }
       }
