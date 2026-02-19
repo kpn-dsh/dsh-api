@@ -112,12 +112,12 @@ impl DshApiClient {
   /// Returns the Authorization header for the rest API
   ///
   /// This method returns a token that can be used to authenticate and authorize a call
-  /// to the DSH resource management web service. These header value are of the form
+  /// to the DSH resource management web service. This header value is of the form
   /// `Bearer ey...`.
   ///
-  /// Since this token has a relatively short lifespan,
-  /// it is advised to request a new token from this method before each API call.
-  /// An internal caching mechanism will make sure that no unnecessary calls will be made.
+  /// Since this token has a relatively short lifespan, it is advised to request a new token
+  /// from this method before each API call. An internal caching mechanism will make sure that
+  /// no unnecessary calls will be made.
   pub async fn bearer_token(&self) -> DshApiResult<String> {
     if let Some(static_token) = &self.static_token {
       // The static token does not have the 'Bearer' prefix
@@ -131,6 +131,28 @@ impl DshApiClient {
   }
 
   /// Returns the Authorization header for the rest API
+  ///
+  /// This method returns a token that can be used to authenticate and authorize a call
+  /// to the DSH resource management web service. This header value is of the form
+  /// `Bearer ey...`.
+  ///
+  /// This method will not use the cached token and will always request a new access token (which
+  /// will overwrite the cached token if available). In normal cases it is preferred to use the
+  /// [`bearer_token`] method instead of this one.
+  /// For static tokens this method has the same effect as the `bearer_token` method.
+  pub async fn fresh_bearer_token(&self) -> DshApiResult<String> {
+    if let Some(static_token) = &self.static_token {
+      // The static token does not have the 'Bearer' prefix
+      Ok(format!("Bearer {}", static_token))
+    } else if let Some(token_fetcher) = &self.token_fetcher {
+      // The token_fetcher.get_bearer_token() method already includes the 'Bearer' prefix
+      token_fetcher.get_fresh_bearer_token().await
+    } else {
+      Err(DshApiError::Configuration("either a static token or a token fetcher must be provided".to_string()))
+    }
+  }
+
+  /// Returns the raw access token
   ///
   /// This method returns a raw access token that can be used to authenticate and authorize a call
   /// to the DSH resource management web service.
@@ -148,13 +170,50 @@ impl DshApiClient {
     }
   }
 
-  /// Returns a token for the rest API
+  /// Returns the raw access token
   ///
-  /// This method returns a token that can be used to authenticate and authorize a call
+  /// This method returns a raw access token that can be used to authenticate and authorize a call
   /// to the DSH resource management web service.
+  ///
+  /// This method will not use the cached token and will always request a new access token (which
+  /// will overwrite the cached token if available). In normal cases it is preferred to use the
+  /// [`raw_token`] method instead of this one.
+  /// For static tokens this method has the same effect as the `raw_token` method.
+  pub async fn fresh_raw_token(&self) -> DshApiResult<String> {
+    if let Some(static_token) = &self.static_token {
+      Ok(static_token.clone())
+    } else if let Some(token_fetcher) = &self.token_fetcher {
+      token_fetcher.get_fresh_raw_token().await
+    } else {
+      Err(DshApiError::Configuration("either a static token or a token fetcher must be provided".to_string()))
+    }
+  }
+
+  /// Returns a json web token
+  ///
+  /// This method returns a struct that contains information from the access token.
+  ///
   /// Since this token has a relatively short lifespan,
   /// it is advised to request a new token from this method before each API call.
   /// An internal caching mechanism will make sure that no unnecessary calls will be made.
+  pub async fn jwt(&self) -> DshApiResult<DshJwt> {
+    if let Some(static_token) = &self.static_token {
+      DshJwt::from_str(static_token).map_err(|_| DshApiError::Unexpected("could not parse static jwt token".to_string(), None))
+    } else if let Some(token_fetcher) = &self.token_fetcher {
+      token_fetcher.get_jwt().await
+    } else {
+      Err(DshApiError::Configuration("either a static token or a token fetcher must be provided".to_string()))
+    }
+  }
+
+  /// Returns a json web token
+  ///
+  /// This method returns a struct that contains information from the access token.
+  ///
+  /// This method will not use the cached token and will always request a new access token (which
+  /// will overwrite the cached token if available). In normal cases it is preferred to use the
+  /// [`jwt`] method instead of this one.
+  /// For static tokens this method has the same effect as the `jwt` method.
   pub async fn fresh_jwt(&self) -> DshApiResult<DshJwt> {
     if let Some(static_token) = &self.static_token {
       DshJwt::from_str(static_token).map_err(|_| DshApiError::Unexpected("could not parse static jwt token".to_string(), None))
