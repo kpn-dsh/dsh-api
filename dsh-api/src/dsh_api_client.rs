@@ -54,7 +54,6 @@ use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::str::{from_utf8, FromStr};
 
-// #[derive(Debug)]
 pub struct DshApiClient {
   static_token: Option<String>,
   token_fetcher: Option<TokenFetcher>,
@@ -138,8 +137,8 @@ impl DshApiClient {
   ///
   /// This method will not use the cached token and will always request a new access token (which
   /// will overwrite the cached token if available). In normal cases it is preferred to use the
-  /// [`bearer_token`] method instead of this one.
-  /// For static tokens this method has the same effect as the `bearer_token` method.
+  /// [`bearer_token()`](self.bearer_token) method instead of this one.
+  /// For static tokens this method has the same effect as the `bearer_token()` method.
   pub async fn fresh_bearer_token(&self) -> DshApiResult<String> {
     if let Some(static_token) = &self.static_token {
       // The static token does not have the 'Bearer' prefix
@@ -177,8 +176,8 @@ impl DshApiClient {
   ///
   /// This method will not use the cached token and will always request a new access token (which
   /// will overwrite the cached token if available). In normal cases it is preferred to use the
-  /// [`raw_token`] method instead of this one.
-  /// For static tokens this method has the same effect as the `raw_token` method.
+  /// [`raw_token()`](self.raw_token) method instead of this one.
+  /// For static tokens this method has the same effect as the `raw_token()` method.
   pub async fn fresh_raw_token(&self) -> DshApiResult<String> {
     if let Some(static_token) = &self.static_token {
       Ok(static_token.clone())
@@ -212,8 +211,8 @@ impl DshApiClient {
   ///
   /// This method will not use the cached token and will always request a new access token (which
   /// will overwrite the cached token if available). In normal cases it is preferred to use the
-  /// [`jwt`] method instead of this one.
-  /// For static tokens this method has the same effect as the `jwt` method.
+  /// [`jwt()`](self.jwt) method instead of this one.
+  /// For static tokens this method has the same effect as the `jwt()` method.
   pub async fn fresh_jwt(&self) -> DshApiResult<DshJwt> {
     if let Some(static_token) = &self.static_token {
       DshJwt::from_str(static_token).map_err(|_| DshApiError::Unexpected("could not parse static jwt token".to_string(), None))
