@@ -69,6 +69,11 @@ pub struct DshJwtPayload {
   pub authentication_time: Option<i64>,
   #[serde(rename = "azp")]
   pub authorized_party: Option<String>,
+  #[serde(rename = "clientAddress")]
+  pub client_address: Option<String>,
+  #[serde(rename = "clientHost")]
+  pub client_host: Option<String>,
+  pub client_id: Option<String>,
   #[serde(rename = "dsh_perms")]
   pub dsh_permission_representations: Option<Vec<String>>,
   pub email: Option<String>,
@@ -116,6 +121,24 @@ impl DshJwtPayload {
 
   pub fn expired(&self) -> bool {
     self.expires_in() <= 0
+  }
+
+  pub fn permissions(&self) -> DshApiResult<Vec<DshPermission>> {
+    match &self.dsh_permission_representations {
+      Some(representations) => {
+        let mut permissions = representations
+          .iter()
+          .map(|representation| DshPermission::from_str(representation))
+          .collect::<Result<Vec<_>, _>>()?;
+        permissions.sort_by(|permission_a, permission_b| permission_a.tenant.cmp(&permission_b.tenant));
+        Ok(permissions)
+      }
+      None => Err(DshApiError::NotFound(None)),
+    }
+  }
+
+  pub fn authenticated_tenants(&self) -> DshApiResult<Vec<String>> {
+    Ok(self.permissions()?.iter().map(|permission| permission.tenant.to_string()).collect_vec())
   }
 }
 
