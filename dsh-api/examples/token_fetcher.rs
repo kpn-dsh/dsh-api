@@ -18,7 +18,7 @@ async fn main() -> Result<(), String> {
   println!("raw token -> {}", raw_token);
 
   let jwt = token_fetcher.get_jwt().await?;
-  println!("jwt -> {}", jwt);
+  println!("jwt -> {:#?}", jwt);
 
   let fresh_bearer_token = token_fetcher.get_fresh_bearer_token().await?;
   println!("fresh bearer token -> {}", fresh_bearer_token);
