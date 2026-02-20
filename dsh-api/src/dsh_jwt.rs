@@ -18,20 +18,26 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct DshJwt {
   pub header: DshJwtHeader,
   pub payload: DshJwtPayload,
-  pub tenant_permissions: Vec<DshPermission>,
+  pub tenant_permissions: Option<Vec<DshPermission>>,
 }
 
 impl DshJwt {
-  pub fn expires_in(&self) -> i64 {
+  /// Returns expected time before token expires
+  pub fn expires_in(&self) -> Option<i64> {
     self.payload.expires_in()
   }
 
-  pub fn expired(&self) -> bool {
+  /// Whether token is expired
+  pub fn expired(&self) -> Option<bool> {
     self.payload.expired()
   }
 
-  pub fn authorized_tenants(&self) -> Vec<&str> {
-    self.tenant_permissions.iter().map(|permission| permission.tenant.as_str()).collect_vec()
+  /// Returns list of authorized tenants
+  pub fn authorized_tenants(&self) -> Option<Vec<&str>> {
+    self
+      .tenant_permissions
+      .as_ref()
+      .map(|permissions| permissions.iter().map(|permission| permission.tenant.as_str()).collect_vec())
   }
 }
 
@@ -48,23 +54,28 @@ pub struct DshJwtHeader {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DshJwtPayload {
-  // Rfc7519
+  /// Issuer claim (rfc7519 "iss")
   #[serde(rename = "iss")]
   pub issuer: Option<String>,
+  /// Subject claim (rfc7519 "sub")
   #[serde(rename = "sub")]
   pub subject: Option<String>,
+  /// Audience claim (rfc7519 "aud")
   #[serde(rename = "aud")]
   pub audience: Option<String>,
+  /// Expiration time claim (rfc7519 "exp")
   #[serde(rename = "exp")]
   pub expiration_time: Option<i64>,
+  /// Not before claim (rfc7519 "nbf")
   #[serde(rename = "nbf")]
   pub not_before: Option<i64>,
+  /// Issued at claim (rfc7519 "iat")
   #[serde(rename = "iat")]
   pub issued_at: Option<i64>,
+  /// Jwt id claim (rfc7519 "jti")
   #[serde(rename = "jti")]
   pub jwt_id: Option<String>,
 
-  // Dsh specific
   #[serde(rename = "auth_time")]
   pub authentication_time: Option<i64>,
   #[serde(rename = "azp")]
@@ -74,6 +85,7 @@ pub struct DshJwtPayload {
   #[serde(rename = "clientHost")]
   pub client_host: Option<String>,
   pub client_id: Option<String>,
+  /// Permission representations claim (dsh specific "dsh_perms")
   #[serde(rename = "dsh_perms")]
   pub dsh_permission_representations: Option<Vec<String>>,
   pub email: Option<String>,
@@ -90,39 +102,38 @@ pub struct DshJwtPayload {
 }
 
 impl DshJwtPayload {
-  pub const ISSUER: &'static str = "iss";
-  pub const SUBJECT: &'static str = "sub";
-  pub const AUDIENCE: &'static str = "aud";
-  pub const EXPIRATION_TIME: &'static str = "exp";
-  pub const NOT_BEFORE: &'static str = "nbf";
-  pub const ISSUED_AT: &'static str = "iat";
-  pub const JWT_ID: &'static str = "jti";
-
-  pub const REGISTERED_CLAIM_TYPES: [&'static str; 7] = [Self::ISSUER, Self::SUBJECT, Self::AUDIENCE, Self::EXPIRATION_TIME, Self::NOT_BEFORE, Self::ISSUED_AT, Self::JWT_ID];
-
-  pub fn registered_claims(&self) -> Vec<(&str, String)> {
+  /// Returns a list of the available rfc7519 claims with their values
+  ///
+  /// # Returns
+  /// * List of tuples consisting of the claim name and value.
+  pub fn rfc7519_claims(&self) -> Vec<(&str, String)> {
     vec![
-      (Self::ISSUER, self.issuer.clone().map(|issuer| issuer.to_string())),
-      (Self::SUBJECT, self.subject.clone().map(|subject| subject.to_string())),
-      (Self::AUDIENCE, self.audience.clone().map(|audience| audience.to_string())),
-      (Self::EXPIRATION_TIME, self.expiration_time.map(|expiration_time| expiration_time.to_string())),
-      (Self::NOT_BEFORE, self.not_before.map(|not_before| not_before.to_string())),
-      (Self::ISSUED_AT, self.issued_at.map(|issued_at| issued_at.to_string())),
-      (Self::JWT_ID, self.jwt_id.clone().map(|jwt_id| jwt_id.to_string())),
+      ("iss", self.issuer.as_ref().map(|issuer| issuer.to_string())),
+      ("sub", self.subject.as_ref().map(|subject| subject.to_string())),
+      ("aud", self.audience.as_ref().map(|audience| audience.to_string())),
+      ("exp", self.expiration_time.map(|expiration_time| expiration_time.to_string())),
+      ("nbf", self.not_before.map(|not_before| not_before.to_string())),
+      ("iat", self.issued_at.map(|issued_at| issued_at.to_string())),
+      ("jti", self.jwt_id.as_ref().map(|jwt_id| jwt_id.to_string())),
     ]
     .into_iter()
     .filter_map(|(claim, value)| value.map(|v| (claim, v)))
     .collect_vec()
   }
 
-  pub fn expires_in(&self) -> i64 {
-    self.expiration_time.unwrap_or_default() - (SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64)
+  /// Returns expected time before token expires
+  pub fn expires_in(&self) -> Option<i64> {
+    self
+      .expiration_time
+      .and_then(|expiration_time| SystemTime::now().duration_since(UNIX_EPOCH).ok().map(|now| expiration_time - now.as_secs() as i64))
   }
 
-  pub fn expired(&self) -> bool {
-    self.expires_in() <= 0
+  /// Whether token is expired
+  pub fn expired(&self) -> Option<bool> {
+    self.expires_in().map(|expires_in| expires_in <= 0)
   }
 
+  /// Returns a list of permissions
   pub fn permissions(&self) -> DshApiResult<Vec<DshPermission>> {
     match &self.dsh_permission_representations {
       Some(representations) => {
@@ -133,10 +144,11 @@ impl DshJwtPayload {
         permissions.sort_by(|permission_a, permission_b| permission_a.tenant.cmp(&permission_b.tenant));
         Ok(permissions)
       }
-      None => Err(DshApiError::NotFound(None)),
+      None => Err(DshApiError::NotFound(Some("token does not contain permissions".to_string()))),
     }
   }
 
+  /// Returns a list with the names of authenticated tenants
   pub fn authenticated_tenants(&self) -> DshApiResult<Vec<String>> {
     Ok(self.permissions()?.iter().map(|permission| permission.tenant.to_string()).collect_vec())
   }
@@ -169,34 +181,60 @@ impl Display for DshJwt {
   }
 }
 
+/// Split json web token in header and payload json
+///
+/// # Parameter
+/// * `jwt` - Json web token.
+///
+/// # Returns
+/// * Ok((String, String)) - Tuple with header and payload json strings.
+pub fn jwt_into_header_payload_json(jwt: &str) -> DshApiResult<(String, String)> {
+  let (header_part, payload_part, _) = split_jwt_to_parts(jwt)?;
+  let header_json = decode_part("header", header_part)?;
+  let payload_json = decode_part("payload", payload_part)?;
+  Ok((header_json, payload_json))
+}
+
+/// Parse json web token string in `DshJwtHeader` and `DshJwtPayload` structs
+///
+/// # Parameter
+/// * `jwt` - Json web token string.
+///
+/// # Returns
+/// * Ok((DshJwtHeader, DshJwtPayload)) - Tuple with header and payload structs.
+pub fn jwt_into_header_payload(jwt: &str) -> DshApiResult<(DshJwtHeader, DshJwtPayload)> {
+  let (header_json, payload_json) = jwt_into_header_payload_json(jwt)?;
+  let header = serde_json::from_str::<DshJwtHeader>(&header_json).map_err(|json_error| DshApiError::Conversion(format!("header contains invalid json ({})", json_error)))?;
+  let payload = serde_json::from_str::<DshJwtPayload>(&payload_json).map_err(|json_error| DshApiError::Conversion(format!("payload contains invalid json ({})", json_error)))?;
+  Ok((header, payload))
+}
+
+fn split_jwt_to_parts(jwt: &str) -> DshApiResult<(&str, &str, &str)> {
+  let parts: Vec<&str> = jwt.split('.').collect();
+  if parts.len() != 3 {
+    Err(DshApiError::Conversion("invalid jwt token".to_string()))
+  } else {
+    Ok((parts[0], parts[1], parts[2]))
+  }
+}
+
+fn decode_part(kind: &str, part: &str) -> DshApiResult<String> {
+  STANDARD_NO_PAD
+    .decode(part.as_bytes())
+    .map_err(|_| DshApiError::Conversion(format!("could not decode {}", kind)))
+    .and_then(|decoded_header| String::from_utf8(decoded_header).map_err(|_| DshApiError::Conversion(format!("{} contains invalid utf8", kind))))
+}
+
 impl FromStr for DshJwt {
   type Err = DshApiError;
 
   fn from_str(token: &str) -> DshApiResult<Self> {
-    let parts: Vec<&str> = token.split('.').collect();
-    if parts.len() != 3 {
-      Err(DshApiError::Conversion("invalid jwt token".to_string()))
-    } else {
-      let header = STANDARD_NO_PAD
-        .decode(parts[0].as_bytes())
-        .map_err(|_| DshApiError::Conversion("could not decode header".to_string()))
-        .and_then(|decoded_header| String::from_utf8(decoded_header).map_err(|_| DshApiError::Conversion("header contains invalid utf8".to_string())))
-        .and_then(|json_header| {
-          serde_json::from_str::<DshJwtHeader>(&json_header).map_err(|json_error| DshApiError::Conversion(format!("payload contains invalid json ({})", json_error)))
-        })?;
-
-      let payload = STANDARD_NO_PAD
-        .decode(parts[1].as_bytes())
-        .map_err(|_| DshApiError::Conversion("could not decode payload".to_string()))
-        .and_then(|decoded_payload| String::from_utf8(decoded_payload).map_err(|_| DshApiError::Conversion("payload contains invalid utf8".to_string())))
-        .and_then(|json_payload| {
-          serde_json::from_str::<DshJwtPayload>(&json_payload).map_err(|json_error| DshApiError::Conversion(format!("payload contains invalid json ({})", json_error)))
-        })?;
-
-      let mut tenant_permissions_map: HashMap<String, DshPermission> = HashMap::new();
-      if let Some(ref permission_representations) = &payload.dsh_permission_representations {
-        for permission_representation in permission_representations {
-          DshPermission::from_str(permission_representation).map(|dsh_permission| {
+    let (header, payload) = jwt_into_header_payload(token)?;
+    match &payload.dsh_permission_representations {
+      Some(representations) => {
+        let mut tenant_permissions_map: HashMap<String, DshPermission> = HashMap::new();
+        for representation in representations {
+          DshPermission::from_str(representation).map(|dsh_permission| {
             let manage = dsh_permission.manage;
             let view = dsh_permission.view;
             let mapped = tenant_permissions_map.entry(dsh_permission.tenant.to_string()).or_insert_with(|| dsh_permission);
@@ -208,10 +246,11 @@ impl FromStr for DshJwt {
             }
           })?;
         }
+        let mut tenant_permissions: Vec<DshPermission> = Vec::from_iter(tenant_permissions_map.into_values());
+        tenant_permissions.sort_by(|dsh_permission_a, dsh_permission_b| dsh_permission_a.tenant.cmp(&dsh_permission_b.tenant));
+        Ok(DshJwt { header, payload, tenant_permissions: Some(tenant_permissions) })
       }
-      let mut tenant_permissions: Vec<DshPermission> = Vec::from_iter(tenant_permissions_map.into_values());
-      tenant_permissions.sort_by(|dsh_permission_a, dsh_permission_b| dsh_permission_a.tenant.cmp(&dsh_permission_b.tenant));
-      Ok(DshJwt { header, payload, tenant_permissions })
+      None => Ok(DshJwt { header, payload, tenant_permissions: None }),
     }
   }
 }
@@ -237,13 +276,22 @@ impl Display for DshJwtPayload {
         Err(_) => write!(f, "[json-error]"),
       }
     } else {
-      write!(
-        f,
-        "{}:{}:{}",
-        self.token_type.as_deref().unwrap_or(""),
-        self.preferred_username.as_deref().unwrap_or(""),
-        self.expires_in()
-      )
+      match self.expires_in() {
+        Some(expires_in) => write!(
+          f,
+          "{}:{}:{}",
+          self.token_type.as_deref().unwrap_or(""),
+          self.preferred_username.as_deref().unwrap_or(""),
+          expires_in
+        ),
+
+        None => write!(
+          f,
+          "{}:{}",
+          self.token_type.as_deref().unwrap_or(""),
+          self.preferred_username.as_deref().unwrap_or(""),
+        ),
+      }
     }
   }
 }
