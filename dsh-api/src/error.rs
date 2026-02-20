@@ -124,6 +124,12 @@ impl From<InvalidHeaderValue> for DshApiError {
   }
 }
 
+impl<T> From<PoisonError<T>> for DshApiError {
+  fn from(value: PoisonError<T>) -> Self {
+    DshApiError::Unexpected("mutex error".to_string(), Some(value.to_string()))
+  }
+}
+
 impl From<std::str::Utf8Error> for DshApiError {
   fn from(error: std::str::Utf8Error) -> Self {
     DshApiError::Unexpected(error.to_string(), None)
@@ -142,9 +148,9 @@ impl From<&str> for DshApiError {
   }
 }
 
-impl<T> From<PoisonError<T>> for DshApiError {
-  fn from(value: PoisonError<T>) -> Self {
-    DshApiError::Unexpected("mutex error".to_string(), Some(value.to_string()))
+impl From<std::time::SystemTimeError> for DshApiError {
+  fn from(value: std::time::SystemTimeError) -> Self {
+    DshApiError::Unexpected("system time error".to_string(), Some(value.to_string()))
   }
 }
 
