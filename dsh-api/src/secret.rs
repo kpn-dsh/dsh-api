@@ -288,8 +288,8 @@ pub fn is_system_id(secret_id: &str) -> bool {
 /// `secret_id` - Secret id to be converted.
 ///
 /// # Returns
-/// `Cow::Borrowed` - Secret id was already in the proper format.
-/// `Cow::Owned` - Secret id was not in the proper format.
+/// * `Cow::Borrowed` - Secret id was already in the proper format.
+/// * `Cow::Owned` - Secret id was not in the proper format.
 pub fn secret_id_to_secret_name(secret_id: &String) -> Cow<String> {
   if is_system_id(secret_id) {
     Cow::Owned(format!("system{}", secret_id.replace("!", "/")))
