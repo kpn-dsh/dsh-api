@@ -3,7 +3,7 @@
 use crate::dsh_api_operation::{method_api_operations, DshApiOperation};
 use crate::openapi_utils::{method_path_operations, OpenApiOperationKind};
 use crate::{capitalize, PathElement, RequestBodyType, ResponseBodyType, MANAGED_PARAMETERS, METHODS};
-use indoc::formatdoc;
+use indoc::{formatdoc, indoc};
 use itertools::Itertools;
 use openapiv3::{OpenAPI, Operation};
 use std::error::Error;
@@ -18,72 +18,127 @@ pub fn generate_methods(writer: &mut dyn Write, openapi: &OpenAPI) -> Result<(),
   }
   operations.sort_by(|operation_a, operation_b| operation_a.selector.cmp(&operation_b.selector));
   writeln!(writer, "#[rustfmt::skip]")?;
-  writeln!(writer, "use crate::dsh_api_client::DshApiClient;")?;
-  writeln!(writer, "use crate::error::DshApiResult;")?;
-  writeln!(writer, "use crate::types::*;")?;
-  writeln!(writer, "use log::{{debug, error, trace}};")?;
-  writeln!(writer, "use percent_encoding::{{AsciiSet, CONTROLS, PercentEncode, utf8_percent_encode}};")?;
-  writeln!(writer, "use reqwest::header::{{HeaderMap, HeaderValue, CONTENT_TYPE, AUTHORIZATION}};")?;
-  writeln!(writer, "use std::collections::HashMap;")?;
-  writeln!(writer, "use std::str::FromStr;")?;
+  write_imports(writer)?;
   writeln!(writer)?;
   writeln!(writer, "/// # API methods")?;
   writeln!(writer, "///")?;
   writeln!(writer, "/// Module that contains all methods to call the API methods.")?;
   writeln!(writer, "impl DshApiClient {{")?;
-  writeln!(writer, "  /// # Returns the version of the openapi spec")?;
-  writeln!(writer, "  ///")?;
-  writeln!(writer, "  /// Version number of the openapi file that the crate has been generated from.")?;
-  writeln!(writer, "  pub fn api_version() -> &'static Version {{")?;
-  writeln!(
-    writer,
-    "    static API_VERSION: LazyLock<Version> = LazyLock::new(|| Version::from_str(\"{}\").unwrap());",
-    openapi.info.version
-  )?;
-  writeln!(writer, "    &API_VERSION")?;
-  writeln!(writer, "  }}")?;
+  write_api_version_method(writer, openapi)?;
   for operation in &operations {
     writeln!(writer)?;
     write_method(writer, operation)?;
   }
   writeln!(writer)?;
-  writeln!(writer, "  #[doc(hidden)]")?;
-  writeln!(writer, "  fn encode_path(pc: &str) -> PercentEncode {{")?;
-  writeln!(writer, "    const PATH_SET: &AsciiSet = &CONTROLS")?;
-  writeln!(writer, "      .add(b' ')")?;
-  writeln!(writer, "      .add(b'\"')")?;
-  writeln!(writer, "      .add(b'#')")?;
-  writeln!(writer, "      .add(b'<')")?;
-  writeln!(writer, "      .add(b'>')")?;
-  writeln!(writer, "      .add(b'?')")?;
-  writeln!(writer, "      .add(b'`')")?;
-  writeln!(writer, "      .add(b'{{')")?;
-  writeln!(writer, "      .add(b'}}')")?;
-  writeln!(writer, "      .add(b'/')")?;
-  writeln!(writer, "      .add(b'%');")?;
-  writeln!(writer, "    utf8_percent_encode(pc, PATH_SET)")?;
-  writeln!(writer, "  }}")?;
-
+  write_encode_path_method(writer)?;
   writeln!(writer)?;
-  writeln!(writer, "  #[doc(hidden)]")?;
-  writeln!(writer, "  fn log_error<T>(error: T) -> T")?;
-  writeln!(writer, "  where")?;
-  writeln!(writer, "    T: Display")?;
-  writeln!(writer, "  {{")?;
-  writeln!(writer, "    error!(\"{{}}\", error);")?;
-  writeln!(writer, "    error")?;
-  writeln!(writer, "  }}")?;
+  write_debug_error_method(writer)?;
   writeln!(writer)?;
-  writeln!(writer, "  #[doc(hidden)]")?;
-  writeln!(writer, "  fn log_error_prefix<T>(prefix: &str, error: T) -> T")?;
-  writeln!(writer, "  where")?;
-  writeln!(writer, "    T: Display")?;
-  writeln!(writer, "  {{")?;
-  writeln!(writer, "    error!(\"{{}}: {{}}\", prefix, error);")?;
-  writeln!(writer, "    error")?;
-  writeln!(writer, "  }}")?;
-
+  write_debug_error_prefix_method(writer)?;
   writeln!(writer, "}}")?;
+  Ok(())
+}
+
+fn write_imports(writer: &mut dyn Write) -> Result<(), Box<dyn Error>> {
+  writeln!(
+    writer,
+    "{}",
+    indoc!(
+      r#"
+    use crate::dsh_api_client::DshApiClient;
+    use crate::error::DshApiResult;
+    use crate::types::*;
+    use log::{{debug, trace}};
+    use percent_encoding::{{AsciiSet, CONTROLS, PercentEncode, utf8_percent_encode}};
+    use reqwest::header::{{HeaderMap, HeaderValue, CONTENT_TYPE, AUTHORIZATION}};
+    use std::collections::HashMap;
+    use std::str::FromStr;"#
+    )
+  )?;
+  Ok(())
+}
+
+fn write_api_version_method(writer: &mut dyn Write, openapi: &OpenAPI) -> Result<(), Box<dyn Error>> {
+  writeln!(
+    writer,
+    "  {}",
+    formatdoc!(
+      r#"
+        /// # Returns the version of the openapi spec
+          ///
+          /// Version number of the openapi file that the crate has been generated from.
+          pub fn api_version() -> &'static Version {{
+            static API_VERSION: LazyLock<Version> = LazyLock::new(|| Version::from_str("{}").unwrap());
+            &API_VERSION
+          }}"#,
+      openapi.info.version
+    ),
+  )?;
+  Ok(())
+}
+
+fn write_encode_path_method(writer: &mut dyn Write) -> Result<(), Box<dyn Error>> {
+  writeln!(
+    writer,
+    "  {}",
+    indoc!(
+      r#"
+        #[doc(hidden)]
+          fn encode_path(pc: &str) -> PercentEncode {{
+            const PATH_SET: &AsciiSet = &CONTROLS
+              .add(b' ')
+              .add(b'\"')
+              .add(b'#')
+              .add(b'<')
+              .add(b'>')
+              .add(b'?')
+              .add(b'`')
+              .add(b'{')
+              .add(b'}')
+              .add(b'/')
+              .add(b'%');
+            utf8_percent_encode(pc, PATH_SET)
+          }}"#
+    )
+  )?;
+  Ok(())
+}
+
+fn write_debug_error_method(writer: &mut dyn Write) -> Result<(), Box<dyn Error>> {
+  writeln!(
+    writer,
+    "  {}",
+    indoc!(
+      r#"
+        #[doc(hidden)]
+          fn debug_error<T>(error: T) -> T
+          where
+            T: Display
+          {
+            debug!("error: {}", error);
+            error
+          }"#
+    )
+  )?;
+  Ok(())
+}
+
+fn write_debug_error_prefix_method(writer: &mut dyn Write) -> Result<(), Box<dyn Error>> {
+  writeln!(
+    writer,
+    "  {}",
+    indoc!(
+      r#"
+        #[doc(hidden)]
+          fn debug_error_prefix<T>(prefix: &str, error: T) -> T
+          where
+            T: Display
+          {
+            debug!("{}: {}", prefix, error);
+            error
+          }"#
+    )
+  )?;
   Ok(())
 }
 
@@ -159,17 +214,17 @@ fn method(dsh_api_operation: &DshApiOperation) -> String {
             self.platform().rest_api_endpoint(),
             Self::encode_path(self.tenant_name()){url_parameters}
           );{body}
-          let bearer_token = self.bearer_token().await.map_err(|error| Self::log_error_prefix("token error", error))?;{header_map}
+          let bearer_token = self.bearer_token().await.map_err(|error| Self::debug_error_prefix("token error", error))?;{header_map}
           debug!("{method} {{}}", url);
           let mut request_builder = self.client.{method}(url);
           request_builder = request_builder.headers(header_map);{add_body}
-          let request = request_builder.build().map_err(|error| Self::log_error_prefix("request builder error", error))?;
+          let request = request_builder.build().map_err(|error| Self::debug_error_prefix("request builder error", error))?;
           trace!("{method_name}() -> {{:#?}}", request);
-          let response = self.client.execute(request).await.map_err(|error| Self::log_error_prefix("request execute error", error));
+          let response = self.client.execute(request).await.map_err(|error| Self::debug_error_prefix("request execute error", error));
           trace!("{method_name}() -> {{:#?}}", response);
           let processed_response = self.{processing_function}(response).await;{sort}
           trace!("{method_name}() -> {{:#?}}", processed_response);
-          processed_response.map_err(Self::log_error)
+          processed_response.map_err(Self::debug_error)
         }}"#
   )
 }
