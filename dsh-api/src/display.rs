@@ -383,12 +383,10 @@ impl Display for Notification {
         )?;
       }
       write!(f, ", message: {}", self.message)
+    } else if self.remove {
+      write!(f, "remove: {}", self.message)
     } else {
-      if self.remove {
-        write!(f, "remove: {}", self.message)
-      } else {
-        write!(f, "{}", self.message)
-      }
+      write!(f, "{}", self.message)
     }
   }
 }
