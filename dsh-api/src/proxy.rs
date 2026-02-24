@@ -75,14 +75,14 @@ impl DshApiClient {
   /// # Get all apps that depend on a secret
   ///
   /// # Parameters
-  /// * `secret_id` - Identifier of the secret.
+  /// * `secret_name` - Name of the secret.
   ///
   /// # Returns
   /// * `Ok<Vec<DependantApp>>` - Apps that depend on the secret.
   /// * `Err<`[`DshApiError`]`>` - When the request could not be processed by the DSH.
-  pub async fn proxies_dependant_on_secret(&self, secret_id: &str) -> DshApiResult<Vec<DependantProxy>> {
+  pub async fn proxies_dependant_on_secret(&self, secret_name: &str) -> DshApiResult<Vec<DependantProxy>> {
     Ok(
-      proxies_that_use_secret(secret_id, &self.proxies().await?)
+      proxies_that_use_secret(secret_name, &self.proxies().await?)
         .into_iter()
         .map(|(proxy_id, proxy)| DependantProxy::new(proxy_id.to_string(), proxy.instances.get()))
         .collect_vec(),
@@ -111,17 +111,17 @@ pub fn proxies_that_use_certificate<'a>(certificate_id: &str, proxies: &'a [(Str
 /// Find proxies that use a secret
 ///
 /// # Parameters
-/// * `secret_id` - Identifier of the secret to look for.
+/// * `secret_name` - Name of the secret to look for.
 /// * `proxies` - List of all proxies.
 ///
 /// # Returns
 /// `Vec<(proxy_id, proxy)>` - Vector of proxies that use the secret:
 /// * `proxy_id` - Proxy id of the proxy that uses the secret.
 /// * `proxy` - Reference to the proxy.
-pub fn proxies_that_use_secret<'a>(secret_id: &str, proxies: &'a [(String, KafkaProxy)]) -> Vec<(&'a str, &'a KafkaProxy)> {
+pub fn proxies_that_use_secret<'a>(secret_name: &str, proxies: &'a [(String, KafkaProxy)]) -> Vec<(&'a str, &'a KafkaProxy)> {
   proxies
     .iter()
-    .filter(|(_, proxy)| proxy.secret_name_ca_chain == secret_id)
+    .filter(|(_, proxy)| proxy.secret_name_ca_chain == secret_name)
     .map(|(proxy_id, proxy)| (proxy_id.as_str(), proxy))
     .collect_vec()
 }

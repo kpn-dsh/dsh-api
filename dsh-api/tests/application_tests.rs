@@ -195,12 +195,12 @@ where
   }
 }
 
-fn secret<S, T>(secret_id: S, env_key: T) -> ApplicationSecret
+fn secret<S, T>(secret_name: S, env_key: T) -> ApplicationSecret
 where
   S: Into<String>,
   T: ToString,
 {
-  ApplicationSecret::new(secret_id, &[env_key])
+  ApplicationSecret::new(secret_name, &[env_key])
 }
 
 fn volume<T>(volume_id: T) -> ApplicationVolumes
