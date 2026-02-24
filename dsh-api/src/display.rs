@@ -373,15 +373,23 @@ impl Display for NodepoolActual {
 
 impl Display for Notification {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "remove: {}", self.remove)?;
-    if !self.args.is_empty() {
-      write!(
-        f,
-        ", args: {}",
-        self.args.iter().map(|(key, value)| format!("{}->{}", key, value)).collect_vec().join(", ")
-      )?;
+    if f.alternate() {
+      write!(f, "remove: {}", self.remove)?;
+      if !self.args.is_empty() {
+        write!(
+          f,
+          ", args: {}",
+          self.args.iter().map(|(key, value)| format!("{}->{}", key, value)).collect_vec().join(", ")
+        )?;
+      }
+      write!(f, ", message: {}", self.message)
+    } else {
+      if self.remove {
+        write!(f, "remove: {}", self.message)
+      } else {
+        write!(f, "{}", self.message)
+      }
     }
-    write!(f, ", message: {}", self.message)
   }
 }
 
