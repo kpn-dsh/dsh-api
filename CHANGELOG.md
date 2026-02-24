@@ -14,17 +14,21 @@ All notable changes to the DSH Api Client project will be documented in this fil
 * Builder pattern to create type instances.
 * Known issues.
 * Added `debug` and `trace` logging to the generated code.
+* Added methods `secret_names`, `secret_names_non_system` and `secret_names_system`.
+* Added function `secret_name`.
 
 ### Changed
 
 * New open api specification version `1.11.1`.
 * Removed dependency on `Progenitor`.
+* Secret methods and functions now use secret names instead of secret ids.
 * Improved error handling and logging.
 * Changed regular expression dependency from `regex` to `regress`.
 * Renamed `issuer_endpoint` field in platforms configuration to  `issuer-endpoint`
   (`issuer_endpoint` is still allowed but deprecated).
 * Removed `lazy_static` dependency.
-* Changed rust version to `1.80.0`.
+* Function `secret_id_to_secret_name` is deprecated.
+* Changed msrv to `1.80.0`.
 * Create and open api versions are returned as a `Version` reference.
 * Set dependencies to latest versions.
 
