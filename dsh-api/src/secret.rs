@@ -28,7 +28,7 @@
 //! DSH resource management API. These derived methods depend on the API methods for this.
 //!
 //! * [`secret_dependants(name) -> Vec<Dependant>`](DshApiClient::secret_dependants)
-//! * [`secret_name(id/name) -> (name, id)`](secret_name)
+//! * [`secret_name(id/name) -> (name, id)`](normalize_secret_name)
 //! * [`secret_names() -> Vec<(String, bool, Option<String>)>`](DshApiClient::secret_names)
 //! * [`secret_names_non_system() -> Vec<String>`](DshApiClient::secret_names_non_system)
 //! * [`secret_names_system() -> Vec<(String, Option<String>)>`](DshApiClient::secret_names_system)
@@ -91,7 +91,7 @@ impl Display for SecretInjection {
 /// DSH resource management API. These derived methods depend on the API methods for this.
 ///
 /// * [`secret_dependants(name) -> Vec<Dependant>`](DshApiClient::secret_dependants)
-/// * [`secret_name(id/name) -> (name, id)`](secret_name)
+/// * [`secret_name(id/name) -> (name, id)`](normalize_secret_name)
 /// * [`secret_names() -> Vec<(String, bool, Option<String>)>`](DshApiClient::secret_names)
 /// * [`secret_names_non_system() -> Vec<String>`](DshApiClient::secret_names_non_system)
 /// * [`secret_names_system() -> Vec<(String, Option<String>)>`](DshApiClient::secret_names_system)
@@ -143,7 +143,7 @@ impl DshApiClient {
   /// * `String` - Contains the secret name.
   /// * `Option<String>` - Secret id if the secret is a system secret, else empty.
   pub async fn secret_names(&self) -> DshApiResult<Vec<(String, Option<String>)>> {
-    let mut secret_names = self.get_secret_ids().await?.into_iter().map(secret_name).collect_vec();
+    let mut secret_names = self.get_secret_ids().await?.into_iter().map(normalize_secret_name).collect_vec();
     secret_names.sort_by(|(name_a, _), (name_b, _)| name_a.cmp(name_b));
     Ok(secret_names)
   }
@@ -363,14 +363,19 @@ pub fn secret_is_system(secret_id: &str) -> bool {
   is_system_id(secret_id)
 }
 
-/// # Checks if secret id is a system secret
-pub fn is_system_id(secret_id: &str) -> bool {
-  secret_id.contains('!')
+/// # Checks if secret id is a system secret id
+pub fn is_system_id(secret_id_name: &str) -> bool {
+  secret_id_name.contains('!')
+}
+
+/// # Checks if secret id is a system secret name
+pub fn is_system_name(secret_id_name: &str) -> bool {
+  secret_id_name.starts_with("system/")
 }
 
 /// # Converts secret id to secret name
 ///
-/// This function is deprecated, use [`secret_name()`](secret_name) instead.
+/// This function is deprecated, use [`secret_name()`](normalize_secret_name) instead.
 ///
 /// When the secret is a system secret this function will convert the secret id to a secret name.
 /// For non-system secrets the secret id and the secret name are the same.
@@ -390,25 +395,28 @@ pub fn secret_id_to_secret_name(secret_id: &String) -> Cow<String> {
   }
 }
 
-/// # Converts secret id to secret name
+/// # Normalize secret id or name
 ///
-/// * When the secret id is a system secret id this function will convert the secret id to a
-///   secret name and will return both the secret name and the secret id.
-/// * For non-system secrets the secret id and the secret name are the same and the secret id
-///   will be returned as the secret name.
+/// * When the provided secret id or name is a system secret id, this function will convert the
+///   system secret id to a system secret name and return both.
+/// * When the provided secret id or name is a system secret name, this function will convert
+///   the secret name to a system secret id and return both.
+/// * When the provided secret id or name is a non-system secret name, only the secret name
+///   will be returned.
 ///
 /// # Parameters
-/// `secret_id_name` - Secret id or name to be converted.
+/// `secret_id_name` - Secret id or name to be normalized.
 ///
 /// # Returns
 /// Tuple consisting of:
-/// * `String` - Secret name, either the original `secret_id_name` when the secret was a
-///   non-system secret, or the converted name when the secret was a system secret.
-/// * `Option<String>` - Original `secret_id_name` when the secret was a non-system secret,
-///   empty otherwise.
-pub fn secret_name(secret_id_name: String) -> (String, Option<String>) {
+/// * `String` - Normalized secret name, can be a non-system secret name or a system secret name.
+/// * `Option<String>` - Secret id when the `secret_id_name` was a system secret id or system
+///   secret name, empty otherwise.
+pub fn normalize_secret_name(secret_id_name: String) -> (String, Option<String>) {
   if is_system_id(&secret_id_name) {
     (format!("system{}", secret_id_name.replace("!", "/")), Some(secret_id_name))
+  } else if let Some(stripped_system_name) = &secret_id_name.strip_prefix("system/") {
+    (secret_id_name.clone(), Some(format!("!{}", stripped_system_name.replace("/", "!"))))
   } else {
     (secret_id_name, None)
   }
