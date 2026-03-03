@@ -1,6 +1,6 @@
 //! Module that contains methods and functions to manage certificates.
 //!
-#![doc=mermaid!("diagrams/certificate.mmd")]
+#![doc = mermaid!("diagrams/certificate.mmd")]
 //!
 //! # Generated methods
 //!
@@ -22,6 +22,7 @@
 //! * [`certificate_with_dependants(id) -> (CertificateStatus, Vec<DependantApp>)`](DshApiClient::certificate_with_dependant_apps)
 //! * [`certificate_with_dependant_apps(id) -> (CertificateStatus, Vec<DependantApp>)`](DshApiClient::certificate_with_dependant_apps)
 //! * [`certificate_with_dependant_proxies(id) -> (CertificateStatus, Vec<DependantProxy>)`](DshApiClient::certificate_with_dependant_apps)
+//! * [`certificates() -> Vec<(String, CertificateStatus>`](DshApiClient::certificates)
 //! * [`certificates_with_dependant_apps() -> Vec<(String, CertificateStatus, Vec<DependantApp>)>`](DshApiClient::certificates_with_dependant_apps)
 
 use crate::app::app_resources;
@@ -31,7 +32,7 @@ use crate::secret::secrets_resources_from_apps;
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Certificate, CertificateStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::{Dependant, DependantApp, DependantProxy};
+use crate::{CertificateSecretKind, Dependant, DependantApp, DependantCertificate, DependantProxy};
 use futures::future::try_join_all;
 use futures::try_join;
 use itertools::Itertools;
@@ -78,7 +79,7 @@ impl DshApiClient {
         }
       }
     } else {
-      return Err(DshApiError::Unexpected(format!("certificate {} has not configuration", certificate_id), None));
+      return Err(DshApiError::unexpected(format!("certificate {} has not configuration", certificate_id)));
     }
     for (proxy_id, proxy) in proxies {
       if proxy.certificate == certificate_id {
@@ -116,7 +117,7 @@ impl DshApiClient {
       }
       Ok((certificate_status, dependants))
     } else {
-      Err(DshApiError::Unexpected(format!("certificate {} has not configuration", certificate_id), None))
+      Err(DshApiError::unexpected(format!("certificate {} has not configuration", certificate_id)))
     }
   }
 
@@ -160,7 +161,6 @@ impl DshApiClient {
 
     for (certificate_id, certificate_status) in certificate_ids.iter().zip(certificates) {
       let mut dependants: Vec<Dependant<T>> = vec![];
-
       if let Some(certificate_configuration) = &certificate_status.configuration {
         for (app_id, app_catalog_app) in &apps {
           let certificate_resources = certificate_resources_from_app(app_catalog_app)
@@ -173,7 +173,7 @@ impl DshApiClient {
           }
         }
       } else {
-        return Err(DshApiError::Unexpected(format!("certificate {} has not configuration", certificate_id), None));
+        return Err(DshApiError::unexpected(format!("certificate {} has not configuration", certificate_id)));
       }
       for (proxy_id, proxy) in &proxies {
         if proxy.certificate == *certificate_id {
@@ -183,6 +183,21 @@ impl DshApiClient {
       certificates_with_usage.push((certificate_id.clone(), certificate_status, dependants));
     }
     Ok(certificates_with_usage)
+  }
+
+  /// # List all certificates
+  ///
+  /// Returns a list of all certificate ids and their configurations,
+  ///
+  /// # Returns
+  /// * `Ok<Vec<(String, CertificateStatus, Vec<UsedBy>>>` - list of tuples
+  ///   containing the certificate id, certificate configuration and a vector of usages,
+  ///   which can be empty.
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn certificates(&self) -> DshApiResult<Vec<(String, CertificateStatus)>> {
+    let certificate_ids = self.get_certificate_ids().await?;
+    let certificates = try_join_all(certificate_ids.iter().map(|certificate_id| self.get_certificate(certificate_id.as_str()))).await?;
+    Ok(certificate_ids.into_iter().zip(certificates).collect_vec())
   }
 
   /// # List all certificates with usage
@@ -232,4 +247,51 @@ pub fn certificate_resources_from_app(app: &AppCatalogApp) -> Vec<(&str, &Certif
     AppCatalogAppResourcesValue::Certificate(certificate) => Some(certificate),
     _ => None,
   })
+}
+
+/// Find certificates that use a given secret
+///
+/// # Parameters
+/// * `secret_name` - Name of the secret to look for.
+/// * `certificates` - Reference to a list of tuples describing all certificate.
+///   Each tuple consists of:
+///    * `String` - Certificate id.
+///    * [`CertificateStatus`] - Certificate parameters.
+///
+/// # Returns
+/// `Vec<DependantCertificate>` - List of certificates that use the secret.
+pub fn certificates_that_use_secret(secret_name: &str, certificates: &[(String, CertificateStatus)]) -> Vec<DependantCertificate> {
+  let mut dependant_certificates: Vec<DependantCertificate> = vec![];
+  for (certificate_id, certificate_status) in certificates {
+    if let Some(actual_certificate) = &certificate_status.actual {
+      if actual_certificate.cert_chain_secret == secret_name {
+        dependant_certificates.push(DependantCertificate::new(certificate_id.clone(), CertificateSecretKind::CertChainSecret))
+      }
+      if actual_certificate.key_secret == secret_name {
+        dependant_certificates.push(DependantCertificate::new(certificate_id.clone(), CertificateSecretKind::KeySecret))
+      }
+      if actual_certificate
+        .passphrase_secret
+        .as_ref()
+        .is_some_and(|passphrase_secret| passphrase_secret == secret_name)
+      {
+        dependant_certificates.push(DependantCertificate::new(certificate_id.clone(), CertificateSecretKind::PassphraseSecret))
+      }
+    } else if let Some(certificate) = &certificate_status.configuration {
+      if certificate.cert_chain_secret == secret_name {
+        dependant_certificates.push(DependantCertificate::new(certificate_id.clone(), CertificateSecretKind::CertChainSecret))
+      }
+      if certificate.key_secret == secret_name {
+        dependant_certificates.push(DependantCertificate::new(certificate_id.clone(), CertificateSecretKind::KeySecret))
+      }
+      if certificate
+        .passphrase_secret
+        .as_ref()
+        .is_some_and(|passphrase_secret| passphrase_secret == secret_name)
+      {
+        dependant_certificates.push(DependantCertificate::new(certificate_id.clone(), CertificateSecretKind::PassphraseSecret))
+      }
+    }
+  }
+  dependant_certificates
 }
