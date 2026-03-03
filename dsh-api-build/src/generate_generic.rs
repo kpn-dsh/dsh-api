@@ -130,7 +130,7 @@ fn write_method_operations(writer: &mut dyn Write, method: &Method, operations: 
   writeln!(writer, " else {{")?;
   writeln!(
     writer,
-    "      Err(DshApiError::Configuration(format!(\"{} method selector '{{}}' not recognized\", selector)))",
+    "      Err(DshApiError::configuration(format!(\"{} method selector '{{}}' not recognized\", selector)))",
     method
   )?;
   writeln!(writer, "    }}")?;
@@ -213,15 +213,15 @@ fn if_block(operation: &DshApiOperation) -> String {
     .collect_vec();
   if let Some(ref request_body_type) = operation.request_body {
     match request_body_type {
-            RequestBodyType::String => parameters.push(
-                "serde_json::from_str::<String>(body.unwrap().into().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid String\".to_string()))?.to_string()"
-                    .to_string(),
-            ),
-            RequestBodyType::SerializableType(serializable_type) => parameters.push(format!(
-                "&serde_json::from_str::<{}>(body.unwrap().into().as_str()).map_err(|_| DshApiError::Parameter(\"json body could not be parsed as a valid {}\".to_string()))?",
-                serializable_type, serializable_type
-            )),
-        }
+      RequestBodyType::String => parameters.push(
+        "serde_json::from_str::<String>(body.unwrap().into().as_str()).map_err(|_| DshApiError::parameter(\"json body could not be parsed as a valid String\"))?.to_string()"
+          .to_string(),
+      ),
+      RequestBodyType::SerializableType(serializable_type) => parameters.push(format!(
+        "&serde_json::from_str::<{}>(body.unwrap().into().as_str()).map_err(|_| DshApiError::parameter(\"json body could not be parsed as a valid {}\"))?",
+        serializable_type, serializable_type
+      )),
+    }
   }
   let number_of_expected_parameters = if operation.request_body.is_none() { parameters.len() as i64 } else { parameters.len() as i64 - 1 };
   let (parameter_length_check, wrong_parameter_length_error) = match number_of_expected_parameters {
@@ -236,12 +236,12 @@ fn if_block(operation: &DshApiOperation) -> String {
     match operation.request_body {
       Some(ref request_body) => format!(
         r#"}} else if body.is_none() {{
-        Err(DshApiError::Parameter("body expected ({})".to_string()))
+        Err(DshApiError::parameter("body expected ({})"))
       "#,
         request_body
       ),
       None => r#"} else if body.is_some() {
-        Err(DshApiError::Parameter("no body expected".to_string()))
+        Err(DshApiError::parameter("no body expected"))
       "#
       .to_string(),
     }
@@ -266,7 +266,7 @@ fn if_block(operation: &DshApiOperation) -> String {
         if selector == "{selector}" || selector == "{path}" {{
               // {comments}
               if {parameter_length_check} {{
-                Err(DshApiError::Parameter("wrong number of parameters ({wrong_parameter_length_error})".to_string()))
+                Err(DshApiError::parameter("wrong number of parameters ({wrong_parameter_length_error})"))
               {body_check}}} else {{
                 self
                   .{method_name}({parameters_string})
@@ -283,7 +283,7 @@ fn write_empty_method_operations(writer: &mut dyn Write, method: &Method) -> Res
   writeln!(writer, "  ///")?;
   writeln!(writer, "  /// ## There are no supported operations for the `{}` method", method)?;
   writeln!(writer, "  {} {{", method_signature(method, "_"))?;
-  writeln!(writer, "    Err(DshApiError::Configuration(\"no {} methods available\".to_string()))", method)?;
+  writeln!(writer, "    Err(DshApiError::configuration(\"no {} methods available\"))", method)?;
   writeln!(writer, "  }}")?;
   Ok(())
 }
