@@ -117,9 +117,8 @@
 //! * `robot` - Enables the
 //!   [`post_robot_generate_secret()`](DshApiClient::post_robot_generate_secret) operation, which
 //!   will generate a new robot password, invalidating the old password.
-/// # Types generated from openapi file
-use std::cmp::Ordering;
 
+/// # Types generated from openapi file
 #[allow(clippy::clone_on_copy)]
 #[allow(clippy::derivable_impls)]
 #[allow(clippy::large_enum_variant)]
@@ -139,7 +138,9 @@ use crate::error::DshApiError;
 use crate::version::Version;
 use chrono::{TimeZone, Utc};
 use itertools::Itertools;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 use std::sync::LazyLock;
 
@@ -229,7 +230,7 @@ pub struct DependantApp {
 
 impl DependantApp {
   pub fn new(app_id: String, resources: Vec<String>) -> Self {
-    DependantApp { app_id, resources }
+    Self { app_id, resources }
   }
 }
 
@@ -260,21 +261,24 @@ impl Ord for DependantApp {
 /// This struct represents one usage of the resource by an application.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct DependantApplication<T> {
-  /// Identifies the dependant application
+  /// Identifies the dependant application.
   pub application_id: String,
-  /// Number of instances of the dependant application
+  /// Number of instances of the dependant application.
   pub instances: u64,
-  /// Injections that the dependencies originate from
+  /// Injections that the dependencies originate from.
   pub injections: Vec<T>,
 }
 
 impl<T> DependantApplication<T> {
   pub fn new(application_id: String, instances: u64, injections: Vec<T>) -> Self {
-    DependantApplication { application_id, instances, injections }
+    Self { application_id, instances, injections }
   }
 }
 
-impl<T: Display> Display for DependantApplication<T> {
+impl<T> Display for DependantApplication<T>
+where
+  T: Display,
+{
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     write!(f, "{}", self.application_id)?;
     if !self.injections.is_empty() {
@@ -298,6 +302,61 @@ impl<T: Ord> Ord for DependantApplication<T> {
   }
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum CertificateSecretKind {
+  CertChainSecret,
+  KeySecret,
+  PassphraseSecret,
+}
+
+impl Display for CertificateSecretKind {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::CertChainSecret => write!(f, "cert-chain-secret"),
+      Self::KeySecret => write!(f, "key-secret"),
+      Self::PassphraseSecret => write!(f, "passphrase-secret"),
+    }
+  }
+}
+
+/// # Describes a certificate dependency
+///
+/// There are a number of methods that return whether a certain resource (e.g. a secret) is
+/// used by a certificate. This struct represents one usage of the resource by a certificate.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct DependantCertificate {
+  /// Identifies the dependant certificate
+  pub certificate_id: String,
+  /// Kind of secret for the Certificate dependency.
+  pub secret_kind: CertificateSecretKind,
+}
+
+impl DependantCertificate {
+  pub fn new(certificate_id: String, secret_kind: CertificateSecretKind) -> Self {
+    Self { certificate_id, secret_kind }
+  }
+}
+
+impl Display for DependantCertificate {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}:{}", self.certificate_id, self.secret_kind)
+  }
+}
+
+impl PartialOrd<Self> for DependantCertificate {
+  /// Ordering uses `certificate_id` only
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    Some(self.cmp(other))
+  }
+}
+
+impl Ord for DependantCertificate {
+  /// Ordering uses `certificate_id` only
+  fn cmp(&self, other: &Self) -> Ordering {
+    self.certificate_id.cmp(&other.certificate_id)
+  }
+}
+
 /// # Describes a proxy dependency
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
@@ -313,7 +372,7 @@ pub struct DependantProxy {
 
 impl DependantProxy {
   pub fn new(proxy_id: String, instances: u64) -> Self {
-    DependantProxy { proxy_id, instances }
+    Self { proxy_id, instances }
   }
 }
 
@@ -337,6 +396,93 @@ impl Ord for DependantProxy {
   }
 }
 
+/// # Describes a Trifonius dependency
+///
+/// There are a number of methods that return whether a certain resource (e.g. a secret,
+/// a volume or an environment variable) is used by a dependant application.
+/// This struct represents one usage of the resource by an application.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct DependantTrifonius<T> {
+  /// Identifies the dependant application.
+  pub trifonius_id: String,
+  /// Number of instances of the dependant application.
+  pub instances: u64,
+  /// Injections that the dependencies originate from.
+  pub injections: Vec<T>,
+}
+
+static TRIFONIUS_ID_REGEX_NEW: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^([a-z])-([a-z0-9]{8})-([a-z])-([a-z0-9]{8})-([a-z])-(.+)$").unwrap());
+static TRIFONIUS_ID_REGEX_OLD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^([a-z])-([a-z0-9]{6})-([a-z])-([a-z0-9]{6})-([a-z])-([a-z0-9]{6})-(.+)$").unwrap());
+
+/// Returns a string slice with the Trifonius prefix removed
+///
+/// If the string starts with a Trifonius prefix this function returns the substring after
+/// the prefix, wrapped in `Some`. If the string does not start with a Trifonius prefix
+/// `None` will be returned.
+///
+/// There are two types of Trifonius prefixes:
+/// * `f-df87c48f-n-5104548e-p-sleep` (new syntax),
+/// * `p-6aythn-v-a6hrkl-n-7bvetd-metadata-manager` (old syntax).
+///
+/// Although the old syntax will not be used anymore, it is still supported for older builds.
+///
+/// # Examples
+///
+/// ```
+/// # use dsh_api::strip_trifonius_prefix;
+/// assert_eq!(strip_trifonius_prefix("f-df87c48f-n-5104548e-p-sleep"), Some("sleep"));
+/// ```
+pub fn strip_trifonius_prefix(id: &str) -> Option<&str> {
+  match TRIFONIUS_ID_REGEX_NEW.captures(id) {
+    Some(captures_new) => captures_new.get(6).map(|matching| matching.as_str()),
+    None => match TRIFONIUS_ID_REGEX_OLD.captures(id) {
+      Some(captures_old) => captures_old.get(7).map(|matching| matching.as_str()),
+      None => None,
+    },
+  }
+}
+
+impl<T> DependantTrifonius<T> {
+  pub fn new(application_id: String, instances: u64, injections: Vec<T>) -> Self {
+    Self { trifonius_id: application_id, instances, injections }
+  }
+
+  pub fn try_new(application_id: &str, instances: u64, injections: Vec<T>) -> DshApiResult<Self> {
+    if let Some(trifonius_prefix) = strip_trifonius_prefix(application_id) {
+      Ok(Self { trifonius_id: trifonius_prefix.to_string(), instances, injections })
+    } else {
+      Err(DshApiError::NotFound { message: None })
+    }
+  }
+}
+
+impl<T> Display for DependantTrifonius<T>
+where
+  T: Display,
+{
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "tr:{}", self.trifonius_id)?;
+    if !self.injections.is_empty() {
+      write!(f, ": {}", self.injections.iter().map(|inj| inj.to_string()).collect_vec().join(", "))?
+    }
+    Ok(())
+  }
+}
+
+impl<T: Ord> PartialOrd<Self> for DependantTrifonius<T> {
+  /// Ordering uses `application_id` only
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    Some(self.cmp(other))
+  }
+}
+
+impl<T: Ord> Ord for DependantTrifonius<T> {
+  /// Ordering uses `application_id` only
+  fn cmp(&self, other: &Self) -> Ordering {
+    self.trifonius_id.cmp(&other.trifonius_id)
+  }
+}
+
 /// # Describes a app or application dependency
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
@@ -345,31 +491,53 @@ impl Ord for DependantProxy {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Dependant<T> {
   /// Identifies an app dependent on the resource
-  App(DependantApp),
+  App { app: DependantApp },
   /// Identifies an application dependent on the resource
-  Application(DependantApplication<T>),
+  Application { application: DependantApplication<T> },
+  /// Identifies a certificate dependent on the resource
+  Certificate { certificate: DependantCertificate },
   /// Identifies a proxy dependent on the resource
-  Proxy(DependantProxy),
+  Proxy { proxy: DependantProxy },
+  /// Identifies a Trifonius dependent on the resource
+  Trifonius { trifonius: DependantTrifonius<T> },
 }
 
 impl<T> Dependant<T> {
   pub fn app(app_id: String, resources: Vec<String>) -> Self {
-    Dependant::App(DependantApp { app_id, resources })
+    Dependant::App { app: DependantApp::new(app_id, resources) }
   }
 
   pub fn application(application_id: String, instances: u64, injections: Vec<T>) -> Self {
-    Dependant::Application(DependantApplication { application_id, instances, injections })
+    Dependant::Application { application: DependantApplication::new(application_id, instances, injections) }
+  }
+
+  pub fn certificate(certificate_id: String, secret_kind: CertificateSecretKind) -> Self {
+    Dependant::Certificate { certificate: DependantCertificate::new(certificate_id, secret_kind) }
   }
 
   pub fn proxy(proxy_id: String, instances: u64) -> Self {
-    Dependant::Proxy(DependantProxy { proxy_id, instances })
+    Dependant::Proxy { proxy: DependantProxy::new(proxy_id, instances) }
   }
 
-  pub fn id(&self) -> &String {
+  pub fn service(service_id: &str, instances: u64, injections: Vec<T>) -> Self {
+    if let Some(trifonius_id) = strip_trifonius_prefix(service_id) {
+      Self::trifonius(trifonius_id.to_string(), instances, injections)
+    } else {
+      Self::application(service_id.to_string(), instances, injections)
+    }
+  }
+
+  pub fn trifonius(trifonius_id: String, instances: u64, injections: Vec<T>) -> Self {
+    Dependant::Trifonius { trifonius: DependantTrifonius::new(trifonius_id, instances, injections) }
+  }
+
+  pub fn id(&self) -> &str {
     match self {
-      Self::App(app) => &app.app_id,
-      Self::Application(application) => &application.application_id,
-      Self::Proxy(proxy) => &proxy.proxy_id,
+      Self::App { app } => &app.app_id,
+      Self::Application { application } => &application.application_id,
+      Self::Certificate { certificate } => &certificate.certificate_id,
+      Self::Proxy { proxy } => &proxy.proxy_id,
+      Self::Trifonius { trifonius } => &trifonius.trifonius_id,
     }
   }
 }
@@ -377,9 +545,11 @@ impl<T> Dependant<T> {
 impl<T: Display> Display for Dependant<T> {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::App(app) => Display::fmt(app, f),
-      Self::Application(application) => Display::fmt(application, f),
-      Self::Proxy(proxy) => Display::fmt(proxy, f),
+      Self::App { app } => Display::fmt(app, f),
+      Self::Application { application } => Display::fmt(application, f),
+      Self::Certificate { certificate } => Display::fmt(certificate, f),
+      Self::Proxy { proxy } => Display::fmt(proxy, f),
+      Self::Trifonius { trifonius } => Display::fmt(trifonius, f),
     }
   }
 }
@@ -387,23 +557,7 @@ impl<T: Display> Display for Dependant<T> {
 impl<T: PartialOrd> PartialOrd<Self> for Dependant<T> {
   /// Ordering uses `id` only
   fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-    match self {
-      Dependant::App(app) => match other {
-        Dependant::App(other_app) => Some(app.app_id.cmp(&other_app.app_id)),
-        Dependant::Application(other_application) => Some(app.app_id.cmp(&other_application.application_id)),
-        Dependant::Proxy(other_proxy) => Some(app.app_id.cmp(&other_proxy.proxy_id)),
-      },
-      Dependant::Application(application) => match other {
-        Dependant::App(other_app) => Some(application.application_id.cmp(&other_app.app_id)),
-        Dependant::Application(other_application) => Some(application.application_id.cmp(&other_application.application_id)),
-        Dependant::Proxy(other_proxy) => Some(application.application_id.cmp(&other_proxy.proxy_id)),
-      },
-      Dependant::Proxy(proxy) => match other {
-        Dependant::App(other_app) => Some(proxy.proxy_id.cmp(&other_app.app_id)),
-        Dependant::Application(other_application) => Some(proxy.proxy_id.cmp(&other_application.application_id)),
-        Dependant::Proxy(other_proxy) => Some(proxy.proxy_id.cmp(&other_proxy.proxy_id)),
-      },
-    }
+    Some(self.id().cmp(other.id()))
   }
 }
 

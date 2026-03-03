@@ -39,6 +39,7 @@
 
 use crate::app::{app_resources, apps_that_use_secret};
 use crate::application_types::{ApplicationValues, EnvVarInjection};
+use crate::certificate::certificates_that_use_secret;
 use crate::dsh_api_client::DshApiClient;
 use crate::error::DshApiResult;
 use crate::proxy::proxies_that_use_secret;
@@ -47,7 +48,7 @@ use crate::types::{AllocationStatus, Empty, Secret};
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application};
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::{Dependant, DependantApp, DependantApplication, DependantProxy};
+use crate::{Dependant, DependantApp, DependantApplication, DependantCertificate, DependantProxy};
 use futures::try_join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -60,13 +61,34 @@ use std::fmt::{Display, Formatter};
 pub enum SecretInjection {
   /// Environment variable injection, where the value is the name of the environment variable.
   #[serde(rename = "env")]
-  EnvVar(String),
+  EnvVar { env_var_name: String },
+  /// Certificate cert chain secret.
+  #[serde(rename = "cert-chain-secret")]
+  CertChainSecret,
+  /// Certificate key secret.
+  #[serde(rename = "key-secret")]
+  KeySecret,
+  /// Certificate passphrase secret.
+  #[serde(rename = "passphrase-secret")]
+  PassphraseSecret,
+}
+
+impl SecretInjection {
+  pub(crate) fn env_var<T>(env_var_name: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self::EnvVar { env_var_name: env_var_name.into() }
+  }
 }
 
 impl Display for SecretInjection {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      SecretInjection::EnvVar(env_var) => write!(f, "{}", env_var),
+      Self::EnvVar { env_var_name } => write!(f, "{}", env_var_name),
+      Self::CertChainSecret => write!(f, "cert-chain-secret"),
+      Self::KeySecret => write!(f, "key-secret"),
+      Self::PassphraseSecret => write!(f, "passphrase-secret"),
     }
   }
 }
@@ -110,10 +132,14 @@ impl DshApiClient {
     let (applications, apps, proxies) = try_join!(self.get_application_configuration_map(), self.get_appcatalogapp_configuration_map(), self.proxies())?;
     let mut dependants: Vec<Dependant<SecretInjection>> = vec![];
     for application in secret_env_vars_from_applications(secret_name, &applications) {
-      dependants.push(Dependant::application(
-        application.id.to_string(),
+      dependants.push(Dependant::service(
+        application.id,
         application.application.instances,
-        application.values.iter().map(|env_var| SecretInjection::EnvVar(env_var.to_string())).collect_vec(),
+        application
+          .values
+          .iter()
+          .map(|env_var| SecretInjection::EnvVar { env_var_name: env_var.to_string() })
+          .collect_vec(),
       ));
     }
     for (app_id, _, resource_ids) in apps_that_use_secret(secret_name, &apps) {
@@ -188,8 +214,9 @@ impl DshApiClient {
   /// * `Option<String>` - Secret id if the secret is a system secret, else empty.
   /// * `Vec<Dependant>` - List of dependants.
   pub async fn secrets_with_dependants(&self) -> DshApiResult<Vec<(String, Option<String>, Vec<Dependant<SecretInjection>>)>> {
-    let (secret_names, applications, apps, proxies) = try_join!(
+    let (secret_names, certificates, applications, apps, proxies) = try_join!(
       self.secret_names(),
+      self.certificates(),
       self.get_application_configuration_map(),
       self.get_appcatalogapp_configuration_map(),
       self.proxies()
@@ -198,10 +225,14 @@ impl DshApiClient {
     for (secret_name, secret_id) in secret_names {
       let mut dependants: Vec<Dependant<SecretInjection>> = vec![];
       for application in secret_env_vars_from_applications(&secret_name, &applications) {
-        dependants.push(Dependant::application(
-          application.id.to_string(),
+        dependants.push(Dependant::service(
+          application.id,
           application.application.instances,
-          application.values.iter().map(|env_var| SecretInjection::EnvVar(env_var.to_string())).collect_vec(),
+          application
+            .values
+            .iter()
+            .map(|env_var| SecretInjection::EnvVar { env_var_name: env_var.to_string() })
+            .collect_vec(),
         ));
       }
       for (app_id, _, resource_ids) in apps_that_use_secret(&secret_name, &apps) {
@@ -209,6 +240,9 @@ impl DshApiClient {
           app_id.to_string(),
           resource_ids.iter().map(|resource_id| resource_id.to_string()).collect_vec(),
         ));
+      }
+      for dependant_certificate in certificates_that_use_secret(&secret_name, &certificates) {
+        dependants.push(Dependant::Certificate { certificate: dependant_certificate })
       }
       for (proxy_id, proxy) in proxies_that_use_secret(&secret_name, &proxies) {
         dependants.push(Dependant::proxy(proxy_id.to_string(), proxy.instances.get()));
@@ -236,7 +270,11 @@ impl DshApiClient {
         dependant_applications.push(DependantApplication::new(
           application.id.to_string(),
           application.application.instances,
-          application.values.iter().map(|env_var| SecretInjection::EnvVar(env_var.to_string())).collect_vec(),
+          application
+            .values
+            .iter()
+            .map(|env_var| SecretInjection::EnvVar { env_var_name: env_var.to_string() })
+            .collect_vec(),
         ));
       }
       secrets.push((secret_name, secret_id, dependant_applications));
@@ -265,6 +303,28 @@ impl DshApiClient {
         ));
       }
       secrets.push((secret_name, secret_id, dependant_apps));
+    }
+    Ok(secrets)
+  }
+
+  /// # Returns all secrets with dependant certificates
+  ///
+  /// Returns a sorted list of all secrets together with the certificates that use them.
+  ///
+  /// # Returns
+  /// List of tuples (sorted by secret name) where each tuple consists of:
+  /// * `String` - Contains the secret name.
+  /// * `Option<String>` - Secret id if the secret is a system secret, else empty.
+  /// * `Vec<DependantCertificate>` - List of dependant certificates.
+  pub async fn secrets_with_dependant_certificates(&self) -> DshApiResult<Vec<(String, Option<String>, Vec<DependantCertificate>)>> {
+    let (secret_names, certificates) = try_join!(self.secret_names(), self.certificates())?;
+    let mut secrets = Vec::<(String, Option<String>, Vec<DependantCertificate>)>::new();
+    for (secret_name, secret_id) in &secret_names {
+      let mut dependant_certificates: Vec<DependantCertificate> = vec![];
+      for dependant_certificate in certificates_that_use_secret(secret_name, &certificates) {
+        dependant_certificates.push(dependant_certificate);
+      }
+      secrets.push((secret_name.clone(), secret_id.clone(), dependant_certificates));
     }
     Ok(secrets)
   }
