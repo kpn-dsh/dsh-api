@@ -44,17 +44,33 @@ use std::fmt::{Display, Formatter};
 pub enum TopicInjection {
   /// Environment variable injection, where the value is the name of the environment variable.
   #[serde(rename = "env")]
-  EnvVar(String),
+  EnvVar { env_var_name: String },
   /// Topic injection, where the value is the name of the topic.
   #[serde(rename = "topic")]
-  Topic(String),
+  Topic { topic_name: String },
+}
+
+impl TopicInjection {
+  pub(crate) fn env_var<T>(env_var: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self::EnvVar { env_var_name: env_var.into() }
+  }
+
+  pub(crate) fn topic<T>(topic_name: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self::Topic { topic_name: topic_name.into() }
+  }
 }
 
 impl Display for TopicInjection {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      TopicInjection::EnvVar(env_var) => write!(f, "{}", env_var),
-      TopicInjection::Topic(variable) => write!(f, "{{ topic('{}') }}", variable),
+      TopicInjection::EnvVar { env_var_name } => write!(f, "{}", env_var_name),
+      TopicInjection::Topic { topic_name } => write!(f, "{{ topic('{}') }}", topic_name),
     }
   }
 }
@@ -90,11 +106,7 @@ impl DshApiClient {
       dependant_applications.push(DependantApplication::new(
         application.id.to_string(),
         application.application.instances,
-        application
-          .values
-          .iter()
-          .map(|(env_var, _)| TopicInjection::EnvVar(env_var.to_string()))
-          .collect_vec(),
+        application.values.iter().map(|(env_var, _)| TopicInjection::env_var(*env_var)).collect_vec(),
       ));
     }
     Ok(dependant_applications)
@@ -128,8 +140,8 @@ impl DshApiClient {
     let (application_configuration_map, appcatalogapp_configuration_map) = try_join!(self.get_application_configuration_map(), self.get_appcatalogapp_configuration_map())?;
     let mut dependants = Vec::<Dependant<TopicInjection>>::new();
     for application in topic_injections_from_applications(topic_id, &application_configuration_map) {
-      dependants.push(Dependant::application(
-        application.id.to_string(),
+      dependants.push(Dependant::service(
+        application.id,
         application.application.instances,
         application.values.iter().cloned().collect_vec(),
       ));
@@ -156,11 +168,7 @@ impl DshApiClient {
         dependant_applications.push(DependantApplication::new(
           application.id.to_string(),
           application.application.instances,
-          application
-            .values
-            .iter()
-            .map(|(env_var, _)| TopicInjection::EnvVar(env_var.to_string()))
-            .collect_vec(),
+          application.values.iter().map(|(env_var, _)| TopicInjection::env_var(*env_var)).collect_vec(),
         ));
       }
       topics.push((topic_id, dependant_applications));
@@ -200,14 +208,10 @@ impl DshApiClient {
     for topic_id in topic_ids {
       let mut dependants: Vec<Dependant<TopicInjection>> = vec![];
       for application in topic_env_vars_from_applications(topic_id.as_str(), &application_configuration_map) {
-        dependants.push(Dependant::application(
-          application.id.to_string(),
+        dependants.push(Dependant::service(
+          application.id,
           application.application.instances,
-          application
-            .values
-            .iter()
-            .map(|(env_var, _)| TopicInjection::EnvVar(env_var.to_string()))
-            .collect_vec(),
+          application.values.iter().map(|(env_var, _)| TopicInjection::env_var(*env_var)).collect_vec(),
         ));
       }
       for (app_id, _, resource_ids) in apps_that_use_topic(topic_id.as_str(), &appcatalogapp_configuration_map) {
@@ -295,14 +299,14 @@ pub fn topic_injections_from_application(topic_name: &str, application: &Applica
   for (env_key, env_value) in &application.env {
     if let Ok(topic) = TopicString::try_from(env_value.as_str()) {
       if topic.name() == topic_name {
-        topic_injections.push(TopicInjection::EnvVar(env_key.to_string()))
+        topic_injections.push(TopicInjection::env_var(env_key))
       }
     }
   }
   for application_topic in &application.topics {
     if let Ok(topic) = TopicString::try_from(application_topic.as_str()) {
       if topic.name() == topic_name {
-        topic_injections.push(TopicInjection::Topic(application_topic.to_owned()))
+        topic_injections.push(TopicInjection::topic(application_topic))
       }
     }
   }

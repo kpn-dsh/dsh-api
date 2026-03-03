@@ -125,7 +125,7 @@ impl DshApiClient {
       // The token_fetcher.get_bearer_token() method already includes the 'Bearer' prefix
       token_fetcher.get_bearer_token().await
     } else {
-      Err(DshApiError::Configuration("either a static token or a token fetcher must be provided".to_string()))
+      Err(DshApiError::configuration("either a static token or a token fetcher must be provided"))
     }
   }
 
@@ -147,7 +147,7 @@ impl DshApiClient {
       // The token_fetcher.get_bearer_token() method already includes the 'Bearer' prefix
       token_fetcher.get_fresh_bearer_token().await
     } else {
-      Err(DshApiError::Configuration("either a static token or a token fetcher must be provided".to_string()))
+      Err(DshApiError::configuration("either a static token or a token fetcher must be provided"))
     }
   }
 
@@ -165,7 +165,7 @@ impl DshApiClient {
     } else if let Some(token_fetcher) = &self.token_fetcher {
       token_fetcher.get_raw_token().await
     } else {
-      Err(DshApiError::Configuration("either a static token or a token fetcher must be provided".to_string()))
+      Err(DshApiError::configuration("either a static token or a token fetcher must be provided"))
     }
   }
 
@@ -184,7 +184,7 @@ impl DshApiClient {
     } else if let Some(token_fetcher) = &self.token_fetcher {
       token_fetcher.get_fresh_raw_token().await
     } else {
-      Err(DshApiError::Configuration("either a static token or a token fetcher must be provided".to_string()))
+      Err(DshApiError::configuration("either a static token or a token fetcher must be provided"))
     }
   }
 
@@ -197,11 +197,11 @@ impl DshApiClient {
   /// An internal caching mechanism will make sure that no unnecessary calls will be made.
   pub async fn jwt(&self) -> DshApiResult<DshJwt> {
     if let Some(static_token) = &self.static_token {
-      DshJwt::from_str(static_token).map_err(|_| DshApiError::Unexpected("could not parse static jwt token".to_string(), None))
+      DshJwt::from_str(static_token).map_err(|_| DshApiError::unexpected("could not parse static jwt token".to_string()))
     } else if let Some(token_fetcher) = &self.token_fetcher {
       token_fetcher.get_jwt().await
     } else {
-      Err(DshApiError::Configuration("either a static token or a token fetcher must be provided".to_string()))
+      Err(DshApiError::configuration("either a static token or a token fetcher must be provided"))
     }
   }
 
@@ -215,11 +215,11 @@ impl DshApiClient {
   /// For static tokens this method has the same effect as the `jwt()` method.
   pub async fn fresh_jwt(&self) -> DshApiResult<DshJwt> {
     if let Some(static_token) = &self.static_token {
-      DshJwt::from_str(static_token).map_err(|_| DshApiError::Unexpected("could not parse static jwt token".to_string(), None))
+      DshJwt::from_str(static_token).map_err(|_| DshApiError::unexpected("could not parse static jwt token"))
     } else if let Some(token_fetcher) = &self.token_fetcher {
       token_fetcher.get_fresh_jwt().await
     } else {
-      Err(DshApiError::Configuration("either a static token or a token fetcher must be provided".to_string()))
+      Err(DshApiError::configuration("either a static token or a token fetcher must be provided"))
     }
   }
 
@@ -267,11 +267,13 @@ impl DshApiClient {
     }
   }
 
+  // Allow dead_code since this method is used in the generated code
   #[allow(dead_code)]
   pub(crate) async fn process_delete(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<()> {
     self.process_no_content(reqwest_response).await
   }
 
+  // Allow dead_code since this method is used in the generated code
   #[allow(dead_code)]
   pub(crate) async fn process_get_deserializable<T>(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<T>
   where
@@ -296,21 +298,25 @@ impl DshApiClient {
     }
   }
 
+  // Allow dead_code since this method is used in the generated code
   #[allow(dead_code)]
   pub(crate) async fn process_head(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<()> {
     self.process_no_content(reqwest_response).await
   }
 
+  // Allow dead_code since this method is used in the generated code
   #[allow(dead_code)]
   pub(crate) async fn process_patch(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<()> {
     self.process_no_content(reqwest_response).await
   }
 
+  // Allow dead_code since this method is used in the generated code
   #[allow(dead_code)]
   pub(crate) async fn process_post(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<()> {
     self.process_no_content(reqwest_response).await
   }
 
+  // Allow dead_code since this method is used in the generated code
   #[allow(dead_code)]
   pub(crate) async fn process_post_deserializable<T>(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<T>
   where
@@ -325,6 +331,7 @@ impl DshApiClient {
     }
   }
 
+  // Allow dead_code since this method is used in the generated code
   #[allow(dead_code)]
   pub(crate) async fn process_put(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<()> {
     self.process_no_content(reqwest_response).await
@@ -349,13 +356,12 @@ impl DshApiClient {
 
   async fn process_errors<T>(status_code: StatusCode, response: Response) -> DshApiResult<T> {
     match status_code {
-      StatusCode::BAD_REQUEST => Err(DshApiError::BadRequest(Self::get_response_string(response).await)),
-      StatusCode::UNAUTHORIZED => Err(DshApiError::NotAuthorized(Self::get_response_string(response).await)),
-      StatusCode::NOT_FOUND => Err(DshApiError::NotFound(Self::get_response_string(response).await)),
-      unexpected_status_code => Err(DshApiError::Unexpected(
-        format!("unexpected status code: {}", unexpected_status_code),
-        Self::get_response_string(response).await,
-      )),
+      StatusCode::BAD_REQUEST => Err(DshApiError::BadRequest { message: Self::get_response_string(response).await }),
+      StatusCode::UNAUTHORIZED => Err(DshApiError::NotAuthorized { message: Self::get_response_string(response).await }),
+      StatusCode::NOT_FOUND => Err(DshApiError::NotFound { message: Self::get_response_string(response).await }),
+      unexpected_status_code => {
+        Err(DshApiError::Unexpected { message: format!("unexpected status code: {}", unexpected_status_code), cause: Self::get_response_string(response).await })
+      }
     }
   }
 

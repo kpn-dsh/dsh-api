@@ -123,7 +123,7 @@ impl TokenFetcher {
         debug!("default token fetcher");
         Ok(Self::new(tenant, client_secret, None, None))
       }
-      None => Err(DshApiError::Configuration("missing robot password configuration".to_string())),
+      None => Err(DshApiError::configuration("missing robot password configuration")),
     }
   }
 
@@ -184,7 +184,7 @@ impl TokenFetcher {
   }
 
   fn unpack_jwt(container: &AccessTokenContainer) -> DshApiResult<DshJwt> {
-    DshJwt::from_str(container.access_token.as_str()).map_err(|_| DshApiError::Unexpected("could not parse fetched token".to_string(), None))
+    DshJwt::from_str(container.access_token.as_str()).map_err(|_| DshApiError::unexpected("could not parse fetched token"))
   }
 
   // Obtains an access token from the cache if it is available and still valid, otherwise
@@ -265,7 +265,7 @@ impl TokenFetcher {
     match response {
       Ok(response) => {
         if !response.status().is_success() {
-          Err(DshApiError::Unexpected(format!("statuscode {}", response.status()), response.text().await.ok()))
+          Err(DshApiError::Unexpected { message: format!("statuscode {}", response.status()), cause: response.text().await.ok() })
         } else {
           let json = response.text().await?;
           trace!("fetch access token from server -> {}", json);

@@ -59,15 +59,31 @@ use std::fmt::{Debug, Display, Formatter};
 /// # Managed stream, either internal or public
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum Stream {
-  Internal(ManagedStream),
-  Public(PublicManagedStream),
+  Internal { internal_stream: ManagedStream },
+  Public { public_stream: PublicManagedStream },
+}
+
+impl Stream {
+  pub(crate) fn internal<T>(internal_stream: T) -> Self
+  where
+    T: Into<ManagedStream>,
+  {
+    Self::Internal { internal_stream: internal_stream.into() }
+  }
+
+  pub(crate) fn public<T>(public_stream: T) -> Self
+  where
+    T: Into<PublicManagedStream>,
+  {
+    Self::Public { public_stream: public_stream.into() }
+  }
 }
 
 impl Display for Stream {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Stream::Internal(internal_managed_stream) => Display::fmt(&internal_managed_stream, f),
-      Stream::Public(public_managed_stream) => Display::fmt(public_managed_stream, f),
+      Stream::Internal { internal_stream } => Display::fmt(&internal_stream, f),
+      Stream::Public { public_stream } => Display::fmt(public_stream, f),
     }
   }
 }
@@ -148,23 +164,20 @@ impl DshApiClient {
     );
     match r {
       (Err(internal_stream_error), Err(public_stream_error)) => match (internal_stream_error, public_stream_error) {
-        (DshApiError::NotFound(_), DshApiError::NotFound(_)) => Ok(None),
-        (internal_stream_error, DshApiError::NotFound(_)) => Err(internal_stream_error),
-        (DshApiError::NotFound(_), public_stream_error) => Err(public_stream_error),
+        (DshApiError::NotFound { .. }, DshApiError::NotFound { .. }) => Ok(None),
+        (internal_stream_error, DshApiError::NotFound { .. }) => Err(internal_stream_error),
+        (DshApiError::NotFound { .. }, public_stream_error) => Err(public_stream_error),
         (internal_stream_error, _) => Err(internal_stream_error),
       },
       (Ok(internal_stream), Err(public_stream_error)) => match public_stream_error {
-        DshApiError::NotFound(_) => Ok(Some(Stream::Internal(internal_stream))),
+        DshApiError::NotFound { .. } => Ok(Some(Stream::Internal { internal_stream })),
         error => Err(error),
       },
       (Err(internal_stream_error), Ok(public_stream)) => match internal_stream_error {
-        DshApiError::NotFound(_) => Ok(Some(Stream::Public(public_stream))),
+        DshApiError::NotFound { .. } => Ok(Some(Stream::Public { public_stream })),
         error => Err(error),
       },
-      (Ok(_), Ok(_)) => Err(DshApiError::Unexpected(
-        format!("both internal and public managed stream '{}' exist", managed_stream_id),
-        None,
-      )),
+      (Ok(_), Ok(_)) => Err(DshApiError::Unexpected { message: format!("both internal and public managed stream '{}' exist", managed_stream_id), cause: None }),
     }
   }
 
@@ -194,12 +207,12 @@ impl DshApiClient {
     )?;
     let mut tuples: Vec<(ManagedStreamId, Stream)> = internal_ids
       .into_iter()
-      .zip(internal_streams.into_iter().map(Stream::Internal).collect_vec())
+      .zip(internal_streams.into_iter().map(Stream::internal).collect_vec())
       .collect_vec();
     tuples.append(
       &mut public_ids
         .into_iter()
-        .zip(public_streams.into_iter().map(Stream::Public).collect_vec())
+        .zip(public_streams.into_iter().map(Stream::public).collect_vec())
         .collect_vec(),
     );
     tuples.sort_by(|(stream_id_a, _), (stream_id_b, _)| stream_id_a.cmp(stream_id_b));
@@ -261,7 +274,7 @@ impl DshApiClient {
   ///   could not be processed by the DSH
   pub async fn managed_stream_grant_access_rights(&self, managed_stream_id: &ManagedStreamId, managed_tenant_id: &str, access_rights: &AccessRights) -> DshApiResult<Stream> {
     match self.managed_stream_configuration(managed_stream_id).await? {
-      Some(Stream::Internal(internal)) => {
+      Some(Stream::Internal { internal_stream }) => {
         match access_rights {
           AccessRights::Read => self.put_stream_internal_access_read(managed_stream_id.as_str(), managed_tenant_id).await?,
           AccessRights::ReadWrite => {
@@ -272,9 +285,9 @@ impl DshApiClient {
           }
           AccessRights::Write => self.put_stream_internal_access_write(managed_stream_id.as_str(), managed_tenant_id).await?,
         }
-        Ok(Stream::Internal(internal))
+        Ok(Stream::Internal { internal_stream })
       }
-      Some(Stream::Public(public)) => {
+      Some(Stream::Public { public_stream }) => {
         match access_rights {
           AccessRights::Read => self.put_stream_public_access_read(managed_stream_id.as_str(), managed_tenant_id).await?,
           AccessRights::ReadWrite => {
@@ -285,9 +298,9 @@ impl DshApiClient {
           }
           AccessRights::Write => self.put_stream_public_access_write(managed_stream_id.as_str(), managed_tenant_id).await?,
         }
-        Ok(Stream::Public(public))
+        Ok(Stream::Public { public_stream })
       }
-      None => Err(DshApiError::NotFound(Some(format!("managed stream '{}' does not exist", managed_stream_id)))),
+      None => Err(DshApiError::NotFound { message: Some(format!("managed stream '{}' does not exist", managed_stream_id)) }),
     }
   }
 
@@ -305,7 +318,7 @@ impl DshApiClient {
   ///   could not be processed by the DSH
   pub async fn managed_stream_revoke_access_rights(&self, managed_stream_id: &ManagedStreamId, managed_tenant_id: &str, access_rights: &AccessRights) -> DshApiResult<Stream> {
     match self.managed_stream_configuration(managed_stream_id).await? {
-      Some(Stream::Internal(internal)) => {
+      Some(Stream::Internal { internal_stream }) => {
         match access_rights {
           AccessRights::Read => self.delete_stream_internal_access_read(managed_stream_id.as_str(), managed_tenant_id).await?,
           AccessRights::ReadWrite => {
@@ -316,9 +329,9 @@ impl DshApiClient {
           }
           AccessRights::Write => self.delete_stream_internal_access_write(managed_stream_id.as_str(), managed_tenant_id).await?,
         }
-        Ok(Stream::Internal(internal))
+        Ok(Stream::Internal { internal_stream })
       }
-      Some(Stream::Public(public)) => {
+      Some(Stream::Public { public_stream }) => {
         match access_rights {
           AccessRights::Read => self.delete_stream_public_access_read(managed_stream_id.as_str(), managed_tenant_id).await?,
           AccessRights::ReadWrite => {
@@ -329,9 +342,9 @@ impl DshApiClient {
           }
           AccessRights::Write => self.delete_stream_public_access_write(managed_stream_id.as_str(), managed_tenant_id).await?,
         }
-        Ok(Stream::Public(public))
+        Ok(Stream::Public { public_stream })
       }
-      None => Err(DshApiError::NotFound(Some(format!("managed stream '{}' does not exist", managed_stream_id)))),
+      None => Err(DshApiError::NotFound { message: Some(format!("managed stream '{}' does not exist", managed_stream_id)) }),
     }
   }
 
@@ -347,16 +360,16 @@ impl DshApiClient {
   pub async fn managed_stream_tenants_with_access_rights(&self, managed_stream_id: &ManagedStreamId) -> DshApiResult<Vec<(String, AccessRights)>> {
     let (tenant_ids_reads, tenant_ids_writes) = match self.managed_stream_configuration(managed_stream_id).await? {
       Some(stream_configuration) => match stream_configuration {
-        Stream::Internal(_) => try_join!(
+        Stream::Internal { .. } => try_join!(
           self.get_stream_internal_access_reads(managed_stream_id.as_str()),
           self.get_stream_internal_access_writes(managed_stream_id.as_str())
         )?,
-        Stream::Public(_) => try_join!(
+        Stream::Public { .. } => try_join!(
           self.get_stream_public_access_reads(managed_stream_id.as_str()),
           self.get_stream_public_access_writes(managed_stream_id.as_str())
         )?,
       },
-      None => return Err(DshApiError::NotFound(Some(format!("managed stream '{}' does not exist", managed_stream_id)))),
+      None => return Err(DshApiError::NotFound { message: Some(format!("managed stream '{}' does not exist", managed_stream_id)) }),
     };
     let mut tenant_ids = tenant_ids_reads.iter().collect_vec();
     for id in &tenant_ids_writes {

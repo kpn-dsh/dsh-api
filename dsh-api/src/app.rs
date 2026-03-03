@@ -121,7 +121,7 @@ impl DshApiClient {
         app_configurations.sort_by(|(app_id_a, _, _), (app_id_b, _, _)| app_id_a.cmp(app_id_b));
         Ok(app_configurations)
       }
-      Err(error) => Err(DshApiError::Unexpected("error parsing app configuration".to_string(), Some(error.to_string()))),
+      Err(error) => Err(DshApiError::Unexpected { message: "error parsing app configuration".to_string(), cause: Some(error.to_string()) }),
     }
   }
 

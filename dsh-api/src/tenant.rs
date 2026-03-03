@@ -156,8 +156,14 @@ impl DshApiClient {
       self.managed_tenant_granted_public_streams(managed_tenant),
     )
     .await?;
-    let mut internal_streams = internal_streams.into_iter().map(|(a, b, c)| (a, Stream::Internal(b), c)).collect_vec();
-    let mut public_streams = public_streams.into_iter().map(|(a, b, c)| (a, Stream::Public(b), c)).collect_vec();
+    let mut internal_streams = internal_streams
+      .into_iter()
+      .map(|(stream_id, internal_stream, access_rights)| (stream_id, Stream::Internal { internal_stream }, access_rights))
+      .collect_vec();
+    let mut public_streams = public_streams
+      .into_iter()
+      .map(|(stream_id, public_stream, access_rights)| (stream_id, Stream::Public { public_stream }, access_rights))
+      .collect_vec();
     internal_streams.append(&mut public_streams);
     internal_streams.sort_by(|(managed_stream_a, _, _), (managed_stream_b, _, _)| managed_stream_a.cmp(managed_stream_b));
     Ok(internal_streams)
@@ -206,7 +212,7 @@ impl DshApiClient {
   pub async fn managed_tenant_has_internal_read_access(&self, managed_tenant: &str, managed_stream: &ManagedStreamId) -> DshApiResult<bool> {
     match self.head_stream_internal_access_read(managed_stream.as_str(), managed_tenant).await {
       Ok(()) => Ok(true),
-      Err(DshApiError::NotFound(_)) => Ok(false),
+      Err(DshApiError::NotFound { .. }) => Ok(false),
       Err(other_error) => Err(other_error),
     }
   }
@@ -228,7 +234,7 @@ impl DshApiClient {
   pub async fn managed_tenant_has_internal_write_access(&self, managed_tenant: &str, managed_stream: &ManagedStreamId) -> DshApiResult<bool> {
     match self.head_stream_internal_access_write(managed_stream.as_str(), managed_tenant).await {
       Ok(()) => Ok(true),
-      Err(DshApiError::NotFound(_)) => Ok(false),
+      Err(DshApiError::NotFound { .. }) => Ok(false),
       Err(other_error) => Err(other_error),
     }
   }
@@ -250,7 +256,7 @@ impl DshApiClient {
   pub async fn managed_tenant_has_public_read_access(&self, managed_tenant: &str, managed_stream: &ManagedStreamId) -> DshApiResult<bool> {
     match self.head_stream_public_access_read(managed_stream.as_str(), managed_tenant).await {
       Ok(()) => Ok(true),
-      Err(DshApiError::NotFound(_)) => Ok(false),
+      Err(DshApiError::NotFound { .. }) => Ok(false),
       Err(other_error) => Err(other_error),
     }
   }
@@ -272,7 +278,7 @@ impl DshApiClient {
   pub async fn managed_tenant_has_public_write_access(&self, managed_tenant: &str, managed_stream: &ManagedStreamId) -> DshApiResult<bool> {
     match self.head_stream_public_access_write(managed_stream.as_str(), managed_tenant).await {
       Ok(()) => Ok(true),
-      Err(DshApiError::NotFound(_)) => Ok(false),
+      Err(DshApiError::NotFound { .. }) => Ok(false),
       Err(other_error) => Err(other_error),
     }
   }
@@ -387,7 +393,7 @@ impl DshApiClient {
     match kind.to_lowercase().as_str() {
       "certificatecount" => Ok(LimitValue::CertificateCount(LimitValueCertificateCount {
         name: LimitValueCertificateCountName::CertificateCount,
-        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion("illegal certificate count value".to_string()))?,
+        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::conversion("illegal certificate count value"))?,
       })),
       "consumerrate" => Ok(LimitValue::ConsumerRate(LimitValueConsumerRate {
         name: LimitValueConsumerRateName::ConsumerRate,
@@ -400,11 +406,11 @@ impl DshApiClient {
       })),
       "mem" => Ok(LimitValue::Mem(LimitValueMem {
         name: LimitValueMemName::Mem,
-        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion("illegal mem value".to_string()))?,
+        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion { message: "illegal mem value".to_string() })?,
       })),
       "partitioncount" => Ok(LimitValue::PartitionCount(LimitValuePartitionCount {
         name: LimitValuePartitionCountName::PartitionCount,
-        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion("illegal partition count value".to_string()))?,
+        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::conversion("illegal partition count value"))?,
       })),
       "producerrate" => Ok(LimitValue::ProducerRate(LimitValueProducerRate {
         name: LimitValueProducerRateName::ProducerRate,
@@ -412,17 +418,17 @@ impl DshApiClient {
       })),
       "requestrate" => Ok(LimitValue::RequestRate(LimitValueRequestRate {
         name: LimitValueRequestRateName::RequestRate,
-        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion("illegal request rate value".to_string()))?,
+        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::conversion("illegal request rate value"))?,
       })),
       "secretcount" => Ok(LimitValue::SecretCount(LimitValueSecretCount {
         name: LimitValueSecretCountName::SecretCount,
-        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion("illegal secret count value".to_string()))?,
+        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::conversion("illegal secret count value"))?,
       })),
       "topiccount" => Ok(LimitValue::TopicCount(LimitValueTopicCount {
         name: LimitValueTopicCountName::TopicCount,
-        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::Conversion("illegal topic count value".to_string()))?,
+        value: NonZeroU64::new(cpu_value as u64).ok_or(DshApiError::conversion("illegal topic count value"))?,
       })),
-      unrecognized_kind => Err(DshApiError::Conversion(format!("unrecognized limit value kind '{}'", unrecognized_kind))),
+      unrecognized_kind => Err(DshApiError::conversion(format!("unrecognized limit value kind '{}'", unrecognized_kind))),
     }
   }
 }

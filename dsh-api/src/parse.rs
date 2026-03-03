@@ -18,15 +18,15 @@ pub enum AuthString {
   /// `"basic-auth@<realm>:<username>:<password-hash>"` or one of the older formats
   /// that are still supported for backwards compatibility.
   /// The enum fields contain the optional realm string and the username.
-  Basic(Option<String>, String),
+  Basic { realm: Option<String>, username: String },
   /// Represents a forward authentication string, like
   /// `"fwd-auth@<auth service endpoint>@<auth response headers>"`.
   /// The enum field contains the authentication service endpoint and the optional headers string.
-  Fwd(String, Option<String>),
+  Fwd { authentication_service_endpoint: String, headers: Option<String> },
   /// Represents a tenant authentication string, like
   /// `"system-fwd-auth@<accepted roles>"`.
   /// The enum field contains the accepted roles.
-  SystemFwd(String),
+  SystemFwd { accepted_roles: String },
 }
 
 impl AuthString {
@@ -40,7 +40,7 @@ impl AuthString {
     T: Into<String>,
     U: Into<String>,
   {
-    Self::Basic(realm.map(Into::<String>::into), username.into())
+    Self::Basic { realm: realm.map(Into::<String>::into), username: username.into() }
   }
 
   /// # Create an `AuthString::Fwd`
@@ -52,7 +52,7 @@ impl AuthString {
     T: Into<String>,
     U: Into<String>,
   {
-    Self::Fwd(endpoint.into(), headers.map(Into::into))
+    Self::Fwd { authentication_service_endpoint: endpoint.into(), headers: headers.map(Into::into) }
   }
 
   /// # Create an `AuthString::SystemFwd`
@@ -63,7 +63,7 @@ impl AuthString {
   where
     T: Into<String>,
   {
-    Self::SystemFwd(roles.into())
+    Self::SystemFwd { accepted_roles: roles.into() }
   }
 }
 
@@ -117,15 +117,15 @@ impl FromStr for AuthString {
 impl Display for AuthString {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::Basic(realm, username) => match realm {
+      Self::Basic { realm, username } => match realm {
         Some(realm) => write!(f, "basic@{}:{}", realm, username),
         None => write!(f, "basic@{}", username),
       },
-      Self::Fwd(endpoint, headers) => match headers {
-        Some(headers) => write!(f, "fwd@{}@{}", endpoint, headers),
-        None => write!(f, "fwd@{}", endpoint),
+      Self::Fwd { authentication_service_endpoint, headers } => match headers {
+        Some(headers) => write!(f, "fwd@{}@{}", authentication_service_endpoint, headers),
+        None => write!(f, "fwd@{}", authentication_service_endpoint),
       },
-      Self::SystemFwd(roles) => write!(f, "sys-fwd@{}", roles),
+      Self::SystemFwd { accepted_roles } => write!(f, "sys-fwd@{}", accepted_roles),
     }
   }
 }
@@ -161,9 +161,9 @@ pub struct AppImage {
 /// [`Application`](crate::types::Application) data structure.
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub enum ImageString {
-  Registry(RegistryImage),
-  App(AppImage),
-  Unrecognized(String),
+  Registry { image: RegistryImage },
+  App { image: AppImage },
+  Unrecognized { image: String },
 }
 
 impl ImageString {
@@ -175,7 +175,7 @@ impl ImageString {
   /// * `id` - image identifier
   /// * `version` - image version
   pub fn registry(tenant: String, id: String, version: String) -> Self {
-    Self::Registry(RegistryImage { tenant, id, version })
+    Self::Registry { image: RegistryImage { tenant, id, version } }
   }
 
   /// # Create an `ImageString::App`
@@ -187,42 +187,42 @@ impl ImageString {
   /// * `id` - image identifier
   /// * `version` - image version
   pub fn app(stage: String, supplier: String, tenant: String, id: String, version: String) -> Self {
-    Self::App(AppImage { stage, supplier, tenant, id, version })
+    Self::App { image: AppImage { stage, supplier, tenant, id, version } }
   }
 
   /// Get the image id
   pub fn id(&self) -> String {
     match self {
-      ImageString::Registry(registry) => registry.id.clone(),
-      ImageString::App(app) => app.id.clone(),
-      ImageString::Unrecognized(image) => image.to_string(),
+      ImageString::Registry { image } => image.id.clone(),
+      ImageString::App { image } => image.id.clone(),
+      ImageString::Unrecognized { image } => image.to_string(),
     }
   }
 
   /// Get the image id
   pub fn source(&self) -> &str {
     match self {
-      ImageString::Registry(_) => "harbor",
-      ImageString::App(_) => "app-catalog",
-      ImageString::Unrecognized(_) => "",
+      ImageString::Registry { .. } => "harbor",
+      ImageString::App { .. } => "app-catalog",
+      ImageString::Unrecognized { .. } => "",
     }
   }
 
   /// Get the image tenant
   pub fn tenant(&self) -> String {
     match self {
-      ImageString::Registry(registry) => registry.tenant.clone(),
-      ImageString::App(app) => app.tenant.clone(),
-      ImageString::Unrecognized(_) => "".to_string(),
+      ImageString::Registry { image } => image.tenant.clone(),
+      ImageString::App { image } => image.tenant.clone(),
+      ImageString::Unrecognized { .. } => "".to_string(),
     }
   }
 
   /// Get the image version
   pub fn version(&self) -> String {
     match self {
-      ImageString::Registry(registry) => registry.version.clone(),
-      ImageString::App(app) => app.version.clone(),
-      ImageString::Unrecognized(_) => "".to_string(),
+      ImageString::Registry { image } => image.version.clone(),
+      ImageString::App { image } => image.version.clone(),
+      ImageString::Unrecognized { .. } => "".to_string(),
     }
   }
 }
@@ -279,7 +279,7 @@ impl From<&str> for ImageString {
           registry_captures.get(2).map(|id| id.as_str().to_string()).unwrap_or_default(),
           registry_captures.get(3).map(|version| version.as_str().to_string()).unwrap_or_default(),
         ),
-        None => ImageString::Unrecognized(image_string.to_string()),
+        None => ImageString::Unrecognized { image: image_string.to_string() },
       },
     }
   }
@@ -288,50 +288,46 @@ impl From<&str> for ImageString {
 impl Display for ImageString {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      ImageString::Registry(registry_image) => write!(f, "registry:{}:{}:{}", registry_image.tenant, registry_image.id, registry_image.version),
-      ImageString::App(app_image) => write!(
-        f,
-        "app:{}:{}:{}:{}:{}",
-        app_image.stage, app_image.supplier, app_image.tenant, app_image.id, app_image.version
-      ),
-      ImageString::Unrecognized(unrecognized_image) => write!(f, "{}", unrecognized_image),
+      ImageString::Registry { image } => write!(f, "registry:{}:{}:{}", image.tenant, image.id, image.version),
+      ImageString::App { image } => write!(f, "app:{}:{}:{}:{}:{}", image.stage, image.supplier, image.tenant, image.id, image.version),
+      ImageString::Unrecognized { image } => write!(f, "{}", image),
     }
   }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum TopicString<'a> {
-  Internal(&'a str, &'a str),
-  Scratch(&'a str, &'a str),
-  Stream(&'a str, &'a str),
+  Internal { name: &'a str, tenant: &'a str },
+  Scratch { name: &'a str, tenant: &'a str },
+  Stream { name: &'a str, tenant: &'a str },
 }
 
 impl<'a> TopicString<'a> {
   pub fn internal(name: &'a str, tenant: &'a str) -> Self {
-    Self::Internal(name, tenant)
+    Self::Internal { name, tenant }
   }
 
   pub fn scratch(name: &'a str, tenant: &'a str) -> Self {
-    Self::Scratch(name, tenant)
+    Self::Scratch { name, tenant }
   }
 
   pub fn stream(name: &'a str, tenant: &'a str) -> Self {
-    Self::Stream(name, tenant)
+    Self::Stream { name, tenant }
   }
 
   pub fn name(&self) -> &str {
     match self {
-      TopicString::Internal(name, _) => name,
-      TopicString::Scratch(name, _) => name,
-      TopicString::Stream(name, _) => name,
+      TopicString::Internal { name, .. } => name,
+      TopicString::Scratch { name, .. } => name,
+      TopicString::Stream { name, .. } => name,
     }
   }
 
   pub fn tenant(&self) -> &str {
     match self {
-      TopicString::Internal(_, tenant) => tenant,
-      TopicString::Scratch(_, tenant) => tenant,
-      TopicString::Stream(_, tenant) => tenant,
+      TopicString::Internal { tenant, .. } => tenant,
+      TopicString::Scratch { tenant, .. } => tenant,
+      TopicString::Stream { tenant, .. } => tenant,
     }
   }
 }
@@ -347,9 +343,9 @@ impl<'a> TryFrom<&'a str> for TopicString<'a> {
 impl Display for TopicString<'_> {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      TopicString::Internal(name, tenant) => write!(f, "internal.{}.{}", name, tenant),
-      TopicString::Scratch(name, tenant) => write!(f, "scratch.{}.{}", name, tenant),
-      TopicString::Stream(name, tenant) => write!(f, "stream.{}.{}", name, tenant),
+      TopicString::Internal { name, tenant } => write!(f, "internal.{}.{}", name, tenant),
+      TopicString::Scratch { name, tenant } => write!(f, "scratch.{}.{}", name, tenant),
+      TopicString::Stream { name, tenant } => write!(f, "stream.{}.{}", name, tenant),
     }
   }
 }
@@ -382,7 +378,7 @@ pub fn parse_basic_authentication_string(basic_authentication_string: &str) -> R
 /// # Returns
 /// When the provided string is valid, the method returns the function parameter value
 pub fn parse_function1<'a>(string: &'a str, f_name: &str) -> Result<&'a str, String> {
-  static FUNCTION1_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\s*([a-z][a-z0-9_]*)\(\s*'([a-zA-Z0-9_\.-]*)'\s*\)\s*\}").unwrap());
+  static FUNCTION1_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\s*([a-z][a-z0-9_]*)\(\s*'([a-zA-Z0-9_.-]*)'\s*\)\s*}").unwrap());
   match FUNCTION1_REGEX.captures(string).map(|captures| {
     (
       captures.get(1).map(|first_match| first_match.as_str()),
@@ -413,7 +409,7 @@ pub fn parse_function1<'a>(string: &'a str, f_name: &str) -> Result<&'a str, Str
 /// # Returns
 /// When the provided string is valid, the method returns the two function parameter values
 pub fn parse_function2<'a>(string: &'a str, f_name: &str) -> Result<(&'a str, &'a str), String> {
-  static FUNCTION2_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\s*([a-z][a-z0-9_]*)\(\s*'([a-zA-Z0-9_\.-]*)'\s*,\s*'([a-zA-Z0-9_\.-]*)'\s*\)\s*\}").unwrap());
+  static FUNCTION2_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\s*([a-z][a-z0-9_]*)\(\s*'([a-zA-Z0-9_.-]*)'\s*,\s*'([a-zA-Z0-9_.-]*)'\s*\)\s*}").unwrap());
   match FUNCTION2_REGEX.captures(string).map(|captures| {
     (
       captures.get(1).map(|first_match| first_match.as_str()),

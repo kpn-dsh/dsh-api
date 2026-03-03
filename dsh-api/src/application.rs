@@ -50,7 +50,6 @@ use crate::vhost::VhostInjection;
 use crate::volume::VolumeInjection;
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::DshApiError::Unexpected;
 use crate::{bucket, secret, topic, vhost, volume, DependantApplication};
 use futures::future::{join, try_join_all};
 use itertools::Itertools;
@@ -167,11 +166,7 @@ impl DshApiClient {
           DependantApplication::new(
             application_values.id.to_string(),
             application_values.application.instances,
-            application_values
-              .values
-              .iter()
-              .map(|env_var| SecretInjection::EnvVar(env_var.to_string()))
-              .collect_vec(),
+            application_values.values.iter().map(|env_var| SecretInjection::env_var(*env_var)).collect_vec(),
           )
         })
         .collect_vec(),
@@ -191,7 +186,7 @@ impl DshApiClient {
     Ok(
       topic::topic_used_in_applications(topic, &applications)
         .iter()
-        .map(|(application_id, application)| DependantApplication::new(application_id.to_string(), application.instances, vec![TopicInjection::Topic(topic.to_string())]))
+        .map(|(application_id, application)| DependantApplication::new(application_id.to_string(), application.instances, vec![TopicInjection::topic(topic)]))
         .collect_vec(),
     )
   }
@@ -216,7 +211,7 @@ impl DshApiClient {
             application_values
               .values
               .iter()
-              .map(|(port, port_mapping)| VhostInjection::Vhost(port.to_string(), Some(port_mapping.to_string())))
+              .map(|(port, port_mapping)| VhostInjection::vhost(*port, Some(port_mapping.to_string())))
               .collect_vec(),
           )
         })
@@ -241,7 +236,7 @@ impl DshApiClient {
           DependantApplication::new(
             application_values.id.to_string(),
             application_values.application.instances,
-            application_values.values.iter().map(|path| VolumeInjection::Volume(path.to_string())).collect_vec(),
+            application_values.values.iter().map(|path| VolumeInjection::volume(*path)).collect_vec(),
           )
         })
         .collect_vec(),
@@ -317,9 +312,9 @@ impl DshApiClient {
           captures.get(1).unwrap().as_str().parse::<usize>().unwrap(),
           captures.get(2).unwrap().as_str().parse::<usize>().unwrap(),
         )),
-        None => Err(Unexpected(format!("illegal user value {}", application.user), None)),
+        None => Err(DshApiError::unexpected(format!("illegal user value {}", application.user))),
       },
-      None => Err(Unexpected("no applications deployed".to_string(), None)),
+      None => Err(DshApiError::unexpected("no applications deployed")),
     }
   }
 }

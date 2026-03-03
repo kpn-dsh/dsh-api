@@ -11,21 +11,57 @@ pub type DshApiResult<T> = Result<T, DshApiError>;
 #[derive(Clone, Debug, Serialize)]
 pub enum DshApiError {
   /// DSH Api server indicated that the request was not correct (BAD_REQUEST).
-  BadRequest(Option<String>),
+  BadRequest { message: Option<String> },
   /// Misconfiguration error, e.g. a missing environment variable.
-  Configuration(String),
+  Configuration { message: String },
   /// Conversion error, e.g. an unknown attribute.
-  Conversion(String),
+  Conversion { message: String },
   /// Not authorized for the requested operation or resource.
-  NotAuthorized(Option<String>),
+  NotAuthorized { message: Option<String> },
   /// Requested resource does not exist.
-  NotFound(Option<String>),
+  NotFound { message: Option<String> },
   /// Wrong parameters provided.
-  Parameter(String),
+  Parameter { message: String },
   /// Unexpected error occurred.
-  Unexpected(String, Option<String>),
+  Unexpected { message: String, cause: Option<String> },
   /// DSH Api server indicated that the request could not be processed (UNPROCESSABLE_ENTITY).
-  Unprocessable(Option<String>),
+  Unprocessable { message: Option<String> },
+}
+
+impl DshApiError {
+  pub(crate) fn configuration<T>(message: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self::Configuration { message: message.into() }
+  }
+
+  pub(crate) fn conversion<T>(message: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self::Conversion { message: message.into() }
+  }
+
+  pub(crate) fn not_found() -> Self {
+    Self::NotFound { message: None }
+  }
+
+  // Allow dead_code since this method is used in the generated code
+  #[allow(dead_code)]
+  pub(crate) fn parameter<T>(message: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self::Conversion { message: message.into() }
+  }
+
+  pub(crate) fn unexpected<T>(message: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self::Unexpected { message: message.into(), cause: None }
+  }
 }
 
 /// Creates a closure that error logs a formatted string and returns the closure's argument.
@@ -73,26 +109,26 @@ impl Error for DshApiError {}
 impl Display for DshApiError {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      DshApiError::BadRequest(message) => match message {
+      DshApiError::BadRequest { message } => match message {
         Some(message) => write!(f, "bad request: {}", message),
         None => write!(f, "bad request"),
       },
-      DshApiError::Configuration(message) => write!(f, "configuration error: {}", message),
-      DshApiError::Conversion(message) => write!(f, "conversion error: {}", message),
-      DshApiError::NotAuthorized(cause) => match cause {
-        Some(cause_message) => write!(f, "not authorized: {}", cause_message),
+      DshApiError::Configuration { message } => write!(f, "configuration error: {}", message),
+      DshApiError::Conversion { message } => write!(f, "conversion error: {}", message),
+      DshApiError::NotAuthorized { message } => match message {
+        Some(message) => write!(f, "not authorized: {}", message),
         None => write!(f, "not authorized"),
       },
-      DshApiError::NotFound(cause) => match cause {
-        Some(cause_message) => write!(f, "not found: {}", cause_message),
+      DshApiError::NotFound { message } => match message {
+        Some(message) => write!(f, "not found: {}", message),
         None => write!(f, "not found"),
       },
-      DshApiError::Parameter(message) => write!(f, "parameter error: {}", message),
-      DshApiError::Unexpected(message, cause) => match cause {
+      DshApiError::Parameter { message } => write!(f, "parameter error: {}", message),
+      DshApiError::Unexpected { message, cause } => match cause {
         Some(cause) => write!(f, "unexpected error: {} ({})", message, cause),
         None => write!(f, "unexpected error: {}", message),
       },
-      DshApiError::Unprocessable(message) => match message {
+      DshApiError::Unprocessable { message } => match message {
         Some(message) => write!(f, "unprocessable entity: {}", message),
         None => write!(f, "unprocessable entity"),
       },
@@ -101,56 +137,56 @@ impl Display for DshApiError {
 }
 
 impl From<crate::types::error::ConversionError> for DshApiError {
-  fn from(value: crate::types::error::ConversionError) -> Self {
-    DshApiError::Unexpected(value.to_string(), None)
+  fn from(conversion_error: crate::types::error::ConversionError) -> Self {
+    DshApiError::unexpected(conversion_error.to_string())
   }
 }
 
 impl From<serde_json::Error> for DshApiError {
-  fn from(error: serde_json::Error) -> Self {
-    DshApiError::Conversion(error.to_string())
+  fn from(json_error: serde_json::Error) -> Self {
+    DshApiError::conversion(json_error.to_string())
   }
 }
 
 impl From<reqwest::Error> for DshApiError {
-  fn from(error: reqwest::Error) -> Self {
-    DshApiError::Unexpected(error.to_string(), None)
+  fn from(reqwest_error: reqwest::Error) -> Self {
+    DshApiError::unexpected(reqwest_error.to_string())
   }
 }
 
 impl From<InvalidHeaderValue> for DshApiError {
-  fn from(error: InvalidHeaderValue) -> Self {
-    DshApiError::Unexpected(error.to_string(), None)
+  fn from(invalid_header_error: InvalidHeaderValue) -> Self {
+    DshApiError::unexpected(invalid_header_error.to_string())
   }
 }
 
 impl<T> From<PoisonError<T>> for DshApiError {
-  fn from(value: PoisonError<T>) -> Self {
-    DshApiError::Unexpected("mutex error".to_string(), Some(value.to_string()))
+  fn from(poison_value: PoisonError<T>) -> Self {
+    DshApiError::Unexpected { message: "mutex error".to_string(), cause: Some(poison_value.to_string()) }
   }
 }
 
 impl From<std::str::Utf8Error> for DshApiError {
-  fn from(error: std::str::Utf8Error) -> Self {
-    DshApiError::Unexpected(error.to_string(), None)
+  fn from(utf8_error: std::str::Utf8Error) -> Self {
+    DshApiError::unexpected(utf8_error.to_string())
   }
 }
 
 impl From<String> for DshApiError {
-  fn from(value: String) -> Self {
-    DshApiError::Unexpected(value, None)
+  fn from(message: String) -> Self {
+    DshApiError::unexpected(message)
   }
 }
 
 impl From<&str> for DshApiError {
-  fn from(value: &str) -> Self {
-    DshApiError::Unexpected(value.to_string(), None)
+  fn from(message: &str) -> Self {
+    DshApiError::unexpected(message)
   }
 }
 
 impl From<std::time::SystemTimeError> for DshApiError {
-  fn from(value: std::time::SystemTimeError) -> Self {
-    DshApiError::Unexpected("system time error".to_string(), Some(value.to_string()))
+  fn from(system_time_error: std::time::SystemTimeError) -> Self {
+    DshApiError::Unexpected { message: "system time error".to_string(), cause: Some(system_time_error.to_string()) }
   }
 }
 

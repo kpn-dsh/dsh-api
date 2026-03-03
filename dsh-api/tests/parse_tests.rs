@@ -110,7 +110,7 @@ fn test_parse_image_string() {
   );
   assert_eq!(
     ImageString::from("registry/greenbox-dev/postgres:pooria.20241211.1"),
-    ImageString::Unrecognized("registry/greenbox-dev/postgres:pooria.20241211.1".to_string())
+    ImageString::Unrecognized { image: "registry/greenbox-dev/postgres:pooria.20241211.1".to_string() }
   );
 }
 

@@ -11,9 +11,9 @@ use std::fmt::{Display, Formatter};
 #[derive(Debug, PartialEq)]
 pub enum Part {
   /// Represents a part of a string that did match the query.
-  Matching(String),
+  Matching { part: String },
   /// Represents a part of a string that did not match the query.
-  NonMatching(String),
+  NonMatching { part: String },
 }
 
 #[derive(Debug, PartialEq)]
@@ -22,9 +22,9 @@ pub enum Match {
   /// - Kind of expression,
   /// - First parameter,
   /// - Optional second parameter.
-  Expression(String, String, Option<String>),
+  Expression { kind: String, first_parameter: String, second_parameter: Option<String> },
   /// Matching and non-matching parts
-  Parts(Vec<Part>),
+  Parts { parts: Vec<Part> },
   /// Simple match
   Simple,
 }
@@ -260,12 +260,12 @@ impl QueryProcessor for StringQueryProcessor {
       }
     } else if self.ignore_case {
       if self.string.eq_ignore_ascii_case(haystack) {
-        Some(vec![Matching(haystack.to_string())])
+        Some(vec![Matching { part: haystack.to_string() }])
       } else {
         None
       }
     } else if self.string == haystack {
-      Some(vec![Matching(haystack.to_string())])
+      Some(vec![Matching { part: haystack.to_string() }])
     } else {
       None
     }
@@ -388,7 +388,7 @@ impl RegexQueryProcessor {
   pub fn create<T: TryInto<Regex>>(pattern: T) -> DshApiResult<Self> {
     match pattern.try_into() {
       Ok(regex) => Ok(Self { regex }),
-      Err(_) => Err(DshApiError::Configuration("illegal regular expression".to_string())),
+      Err(_) => Err(DshApiError::configuration("illegal regular expression")),
     }
   }
 }
@@ -533,31 +533,31 @@ impl Part {
   /// # Create a `Part::Matching`
   ///
   /// # Parameters
-  /// `value` - the value of this `Part::Matching`
+  /// `matching_part` - Value of this `Part::Matching`
   ///
   /// # Returns
   /// The created instance.
-  pub fn matching(value: impl Into<String>) -> Part {
-    Matching(value.into())
+  pub fn matching(matching_part: impl Into<String>) -> Part {
+    Matching { part: matching_part.into() }
   }
 
   /// # Create a `Part::NonMatching`
   ///
   /// # Parameters
-  /// `value` - the value of this `Part::NonMatching`
+  /// `non_matching_part` - the value of this `Part::NonMatching`
   ///
   /// # Returns
   /// The created instance.
-  pub fn non_matching(value: impl Into<String>) -> Part {
-    NonMatching(value.into())
+  pub fn non_matching(non_matching_part: impl Into<String>) -> Part {
+    NonMatching { part: non_matching_part.into() }
   }
 }
 
 impl Display for Part {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Matching(part) => write!(f, "{}", part),
-      NonMatching(part) => write!(f, "{}", part),
+      Matching { part } => write!(f, "{}", part),
+      NonMatching { part } => write!(f, "{}", part),
     }
   }
 }
@@ -569,11 +569,11 @@ impl Match {
     U: Into<String>,
     V: Into<String>,
   {
-    Match::Expression(kind.into(), first_parameter.into(), second_parameter.map(|sp| sp.into()))
+    Match::Expression { kind: kind.into(), first_parameter: first_parameter.into(), second_parameter: second_parameter.map(|sp| sp.into()) }
   }
 
   pub fn parts(parts: Vec<Part>) -> Self {
-    Match::Parts(parts)
+    Match::Parts { parts }
   }
 
   pub fn simple() -> Self {
@@ -584,11 +584,11 @@ impl Match {
 impl Display for Match {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Match::Expression(kind, first_parameter, second_parameter) => match second_parameter {
+      Match::Expression { kind, first_parameter, second_parameter } => match second_parameter {
         Some(second) => write!(f, "{{ {}('{}', '{}') }}", kind, first_parameter, second),
         None => write!(f, "{{ {}('{}') }}", kind, first_parameter),
       },
-      Match::Parts(parts) => write!(f, "{}", parts.iter().join("")),
+      Match::Parts { parts } => write!(f, "{}", parts.iter().join("")),
       Match::Simple => write!(f, "match"),
     }
   }

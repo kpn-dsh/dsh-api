@@ -48,23 +48,33 @@ use std::sync::LazyLock;
 pub enum VhostInjection {
   /// Environment variable injection, where the value is the name of the environment variable.
   #[serde(rename = "env")]
-  EnvVar(String),
+  EnvVar { env_var_name: String },
   /// Variable function, where the values are the name of the function and the parameter.
   #[serde(rename = "variable")]
-  Variable(String),
+  Variable { variable_name: String },
   /// Vhost injection, where the values are the exposed port and the zone
   #[serde(rename = "vhost")]
-  Vhost(String, Option<String>),
+  Vhost { exposed_port: String, zone: Option<String> },
+}
+
+impl VhostInjection {
+  pub(crate) fn vhost<S, T>(exposed_port: S, zone: Option<T>) -> Self
+  where
+    S: Into<String>,
+    T: Into<String>,
+  {
+    Self::Vhost { exposed_port: exposed_port.into(), zone: zone.map(|zone| zone.into()) }
+  }
 }
 
 impl Display for VhostInjection {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      VhostInjection::EnvVar(env_var) => write!(f, "{}", env_var),
-      VhostInjection::Variable(variable) => write!(f, "{{ vhost('{}') }}", variable),
-      VhostInjection::Vhost(port, zone) => match zone {
-        Some(a_zone) => write!(f, "vhost({}:{})", port, a_zone),
-        None => write!(f, "{}", port),
+      VhostInjection::EnvVar { env_var_name } => write!(f, "{}", env_var_name),
+      VhostInjection::Variable { variable_name } => write!(f, "{{ vhost('{}') }}", variable_name),
+      VhostInjection::Vhost { exposed_port, zone } => match zone {
+        Some(a_zone) => write!(f, "vhost({}:{})", exposed_port, a_zone),
+        None => write!(f, "{}", exposed_port),
       },
     }
   }
@@ -84,7 +94,7 @@ impl DshApiClient {
         dependant_applications.push(DependantApplication::new(
           id.to_string(),
           application.instances,
-          vec![VhostInjection::Vhost(port.to_string(), None)],
+          vec![VhostInjection::Vhost { exposed_port: port.to_string(), zone: None }],
         ));
       }
     }
@@ -125,10 +135,10 @@ impl DshApiClient {
     for ApplicationValues { id, application, values } in vhosts_from_applications(&application_configuration_map) {
       for (vhost, port, _) in values {
         let dependants = vhosts_with_dependants_map.entry(vhost.clone()).or_default();
-        dependants.push(Dependant::application(
-          id.to_string(),
+        dependants.push(Dependant::service(
+          id,
           application.instances,
-          vec![VhostInjection::Vhost(port.to_string(), None)],
+          vec![VhostInjection::Vhost { exposed_port: port.to_string(), zone: None }],
         ));
       }
     }

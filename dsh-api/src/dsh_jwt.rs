@@ -144,7 +144,7 @@ impl DshJwtPayload {
         permissions.sort_by(|permission_a, permission_b| permission_a.tenant.cmp(&permission_b.tenant));
         Ok(permissions)
       }
-      None => Err(DshApiError::NotFound(Some("token does not contain permissions".to_string()))),
+      None => Err(DshApiError::NotFound { message: Some("token does not contain permissions".to_string()) }),
     }
   }
 
@@ -204,15 +204,15 @@ pub fn jwt_into_header_payload_json(jwt: &str) -> DshApiResult<(String, String)>
 /// * Ok((DshJwtHeader, DshJwtPayload)) - Tuple with header and payload structs.
 pub fn jwt_into_header_payload(jwt: &str) -> DshApiResult<(DshJwtHeader, DshJwtPayload)> {
   let (header_json, payload_json) = jwt_into_header_payload_json(jwt)?;
-  let header = serde_json::from_str::<DshJwtHeader>(&header_json).map_err(|json_error| DshApiError::Conversion(format!("header contains invalid json ({})", json_error)))?;
-  let payload = serde_json::from_str::<DshJwtPayload>(&payload_json).map_err(|json_error| DshApiError::Conversion(format!("payload contains invalid json ({})", json_error)))?;
+  let header = serde_json::from_str::<DshJwtHeader>(&header_json).map_err(|json_error| DshApiError::conversion(format!("header contains invalid json ({})", json_error)))?;
+  let payload = serde_json::from_str::<DshJwtPayload>(&payload_json).map_err(|json_error| DshApiError::conversion(format!("payload contains invalid json ({})", json_error)))?;
   Ok((header, payload))
 }
 
 fn split_jwt_to_parts(jwt: &str) -> DshApiResult<(&str, &str, &str)> {
   let parts: Vec<&str> = jwt.split('.').collect();
   if parts.len() != 3 {
-    Err(DshApiError::Conversion("invalid jwt token".to_string()))
+    Err(DshApiError::conversion("invalid jwt token"))
   } else {
     Ok((parts[0], parts[1], parts[2]))
   }
@@ -221,8 +221,8 @@ fn split_jwt_to_parts(jwt: &str) -> DshApiResult<(&str, &str, &str)> {
 fn decode_part(kind: &str, part: &str) -> DshApiResult<String> {
   STANDARD_NO_PAD
     .decode(part.as_bytes())
-    .map_err(|_| DshApiError::Conversion(format!("could not decode {}", kind)))
-    .and_then(|decoded_header| String::from_utf8(decoded_header).map_err(|_| DshApiError::Conversion(format!("{} contains invalid utf8", kind))))
+    .map_err(|_| DshApiError::conversion(format!("could not decode {}", kind)))
+    .and_then(|decoded_header| String::from_utf8(decoded_header).map_err(|_| DshApiError::conversion(format!("{} contains invalid utf8", kind))))
 }
 
 impl FromStr for DshJwt {
@@ -326,7 +326,7 @@ impl FromStr for DshPermission {
           view: kind == "view",
         })
       }
-      None => Err(DshApiError::Conversion("illegal permission representation".to_string())),
+      None => Err(DshApiError::conversion("illegal permission representation")),
     }
   }
 }

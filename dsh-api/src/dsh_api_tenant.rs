@@ -145,7 +145,7 @@ impl DshApiTenant {
   pub fn from_platform(platform: DshPlatform) -> DshApiResult<Self> {
     let tenant_name = match env::var(ENV_VAR_TENANT) {
       Ok(name) => name,
-      Err(_) => return Err(DshApiError::Configuration(format!("environment variable {} not set", ENV_VAR_TENANT))),
+      Err(_) => return Err(DshApiError::configuration(format!("environment variable {} not set", ENV_VAR_TENANT))),
     };
     Ok(DshApiTenant::new(tenant_name, platform))
   }
@@ -232,6 +232,6 @@ fn get_default_tenant_name() -> DshApiResult<String> {
       debug!("tenant '{}' (environment variable '{}')", tenant_name, ENV_VAR_TENANT);
       Ok(tenant_name)
     }
-    Err(_) => Err(DshApiError::Configuration(format!("environment variable '{}' not set", ENV_VAR_TENANT))),
+    Err(_) => Err(DshApiError::configuration(format!("environment variable '{}' not set", ENV_VAR_TENANT))),
   }
 }

@@ -256,7 +256,7 @@ impl DshApiClientFactory {
         debug!("default dsh api client factory with token fetcher");
         Ok(DshApiClientFactory::create_with_token_fetcher(tenant, robot_password))
       }
-      None => Err(DshApiError::Configuration("missing default configuration for token fetcher".to_string())),
+      None => Err(DshApiError::configuration("missing default configuration for token fetcher")),
     }
   }
 
@@ -288,7 +288,7 @@ impl DshApiClientFactory {
         debug!("default dsh api client factory with static token");
         Ok(DshApiClientFactory::create_from_static_token(tenant, static_token))
       }
-      None => Err(DshApiError::Configuration("missing default configuration for static token".to_string())),
+      None => Err(DshApiError::configuration("missing default configuration for static token")),
     }
   }
 
@@ -326,7 +326,7 @@ impl DshApiClientFactory {
           debug!("default dsh api client factory with static token");
           Ok(DshApiClientFactory::create_from_static_token(tenant, static_token))
         }
-        None => Err(DshApiError::Configuration("missing robot password or static token configuration".to_string())),
+        None => Err(DshApiError::configuration("missing robot password or static token configuration")),
       },
     }
   }
@@ -553,7 +553,7 @@ fn get_password(tenant: &DshApiTenant, password_env_var_prefix: &str, password_f
             password_file_from_env_var, password_file_env_var
           );
           error!("{}", message);
-          Err(DshApiError::Configuration(message))
+          Err(DshApiError::configuration(message))
         } else {
           debug!(
             "password read from file '{}' (environment variable '{}')",
@@ -569,7 +569,7 @@ fn get_password(tenant: &DshApiTenant, password_env_var_prefix: &str, password_f
             password_file_from_env_var, password_file_env_var
           );
           error!("{}", message);
-          Err(DshApiError::NotFound(Some(message)))
+          Err(DshApiError::NotFound { message: Some(message) })
         }
         _ => {
           let message = format!(
@@ -577,7 +577,7 @@ fn get_password(tenant: &DshApiTenant, password_env_var_prefix: &str, password_f
             password_file_from_env_var, password_file_env_var
           );
           error!("{}", message);
-          Err(DshApiError::Unexpected(message, Some(io_error.to_string())))
+          Err(DshApiError::Unexpected { message, cause: Some(io_error.to_string()) })
         }
       },
     },
