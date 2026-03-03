@@ -62,7 +62,13 @@ async fn main() -> Result<(), String> {
       }
 
       for dependant in dependants {
-        println!("  {}", dependant);
+        match dependant {
+          Dependant::App { app } => println!("  app -> {}", app),
+          Dependant::Application { application } => println!("  service -> {}", application),
+          Dependant::Certificate { certificate } => println!("  certificate -> {}", certificate),
+          Dependant::Proxy { proxy } => println!("  proxy -> {}", proxy),
+          Dependant::Trifonius { trifonius } => println!("  trifonius -> {}", trifonius),
+        }
       }
     }
   }
