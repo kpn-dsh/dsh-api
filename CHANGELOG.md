@@ -17,6 +17,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 * Added function `secret_name`.
 * Added `Trifonius` as a separate dependency.
 * Added `secrets_with_dependant_certificates` method.
+* Added `render_message` method to `Notification`.
 
 ### Changed
 

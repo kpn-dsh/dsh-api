@@ -38,6 +38,7 @@
 //! * [`NodeFeatures::fmt()`](NodeFeatures::fmt)
 //! * [`NodepoolActual::fmt()`](NodepoolActual::fmt)
 //! * [`Notification::fmt()`](Notification::fmt)
+//! * [`Notification::render_message()`](Notification::render_message)
 //! * [`PathSpec::fmt()`](PathSpec::fmt)
 //! * [`PortMapping::fmt()`](PortMapping::fmt)
 //! * [`PublicManagedStream::fmt()`](PublicManagedStream::fmt)
@@ -371,22 +372,35 @@ impl Display for NodepoolActual {
   }
 }
 
+impl Notification {
+  /// Renders the message
+  ///
+  /// Uses the values in the `args` hashmap to replace the placeholders with the appropriate
+  /// values in the `message` template.
+  pub fn render_message(&self) -> String {
+    let mut result = self.message.to_string();
+    for (key, value) in &self.args {
+      if let Some((_, suffix)) = value.rsplit_once("/") {
+        result = result.replace(&format!("${{urn:{}}}", key), suffix);
+      } else {
+        result = result.replace(&format!("${{{}}}", key), value);
+      }
+    }
+    result
+  }
+}
+
 impl Display for Notification {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    if f.alternate() {
-      write!(f, "remove: {}", self.remove)?;
-      if !self.args.is_empty() {
-        write!(
-          f,
-          ", args: {}",
-          self.args.iter().map(|(key, value)| format!("{}->{}", key, value)).collect_vec().join(", ")
-        )?;
-      }
-      write!(f, ", message: {}", self.message)
-    } else if self.remove {
-      write!(f, "remove: {}", self.message)
+    if self.remove {
+      write!(f, "remove")?;
     } else {
-      write!(f, "{}", self.message)
+      write!(f, "creation/update")?;
+    }
+    if f.alternate() {
+      write!(f, ":{}", self.render_message())
+    } else {
+      Ok(())
     }
   }
 }
