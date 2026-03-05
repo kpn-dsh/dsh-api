@@ -398,7 +398,7 @@ impl Display for Notification {
       write!(f, "creation/update")?;
     }
     if f.alternate() {
-      write!(f, ":{}", self.render_message())
+      write!(f, ": {}", self.render_message())
     } else {
       Ok(())
     }
