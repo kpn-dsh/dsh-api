@@ -10,7 +10,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.8.1" 
+dsh_api = "0.9.0" 
 ```
 
 ### Minimal example
@@ -55,10 +55,10 @@ use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::dsh_api_tenant::DshApiTenant;
 use dsh_api::platform::DshPlatform;
 use dsh_api::types::Application;
-use dsh_api::DshApiError;
+use dsh_api::error::DshApiResult;
 
 #[tokio::main]
-async fn main() -> Result<(), DshApiError> {
+async fn main() -> DshApiResult<()> {
     let tenant = DshApiTenant::new(
         "my-tenant".to_string(),
         DshPlatform::try_from("np-aws-lz-dsh")?
@@ -91,7 +91,7 @@ The generic methods requires the `generic` feature to be enabled:
 
 ```toml
 [dependencies]
-dsh_api = { version = "0.8.1", features = ["generic"] }
+dsh_api = { version = "0.9.0", features = ["generic"] }
 ```
 
 The example below will add a new secret to the tenant's secret store.
@@ -135,6 +135,11 @@ async fn main() -> DshApiResult<()> {
     client.post("secret", &[], Some(secret_json)).await
 }
 ```
+
+## Logging
+
+The crate generates `error`, `debug` and `trace` level logging information via the Rust `log`
+framework. No logging with higher logging levels will be generated.
 
 ## Environment variables
 

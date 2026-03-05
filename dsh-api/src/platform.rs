@@ -2,11 +2,11 @@
 
 use crate::{DEFAULT_PLATFORMS, ENV_VAR_PLATFORM, ENV_VAR_PLATFORMS_FILE_NAME};
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use std::sync::LazyLock;
 use std::{env, fs};
 
 /// # Describes the DSH platforms and their properties
@@ -41,6 +41,7 @@ pub struct DshPlatform {
   #[serde(rename = "cloud-provider")]
   cloud_provider: CloudProvider,
   region: Option<String>,
+  #[serde(alias = "issuer-endpoint")]
   issuer_endpoint: String,
   realm: String,
   #[serde(rename = "public-domain")]
@@ -52,10 +53,10 @@ pub struct DshPlatform {
 /// # Cloud service provider that hosts a platform
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum CloudProvider {
-  /// # Amazon Web Services
+  /// Amazon Web Services
   #[serde(rename = "aws")]
   AWS,
-  /// # Microsoft Azure
+  /// Microsoft Azure
   #[serde(rename = "azure")]
   Azure,
 }
@@ -199,6 +200,40 @@ impl DshPlatform {
     &self.description
   }
 
+  /// Returns the endpoint for the http messaging api (multi)
+  ///
+  /// # Parameters
+  /// * `mqtt_topic` - Mqtt topic name.
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").http_messaging_api_url_multi("my-topic"),
+  ///   "https://api.dsh-dev.dsh.np.aws.kpn.com/data/v0/multi/my-topic".to_string()
+  /// );
+  /// ```
+  pub fn http_messaging_api_url_multi(&self, mqtt_topic: impl Display) -> String {
+    format!("https://{}/data/v0/multi/{}", self.rest_api_domain(), mqtt_topic)
+  }
+
+  /// Returns the endpoint for the http messaging api (single)
+  ///
+  /// # Parameters
+  /// * `mqtt_topic` - Mqtt topic name.
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").http_messaging_api_url_single("my-topic"),
+  ///   "https://api.dsh-dev.dsh.np.aws.kpn.com/data/v0/single/my-topic".to_string()
+  /// );
+  /// ```
+  pub fn http_messaging_api_url_single(&self, mqtt_topic: impl Display) -> String {
+    format!("https://{}/data/v0/single/{}", self.rest_api_domain(), mqtt_topic)
+  }
+
   /// # Returns the internal domain name for a tenant
   ///
   /// # Examples
@@ -250,6 +285,35 @@ impl DshPlatform {
   /// ```
   pub fn is_production(&self) -> bool {
     self.is_production
+  }
+
+  /// Returns the endpoint for the mqtt messaging api
+  ///
+  /// It is preferred to use the endpoint in the mqtt token.
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").mqtt_messaging_api_endpoint(),
+  ///   "mqtt.dsh-dev.dsh.np.aws.kpn.com".to_string()
+  /// );
+  /// ```
+  pub fn mqtt_messaging_api_endpoint(&self) -> String {
+    format!("mqtt.{}", self.public_domain())
+  }
+
+  /// Returns the port for the mqtt messaging api
+  ///
+  /// It is preferred to use the endpoint in the mqtt token.
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(DshPlatform::new("nplz").mqtt_messaging_api_port(), 8883);
+  /// ```
+  pub fn mqtt_messaging_api_port(&self) -> usize {
+    8883
   }
 
   /// Returns the endpoint for fetching an MQTT token
@@ -314,6 +378,116 @@ impl DshPlatform {
   /// ```
   pub fn private_domain(&self) -> Option<&str> {
     self.private_domain.as_deref()
+  }
+
+  /// # Returns the proxy broker vhost
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
+  /// * `number` - Proxy broker number.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").proxy_broker_vhost("my-tenant", "my-proxy", 2),
+  ///   "my-proxy-2.my-tenant.np-aws-lz-dsh.kpn-dsh.com".to_string()
+  /// );
+  /// ```
+  pub fn proxy_broker_vhost(&self, tenant_name: impl Display, proxy_name: impl Display, number: usize) -> String {
+    format!("{}-{}.{}", proxy_name, number, self.proxy_vhost_domain(tenant_name))
+  }
+
+  /// # Returns the proxy common name
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").proxy_common_name("my-tenant"),
+  ///   "brokers.kafka.my-tenant.np-aws-lz-dsh.kpn-dsh.com".to_string()
+  /// );
+  /// ```
+  pub fn proxy_common_name(&self, tenant_name: impl Display) -> String {
+    format!("brokers.kafka.{}", self.proxy_vhost_domain(tenant_name))
+  }
+
+  /// # Returns the proxy consumer name
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
+  /// * `number` - Proxy broker number.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").proxy_consumer_name("my-tenant", "my-proxy", 2),
+  ///   "my-tenant_my-proxy_2".to_string()
+  /// );
+  /// ```
+  pub fn proxy_consumer_name(&self, tenant_name: impl Display, proxy_name: impl Display, number: usize) -> String {
+    format!("{}_{}_{}", tenant_name, proxy_name, number)
+  }
+
+  /// # Returns the proxy consumer name with acl groups
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
+  /// * `acl_group_name` - Acl group name.
+  /// * `number` - Proxy broker number.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").proxy_consumer_name_acl_group("my-tenant", "my-acl-group", "my-proxy", 2),
+  ///   "my-tenant.my-acl-group_my-proxy_2".to_string()
+  /// );
+  /// ```
+  pub fn proxy_consumer_name_acl_group(&self, tenant_name: impl Display, acl_group_name: impl Display, proxy_name: impl Display, number: usize) -> String {
+    format!("{}.{}_{}_{}", tenant_name, acl_group_name, proxy_name, number)
+  }
+
+  /// # Returns the proxy schema store vhost
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").proxy_schema_store_vhost("my-tenant", "my-proxy"),
+  ///   "my-proxy-schema-store.kafka.my-tenant.np-aws-lz-dsh.kpn-dsh.com".to_string()
+  /// );
+  /// ```
+  pub fn proxy_schema_store_vhost(&self, tenant_name: impl Display, proxy_name: impl Display) -> String {
+    format!("{}-schema-store.kafka.{}", proxy_name, self.proxy_vhost_domain(tenant_name))
+  }
+
+  /// # Returns the proxy vhost domain
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").proxy_vhost_domain("my-tenant"),
+  ///   "my-tenant.np-aws-lz-dsh.kpn-dsh.com".to_string()
+  /// );
+  /// ```
+  pub fn proxy_vhost_domain(&self, tenant_name: impl Display) -> String {
+    format!("{}.{}.kpn-dsh.com", tenant_name, &self.name)
   }
 
   /// # Returns the domain used for public vhosts
@@ -389,6 +563,20 @@ impl DshPlatform {
   /// ```
   pub fn rest_api_endpoint(&self) -> String {
     format!("https://{}/resources/v0", self.rest_api_domain())
+  }
+
+  /// Returns the endpoint for fetching a rest token
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").rest_token_endpoint(),
+  ///   "https://api.dsh-dev.dsh.np.aws.kpn.com/auth/v0/token".to_string()
+  /// );
+  /// ```
+  pub fn rest_token_endpoint(&self) -> String {
+    format!("https://{}/auth/v0/token", self.rest_api_domain())
   }
 
   /// # Returns the url of the platform swagger page
@@ -727,7 +915,7 @@ impl DshPlatform {
     match env::var(ENV_VAR_PLATFORM) {
       Ok(platform_name_from_env_var) => match DshPlatform::try_from(platform_name_from_env_var.as_str()) {
         Ok(platform) => {
-          debug!("default platform '{}' read from environment variable '{}'", platform, ENV_VAR_PLATFORM);
+          debug!("platform '{}' (environment variable '{}')", platform, ENV_VAR_PLATFORM);
           Ok(platform)
         }
         Err(_) => Err(format!(
@@ -842,44 +1030,40 @@ impl FromStr for DshPlatform {
   }
 }
 
-lazy_static! {
-  // Static list of all recognized DSH platforms, lazily initialized
-  static ref DSH_PLATFORMS: Vec<DshPlatform> = {
-    match env::var(ENV_VAR_PLATFORMS_FILE_NAME) {
-      Ok(platform_file_name_from_env_var) => match fs::read_to_string(&platform_file_name_from_env_var) {
-        Ok(platform_list_from_file) => match serde_json::from_str(platform_list_from_file.as_str()) {
-          Ok(mut dsh_platforms_from_file) => {
-            if let Err(validation_error) = check_for_duplicate_names_or_aliases(&dsh_platforms_from_file) {
-              error!("{}", validation_error);
-              panic!("{}", validation_error)
-            }
-            dsh_platforms_from_file.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
-            info!("dsh platform list read from '{}'", platform_file_name_from_env_var);
-            dsh_platforms_from_file
-          },
-          Err(parse_error) => {
-            let message = format!("invalid platforms file '{}' ({})", platform_file_name_from_env_var, parse_error);
-            error!("{}", message);
-            panic!("{}", message)
-          }
-        },
-        Err(file_error) => {
-          let message = format!("unable to read platforms file '{}' ({})", platform_file_name_from_env_var, file_error);
-          error!("{}", message);
-          panic!("{}", message)
+// Static list of all recognized DSH platforms, lazily initialized
+static DSH_PLATFORMS: LazyLock<Vec<DshPlatform>> = LazyLock::new(|| match env::var(ENV_VAR_PLATFORMS_FILE_NAME) {
+  Ok(platform_file_name_from_env_var) => match fs::read_to_string(&platform_file_name_from_env_var) {
+    Ok(platform_list_from_file) => match serde_json::from_str(platform_list_from_file.as_str()) {
+      Ok(mut dsh_platforms_from_file) => {
+        if let Err(validation_error) = check_for_duplicate_names_or_aliases(&dsh_platforms_from_file) {
+          error!("{}", validation_error);
+          panic!("{}", validation_error)
         }
-      },
-      Err(_) => match serde_json::from_str::<Vec<DshPlatform>>(DEFAULT_PLATFORMS) {
-        Ok(mut default_dsh_platforms) => {
-          default_dsh_platforms.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
-          debug!("default dsh platform list used");
-          default_dsh_platforms
-        },
-        Err(_) => panic!()
+        dsh_platforms_from_file.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
+        info!("dsh platform list read from '{}'", platform_file_name_from_env_var);
+        dsh_platforms_from_file
       }
+      Err(parse_error) => {
+        let message = format!("invalid platforms file '{}' ({})", platform_file_name_from_env_var, parse_error);
+        error!("{}", message);
+        panic!("{}", message)
+      }
+    },
+    Err(file_error) => {
+      let message = format!("unable to read platforms file '{}' ({})", platform_file_name_from_env_var, file_error);
+      error!("{}", message);
+      panic!("{}", message)
     }
-  };
-}
+  },
+  Err(_) => match serde_json::from_str::<Vec<DshPlatform>>(DEFAULT_PLATFORMS) {
+    Ok(mut default_dsh_platforms) => {
+      default_dsh_platforms.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
+      debug!("default platform list");
+      default_dsh_platforms
+    }
+    Err(_) => panic!(),
+  },
+});
 
 // Check whether duplicate names or aliases exist
 #[allow(suspicious_double_ref_op)]

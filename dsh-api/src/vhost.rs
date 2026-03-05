@@ -30,42 +30,51 @@ use crate::application_types::ApplicationValues;
 /// # Derived methods
 /// * [`list_vhosts_with_usage() -> [id, [usage]]`](DshApiClient::list_vhosts_with_usage)
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::parse::parse_function;
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application, PortMapping, Vhost};
-#[allow(unused_imports)]
-use crate::DshApiError;
-use crate::{Dependant, DependantApp, DependantApplication, DshApiResult};
+use crate::{Dependant, DependantApp, DependantApplication};
 use futures::try_join;
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 /// # Describes an injection of a resource in an application
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum VhostInjection {
   /// Environment variable injection, where the value is the name of the environment variable.
   #[serde(rename = "env")]
-  EnvVar(String),
+  EnvVar { env_var_name: String },
   /// Variable function, where the values are the name of the function and the parameter.
   #[serde(rename = "variable")]
-  Variable(String),
+  Variable { variable_name: String },
   /// Vhost injection, where the values are the exposed port and the zone
   #[serde(rename = "vhost")]
-  Vhost(String, Option<String>),
+  Vhost { exposed_port: String, zone: Option<String> },
+}
+
+impl VhostInjection {
+  pub(crate) fn vhost<S, T>(exposed_port: S, zone: Option<T>) -> Self
+  where
+    S: Into<String>,
+    T: Into<String>,
+  {
+    Self::Vhost { exposed_port: exposed_port.into(), zone: zone.map(|zone| zone.into()) }
+  }
 }
 
 impl Display for VhostInjection {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      VhostInjection::EnvVar(env_var) => write!(f, "{}", env_var),
-      VhostInjection::Variable(variable) => write!(f, "{{ vhost('{}') }}", variable),
-      VhostInjection::Vhost(port, zone) => match zone {
-        Some(a_zone) => write!(f, "vhost({}:{})", port, a_zone),
-        None => write!(f, "{}", port),
+      VhostInjection::EnvVar { env_var_name } => write!(f, "{}", env_var_name),
+      VhostInjection::Variable { variable_name } => write!(f, "{{ vhost('{}') }}", variable_name),
+      VhostInjection::Vhost { exposed_port, zone } => match zone {
+        Some(a_zone) => write!(f, "vhost({}:{})", exposed_port, a_zone),
+        None => write!(f, "{}", exposed_port),
       },
     }
   }
@@ -85,7 +94,7 @@ impl DshApiClient {
         dependant_applications.push(DependantApplication::new(
           id.to_string(),
           application.instances,
-          vec![VhostInjection::Vhost(port.to_string(), None)],
+          vec![VhostInjection::Vhost { exposed_port: port.to_string(), zone: None }],
         ));
       }
     }
@@ -126,10 +135,10 @@ impl DshApiClient {
     for ApplicationValues { id, application, values } in vhosts_from_applications(&application_configuration_map) {
       for (vhost, port, _) in values {
         let dependants = vhosts_with_dependants_map.entry(vhost.clone()).or_default();
-        dependants.push(Dependant::application(
-          id.to_string(),
+        dependants.push(Dependant::service(
+          id,
           application.instances,
-          vec![VhostInjection::Vhost(port.to_string(), None)],
+          vec![VhostInjection::Vhost { exposed_port: port.to_string(), zone: None }],
         ));
       }
     }
@@ -368,9 +377,8 @@ impl VhostString {
   /// When the provided string is valid, the method returns an instance of the `VhostString`
   /// struct, describing the auth string.
   pub fn from_resource_str(vhost_resource_string: &str) -> Result<Self, String> {
-    lazy_static! {
-      static ref VHOST_RESOURCE_STRING_REGEX: Regex = Regex::new(r"^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)@([a-zA-Z0-9_-]+)$").unwrap();
-    }
+    static VHOST_RESOURCE_STRING_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)@([a-zA-Z0-9_-]+)$").unwrap());
+
     VHOST_RESOURCE_STRING_REGEX
       .captures(vhost_resource_string)
       .map(|captures| {
@@ -419,9 +427,7 @@ impl FromStr for VhostString {
   /// When the provided string is valid, the method returns an instance of the `VhostString`
   /// struct, describing the auth string.
   fn from_str(vhost_string: &str) -> Result<Self, Self::Err> {
-    lazy_static! {
-      static ref VALUE_REGEX: Regex = Regex::new(r"([a-zA-Z0-9_-]+)(\.kafka)?(?:\.([a-zA-Z0-9_-]+))?").unwrap();
-    }
+    static VALUE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"([a-zA-Z0-9_-]+)(\.kafka)?(?:\.([a-zA-Z0-9_-]+))?").unwrap());
     let (value_string, zone) = parse_function(vhost_string, "vhost")?;
     VALUE_REGEX
       .captures(value_string)

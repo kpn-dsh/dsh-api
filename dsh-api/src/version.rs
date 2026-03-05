@@ -1,12 +1,12 @@
 //! # Models semantic versions
 
-use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{de, Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Version {
@@ -52,9 +52,7 @@ impl Ord for Version {
   }
 }
 
-lazy_static! {
-  static ref VERSION_REGEX: Regex = Regex::new(r"^([0-9]+)(?:.([0-9]+))?(?:.([0-9]+))?(?:-([a-zA-Z][a-zA-Z0-9_-]*))?$").unwrap();
-}
+static VERSION_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^([0-9]+)(?:.([0-9]+))?(?:.([0-9]+))?(?:-([a-zA-Z][a-zA-Z0-9_-]*))?$").unwrap());
 
 impl FromStr for Version {
   type Err = String;

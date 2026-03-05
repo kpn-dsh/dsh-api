@@ -4,6 +4,41 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-03-05
+
+### Added
+
+* Platform naming methods for proxy.
+* Platform naming methods for messaging api.
+* Module `nodepool`.
+* Builder pattern to create type instances.
+* Added `debug` and `trace` logging to the generated code.
+* Added methods `secret_names`, `secret_names_non_system` and `secret_names_system`.
+* Added function `secret_name`.
+* Added `Trifonius` as a separate dependency.
+* Added `secrets_with_dependant_certificates` method.
+* Added `render_message` method to `Notification`.
+
+### Changed
+
+* New open api specification version `1.11.1`.
+* Removed dependency on `Progenitor`.
+* Secret methods and functions now use secret names instead of secret ids.
+* Improved error handling and logging.
+* Renamed `issuer_endpoint` field in platforms configuration to  `issuer-endpoint`
+  (`issuer_endpoint` is still allowed but deprecated).
+* Removed `lazy_static` dependency.
+* Function `secret_id_to_secret_name` is deprecated.
+* Changed `msrv` to `1.80.0`.
+* Create and open api versions are returned as a `Version` reference.
+* Set dependencies to latest versions.
+* Resolved some known issues.
+* Lots of refactoring.
+
+### Fixed
+
+* Fixed bug in the description of return type in method descriptors.
+
 ## [0.8.1] - 2026-01-15
 
 ### Added

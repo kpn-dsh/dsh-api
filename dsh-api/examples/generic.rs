@@ -11,10 +11,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 #[cfg(feature = "generic")]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+  use crate::common::initialize_logger;
   use crate::common::print_header;
   use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   use dsh_api::types::{LimitValue, LimitValueCpu, LimitValueCpuName, LimitValueMem, LimitValueMemName};
-  crate::common::initialize_logger();
+  use std::num::NonZero;
+  initialize_logger();
 
   const APPLICATION_ID: &str = "keyring-dev";
 
@@ -31,21 +33,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
   println!("{}", toml::to_string_pretty(&application)?);
 
   print_header("get secret");
-  let application = client.get("secret", &["aaaa"]).await?;
+  let application = client.get("secret", &["test"]).await?;
   println!("{}", serde_json::to_string_pretty(&application)?);
 
   print_header("post secret");
   let secret = r#"{"name": "secret-name","value": "secret-value"}"#.to_string();
-  println!("{:#?}", client.post("secret", &[], Some(secret)).await?);
+  println!("{:#?}", client.post("secret", &[], Some(secret)).await);
 
   print_header("put secret");
   let secret = serde_json::to_string("ABCDEF")?;
-  client.put("secret", &["abcdef"], Some(secret)).await?;
+  client.put("secret", &["test"], Some(secret)).await?;
 
-  let limit_values: Vec<LimitValue> =
-    vec![LimitValue::Cpu(LimitValueCpu { name: LimitValueCpuName::Cpu, value: 2.0 }), LimitValue::Mem(LimitValueMem { name: LimitValueMemName::Mem, value: 1000 })];
+  print_header("patch tenant-limit");
+  let limit_values: Vec<LimitValue> = vec![
+    LimitValue::Cpu(LimitValueCpu { name: LimitValueCpuName::Cpu, value: 2.0 }),
+    LimitValue::Mem(LimitValueMem { name: LimitValueMemName::Mem, value: NonZero::new(1000).unwrap() }),
+  ];
   let body = serde_json::to_string(&limit_values)?;
-  client.patch("manage-tenant-limit", &["my-tenant"], Some(body)).await?;
+  client.patch("tenant-limit", &["my-tenant"], Some(body)).await?;
 
   Ok(())
 }

@@ -37,7 +37,7 @@ async fn main() -> Result<(), String> {
   for (application_id, _, matching_env_vars) in applications_that_use_env_value {
     println!("{}", application_id);
     for (key, matching_env_var) in &matching_env_vars {
-      if let Match::Parts(parts) = matching_env_var {
+      if let Match::Parts { parts } = matching_env_var {
         println!("  {} -> {}", key, parts_to_ansi_formatted_string(parts));
       }
     }
@@ -111,8 +111,8 @@ async fn main() -> Result<(), String> {
 /// will be shown as `"part is `<code><b>MATCH</b></code>`"`.
 pub fn part_to_ansi_formatted_string(part: &Part) -> String {
   match part {
-    Matching(part) => format!("\x1B[1m{}\x1B[0m", part),
-    NonMatching(part) => part.to_string(),
+    Matching { part } => format!("\x1B[1m{}\x1B[0m", part),
+    NonMatching { part } => part.to_string(),
   }
 }
 

@@ -35,7 +35,10 @@
 //! * [`ManagedStreamId::fmt()`](ManagedStreamId::fmt)
 //! * [`ManagedTenant::fmt()`](ManagedTenant::fmt)
 //! * [`Metrics::fmt()`](Metrics::fmt)
+//! * [`NodeFeatures::fmt()`](NodeFeatures::fmt)
+//! * [`NodepoolActual::fmt()`](NodepoolActual::fmt)
 //! * [`Notification::fmt()`](Notification::fmt)
+//! * [`Notification::render_message()`](Notification::render_message)
 //! * [`PathSpec::fmt()`](PathSpec::fmt)
 //! * [`PortMapping::fmt()`](PortMapping::fmt)
 //! * [`PublicManagedStream::fmt()`](PublicManagedStream::fmt)
@@ -52,7 +55,8 @@ use crate::types::{
   ActualCertificate, AllocationStatus, AppCatalogApp, AppCatalogAppConfiguration, AppCatalogAppResourcesValue, AppCatalogManifest, Application, ApplicationSecret,
   ApplicationVolumes, Bucket, BucketStatus, Certificate, CertificateStatus, Empty, HealthCheck, LimitValue, LimitValueCertificateCount, LimitValueConsumerRate, LimitValueCpu,
   LimitValueKafkaAclGroupCount, LimitValueMem, LimitValuePartitionCount, LimitValueProducerRate, LimitValueRequestRate, LimitValueSecretCount, LimitValueTopicCount, ManagedStream,
-  ManagedStreamId, ManagedTenant, Metrics, Notification, PathSpec, PortMapping, PublicManagedStream, Secret, Task, TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
+  ManagedStreamId, ManagedTenant, Metrics, NodeFeatures, NodepoolActual, Notification, PathSpec, PortMapping, PublicManagedStream, Secret, Task, TaskStatus, Topic, TopicStatus,
+  Vhost, Volume, VolumeStatus,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -232,7 +236,7 @@ impl Display for Empty {
 impl Display for HealthCheck {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self.protocol {
-      Some(protocol) => write!(f, "{}:{}{}", protocol.to_string(), self.port, self.path),
+      Some(protocol) => write!(f, "{}:{}{}", protocol, self.port, self.path),
       None => write!(f, "{}{}", self.port, self.path),
     }
   }
@@ -350,17 +354,54 @@ impl Display for Metrics {
   }
 }
 
+impl Display for NodeFeatures {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "{}:{}:{}",
+      self.nodepool,
+      self.gpus.map(|gpus| gpus.to_string()).unwrap_or_default(),
+      self.gpu_driver.map(|driver| driver.to_string()).unwrap_or_default()
+    )
+  }
+}
+
+impl Display for NodepoolActual {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}:{}", self.max_instances, self.gpu_driver)
+  }
+}
+
+impl Notification {
+  /// Renders the message
+  ///
+  /// Uses the values in the `args` hashmap to replace the placeholders with the appropriate
+  /// values in the `message` template.
+  pub fn render_message(&self) -> String {
+    let mut result = self.message.to_string();
+    for (key, value) in &self.args {
+      if let Some((_, suffix)) = value.rsplit_once("/") {
+        result = result.replace(&format!("${{urn:{}}}", key), suffix);
+      } else {
+        result = result.replace(&format!("${{{}}}", key), value);
+      }
+    }
+    result
+  }
+}
+
 impl Display for Notification {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "remove: {}", self.remove)?;
-    if !self.args.is_empty() {
-      write!(
-        f,
-        ", args: {}",
-        self.args.iter().map(|(key, value)| format!("{}->{}", key, value)).collect_vec().join(", ")
-      )?;
+    if self.remove {
+      write!(f, "remove")?;
+    } else {
+      write!(f, "creation/update")?;
     }
-    write!(f, ", message: {}", self.message)
+    if f.alternate() {
+      write!(f, ": {}", self.render_message())
+    } else {
+      Ok(())
+    }
   }
 }
 
@@ -383,7 +424,7 @@ impl Display for PortMapping {
       fields.push(format!("service group: {}", service_group))
     }
     if let Some(ref tls) = self.tls {
-      fields.push(format!("port mapping: {}", tls.to_string()))
+      fields.push(format!("port mapping: {}", tls))
     }
     if let Some(ref vhost) = self.vhost {
       fields.push(format!("vhost: {}", vhost))
@@ -416,7 +457,7 @@ impl Display for Secret {
 
 impl Display for Task {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "host: {}, state: {}", self.host, self.state.to_string())
+    write!(f, "host: {}, state: {}", self.host, self.state)
   }
 }
 

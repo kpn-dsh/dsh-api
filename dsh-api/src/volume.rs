@@ -27,11 +27,10 @@
 use crate::app::{app_resources, apps_that_use_volume};
 use crate::application_types::ApplicationValues;
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::parse::parse_volume_string;
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application, Volume, VolumeStatus};
-#[allow(unused_imports)]
-use crate::DshApiError;
-use crate::{Dependant, DependantApp, DependantApplication, DshApiResult};
+use crate::{Dependant, DependantApp, DependantApplication};
 use futures::try_join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -43,25 +42,41 @@ use std::fmt::{Display, Formatter};
 pub enum VolumeInjection {
   /// Environment variable injection, where the value is the name of the environment variable.
   #[serde(rename = "env")]
-  EnvVar(String),
+  EnvVar { env_var_name: String },
   /// Path injection, where the value is the name of a directory in the container.
   #[serde(rename = "path")]
-  Path(String),
+  Path { directory_path: String },
   /// Variable function, where the values are the name of the function and the parameter.
   #[serde(rename = "variable")]
-  Variable(String, String),
+  Variable { function_name: String, parameter_name: String },
   /// Volume injection, where the value is the mount path
   #[serde(rename = "volume")]
-  Volume(String),
+  Volume { mount_path: String },
+}
+
+impl VolumeInjection {
+  pub(crate) fn env_var<T>(env_var: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self::EnvVar { env_var_name: env_var.into() }
+  }
+
+  pub(crate) fn volume<T>(mount_path: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self::Volume { mount_path: mount_path.into() }
+  }
 }
 
 impl Display for VolumeInjection {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      VolumeInjection::EnvVar(env_var) => write!(f, "{}", env_var),
-      VolumeInjection::Path(path) => write!(f, "path:{}", path),
-      VolumeInjection::Variable(name, parameter) => write!(f, "{{ {}('{}') }}", name, parameter),
-      VolumeInjection::Volume(mount_path) => write!(f, "mount:{}", mount_path),
+      VolumeInjection::EnvVar { env_var_name } => write!(f, "{}", env_var_name),
+      VolumeInjection::Path { directory_path } => write!(f, "path:{}", directory_path),
+      VolumeInjection::Variable { function_name, parameter_name } => write!(f, "{{ {}('{}') }}", function_name, parameter_name),
+      VolumeInjection::Volume { mount_path } => write!(f, "mount:{}", mount_path),
     }
   }
 }
@@ -91,7 +106,7 @@ impl DshApiClient {
   ///
   /// # Returns
   /// * `Ok<(VolumeStatus, Vec<UsedBy>)>` - volume status and usage.
-  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  /// * `Err<DshApiError>` - when the request could not be processed by the DSH
   pub async fn volume_with_dependants(&self, volume_id: &str) -> DshApiResult<(VolumeStatus, Vec<Dependant<VolumeInjection>>)> {
     let (volume_status, applications, apps) = try_join!(
       self.get_volume(volume_id),
@@ -100,10 +115,13 @@ impl DshApiClient {
     )?;
     let mut dependants: Vec<Dependant<VolumeInjection>> = vec![];
     for ApplicationValues { id, application, values } in volume_paths_from_applications(volume_id, &applications) {
-      dependants.push(Dependant::application(
-        id.to_string(),
+      dependants.push(Dependant::service(
+        id,
         application.instances,
-        values.iter().map(|path| VolumeInjection::Volume(path.to_string())).collect_vec(),
+        values
+          .iter()
+          .map(|mount_path| VolumeInjection::Volume { mount_path: mount_path.to_string() })
+          .collect_vec(),
       ));
     }
     for (app_id, _, resource_ids) in apps_that_use_volume(volume_id, &apps) {
@@ -127,7 +145,7 @@ impl DshApiClient {
         dependant_applications.push(DependantApplication::new(
           application.id.to_string(),
           application.application.instances,
-          application.values.iter().map(|env_var| VolumeInjection::EnvVar(env_var.to_string())).collect_vec(),
+          application.values.iter().map(|env_var| VolumeInjection::env_var(*env_var)).collect_vec(),
         ));
       }
       volumes.push((volume_id, dependant_applications));
@@ -167,10 +185,14 @@ impl DshApiClient {
     for volume_id in volume_ids {
       let mut dependants: Vec<Dependant<VolumeInjection>> = vec![];
       for application in volume_paths_from_applications(volume_id.as_str(), &applications) {
-        dependants.push(Dependant::application(
-          application.id.to_string(),
+        dependants.push(Dependant::service(
+          application.id,
           application.application.instances,
-          application.values.iter().map(|env_var| VolumeInjection::EnvVar(env_var.to_string())).collect_vec(),
+          application
+            .values
+            .iter()
+            .map(|env_var| VolumeInjection::EnvVar { env_var_name: env_var.to_string() })
+            .collect_vec(),
         ));
       }
       for (app_id, _, resource_ids) in apps_that_use_volume(volume_id.as_str(), &apps) {

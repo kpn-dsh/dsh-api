@@ -24,11 +24,12 @@
 //! * [`manifest_all_versions() -> [(manifest id, [manifest])]`](DshApiClient::manifest_all_versions)
 //! * [`manifests_latest_version(draft) -> [(manifest id, manifest)]`](DshApiClient::manifests_latest_version)
 use crate::dsh_api_client::DshApiClient;
+use crate::epoch_milliseconds_to_string;
+use crate::error::DshApiResult;
 use crate::types::AppCatalogManifest;
 use crate::version::Version;
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::{epoch_milliseconds_to_string, DshApiResult};
 use itertools::Itertools;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -72,7 +73,7 @@ impl DshApiClient {
       .iter()
       .find(|manifest| manifest.id == manifest_id && manifest.version == *manifest_version)
       .cloned()
-      .ok_or(DshApiError::NotFound(None))
+      .ok_or(DshApiError::not_found())
   }
 
   /// # Return latest version of manifest by id
@@ -91,9 +92,9 @@ impl DshApiClient {
     match self.manifest_all_versions(manifest_id).await {
       Ok(manifests) => match manifests.into_iter().filter(|manifest| !manifest.draft || allow_draft_version).next_back() {
         Some(latest_manifest) => Ok(latest_manifest),
-        None => Err(DshApiError::NotFound(None)),
+        None => Err(DshApiError::not_found()),
       },
-      Err(_) => Err(DshApiError::NotFound(None)),
+      Err(_) => Err(DshApiError::not_found()),
     }
   }
 
@@ -111,7 +112,7 @@ impl DshApiClient {
   pub async fn manifest_all_versions(&self, manifest_id: &str) -> DshApiResult<Vec<Manifest>> {
     let mut manifests: Vec<Manifest> = self.manifests().await?.into_iter().filter(|manifest| manifest.id == manifest_id).collect_vec();
     if manifests.is_empty() {
-      Err(DshApiError::NotFound(None))
+      Err(DshApiError::not_found())
     } else {
       manifests.sort_by(|manifest_a, manifest_b| manifest_a.version.cmp(&manifest_b.version));
       Ok(manifests)
@@ -150,7 +151,7 @@ impl DshApiClient {
         return Ok((serde_json::to_string_pretty(&payload)?, app_catalog_manifest.draft));
       }
     }
-    Err(DshApiError::NotFound(None))
+    Err(DshApiError::not_found())
   }
 
   /// # Return raw manifest latest version
@@ -189,7 +190,7 @@ impl DshApiClient {
     raw_manifests.sort_by(|(version_a, _, _), (version_b, _, _)| version_a.cmp(version_b));
     match raw_manifests.last() {
       Some((last_version, draft, last_payload)) => Ok((last_version.clone(), serde_json::to_string_pretty(&last_payload)?, *draft)),
-      None => Err(DshApiError::NotFound(None)),
+      None => Err(DshApiError::not_found()),
     }
   }
 
@@ -418,27 +419,27 @@ impl Display for PropertyKind {
 /// Resource that a manifest depends upon
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum Resource {
-  Application(Box<ApplicationResource>),
-  Bucket(Box<BucketResource>),
-  Certificate(Box<CertificateResource>),
-  Database(Box<DatabaseResource>),
-  Secret(Box<SecretResource>),
-  Topic(Box<TopicResource>),
-  Vhost(Box<VhostResource>),
-  Volume(Box<VolumeResource>),
+  Application { application: Box<ApplicationResource> },
+  Bucket { bucket: Box<BucketResource> },
+  Certificate { certificate: Box<CertificateResource> },
+  Database { database: Box<DatabaseResource> },
+  Secret { secret: Box<SecretResource> },
+  Topic { topic: Box<TopicResource> },
+  Vhost { vhost: Box<VhostResource> },
+  Volume { volume: Box<VolumeResource> },
 }
 
 impl Display for Resource {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::Application(application) => Display::fmt(&application, f),
-      Self::Bucket(bucket) => Display::fmt(&bucket, f),
-      Self::Certificate(certificate) => Display::fmt(&certificate, f),
-      Self::Database(database) => Display::fmt(&database, f),
-      Self::Secret(secret) => Display::fmt(&secret, f),
-      Self::Topic(topic) => Display::fmt(&topic, f),
-      Self::Vhost(vhost) => Display::fmt(&vhost, f),
-      Self::Volume(volume) => Display::fmt(&volume, f),
+      Self::Application { application } => Display::fmt(&application, f),
+      Self::Bucket { bucket } => Display::fmt(&bucket, f),
+      Self::Certificate { certificate } => Display::fmt(&certificate, f),
+      Self::Database { database } => Display::fmt(&database, f),
+      Self::Secret { secret } => Display::fmt(&secret, f),
+      Self::Topic { topic } => Display::fmt(&topic, f),
+      Self::Vhost { vhost } => Display::fmt(&vhost, f),
+      Self::Volume { volume } => Display::fmt(&volume, f),
     }
   }
 }
@@ -447,17 +448,17 @@ impl Display for Resource {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "Value", into = "Value")]
 pub enum Numerical {
-  Float(f64),
-  Integer(i64),
-  Template(String),
+  Float { value: f64 },
+  Integer { value: i64 },
+  Template { template: String },
 }
 
 impl Display for Numerical {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::Float(float) => write!(f, "{}", float),
-      Self::Integer(integer) => write!(f, "{}", integer),
-      Self::Template(template) => write!(f, "{}", template),
+      Self::Float { value } => write!(f, "{}", value),
+      Self::Integer { value } => write!(f, "{}", value),
+      Self::Template { template } => write!(f, "{}", template),
     }
   }
 }
@@ -511,7 +512,6 @@ impl Display for BucketResource {
   }
 }
 
-// TODO Proper implementation when format is known
 /// Manifest certificate dependency (plain string since this dependency is undocumented)
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct CertificateResource {
@@ -545,7 +545,6 @@ impl Display for DatabaseResource {
   }
 }
 
-// TODO Proper implementation when format is known
 /// Manifest secret dependency (plain string since this dependency is undocumented)
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct SecretResource {
@@ -575,7 +574,6 @@ impl Display for TopicResource {
   }
 }
 
-// TODO Proper implementation when format is known
 /// Manifest vhost dependency (plain string since this dependency is undocumented)
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct VhostResource {
@@ -696,37 +694,35 @@ where
 
 impl Resource {
   fn application(value: &Value) -> Result<Resource, serde_json::Error> {
-    ApplicationResource::deserialize(value).map(|application_resource| Resource::Application(Box::new(application_resource)))
+    ApplicationResource::deserialize(value).map(|application_resource| Resource::Application { application: Box::new(application_resource) })
   }
 
   fn bucket(value: &Value) -> Result<Resource, serde_json::Error> {
-    BucketResource::deserialize(value).map(|bucket_resource| Resource::Bucket(Box::new(bucket_resource)))
+    BucketResource::deserialize(value).map(|bucket_resource| Resource::Bucket { bucket: Box::new(bucket_resource) })
   }
 
   fn certificate(value: &Value) -> Result<Resource, serde_json::Error> {
-    Ok(Resource::Certificate(Box::new(CertificateResource {
-      unformatted_representation: value.to_string(),
-    })))
+    Ok(Resource::Certificate { certificate: Box::new(CertificateResource { unformatted_representation: value.to_string() }) })
   }
 
   fn database(value: &Value) -> Result<Resource, serde_json::Error> {
-    DatabaseResource::deserialize(value).map(|database_resource| Resource::Database(Box::new(database_resource)))
+    DatabaseResource::deserialize(value).map(|database_resource| Resource::Database { database: Box::new(database_resource) })
   }
 
   fn secret(value: &Value) -> Result<Resource, serde_json::Error> {
-    Ok(Resource::Secret(Box::new(SecretResource { unformatted_representation: value.to_string() })))
+    Ok(Resource::Secret { secret: Box::new(SecretResource { unformatted_representation: value.to_string() }) })
   }
 
   fn topic(value: &Value) -> Result<Resource, serde_json::Error> {
-    TopicResource::deserialize(value).map(|topic_resource| Resource::Topic(Box::new(topic_resource)))
+    TopicResource::deserialize(value).map(|topic_resource| Resource::Topic { topic: Box::new(topic_resource) })
   }
 
   fn vhost(value: &Value) -> Result<Resource, serde_json::Error> {
-    Ok(Resource::Vhost(Box::new(VhostResource { unformatted_representation: value.to_string() })))
+    Ok(Resource::Vhost { vhost: Box::new(VhostResource { unformatted_representation: value.to_string() }) })
   }
 
   fn volume(value: &Value) -> Result<Resource, serde_json::Error> {
-    VolumeResource::deserialize(value).map(|volume_resource| Resource::Volume(Box::new(volume_resource)))
+    VolumeResource::deserialize(value).map(|volume_resource| Resource::Volume { volume: Box::new(volume_resource) })
   }
 }
 
@@ -735,11 +731,11 @@ impl TryFrom<Value> for Numerical {
 
   fn try_from(value: Value) -> Result<Self, Self::Error> {
     match value.as_i64() {
-      Some(integer) => Ok(Numerical::Integer(integer)),
+      Some(value) => Ok(Numerical::Integer { value }),
       None => match value.as_f64() {
-        Some(float) => Ok(Numerical::Float(float)),
+        Some(value) => Ok(Numerical::Float { value }),
         None => match value.as_str() {
-          Some(string) => Ok(Numerical::Template(string.to_string())),
+          Some(template) => Ok(Numerical::Template { template: template.to_string() }),
           None => Err(format!("could not parse '{}' value", value)),
         },
       },
@@ -750,9 +746,9 @@ impl TryFrom<Value> for Numerical {
 impl From<Numerical> for Value {
   fn from(numerical: Numerical) -> Self {
     match numerical {
-      Numerical::Float(float) => Value::from(float),
-      Numerical::Integer(integer) => Value::from(integer),
-      Numerical::Template(string) => Value::from(string),
+      Numerical::Float { value } => Value::from(value),
+      Numerical::Integer { value } => Value::from(value),
+      Numerical::Template { template } => Value::from(template),
     }
   }
 }

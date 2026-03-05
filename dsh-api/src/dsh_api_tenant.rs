@@ -1,11 +1,12 @@
 //! # Client tenant
+use crate::error::DshApiResult;
 use crate::platform::DshPlatform;
 use crate::{DshApiError, ENV_VAR_TENANT};
-use lazy_static::lazy_static;
 use log::{debug, info};
 use serde::Serialize;
 use std::env;
 use std::fmt::{Display, Formatter};
+use std::sync::LazyLock;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize)]
 pub struct DshApiTenant {
@@ -64,15 +65,15 @@ impl DshApiTenant {
   /// ```no_run
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
   /// # use dsh_api::platform::DshPlatform;
-  /// # use dsh_api::DshApiError;
-  /// # fn main() -> Result<(), DshApiError> {
+  /// # use dsh_api::error::DshApiResult;
+  /// # fn main() -> DshApiResult<()> {
   /// let tenant_name = "my-tenant";
   /// let dsh_api_tenant = DshApiTenant::from_tenant(tenant_name)?;
   /// println!("target platform: {}", dsh_api_tenant.platform());
   /// # Ok(())
   /// # }
   /// ```
-  pub fn from_tenant<T>(tenant_name: T) -> Result<Self, DshApiError>
+  pub fn from_tenant<T>(tenant_name: T) -> DshApiResult<Self>
   where
     T: Into<String>,
   {
@@ -99,8 +100,8 @@ impl DshApiTenant {
   /// ```
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
   /// # use dsh_api::platform::DshPlatform;
-  /// # use dsh_api::DshApiError;
-  /// # fn main() -> Result<(), DshApiError> {
+  /// # use dsh_api::error::DshApiResult;
+  /// # fn main() -> DshApiResult<()> {
   /// let tenant_name = String::from("my-tenant");
   /// let platform = DshPlatform::try_from("nplz")?;
   /// let dsh_api_tenant = DshApiTenant::from_tenant_and_platform(tenant_name, platform)?;
@@ -108,7 +109,7 @@ impl DshApiTenant {
   /// # Ok(())
   /// # }
   /// ```
-  pub fn from_tenant_and_platform<T>(tenant_name: T, platform: DshPlatform) -> Result<Self, DshApiError>
+  pub fn from_tenant_and_platform<T>(tenant_name: T, platform: DshPlatform) -> DshApiResult<Self>
   where
     T: Into<String>,
   {
@@ -133,18 +134,18 @@ impl DshApiTenant {
   /// ```no_run
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
   /// # use dsh_api::platform::DshPlatform;
-  /// # use dsh_api::DshApiError;
-  /// # fn main() -> Result<(), DshApiError> {
+  /// # use dsh_api::error::DshApiResult;
+  /// # fn main() -> DshApiResult<()> {
   /// let platform = DshPlatform::try_from("nplz")?;
   /// let dsh_api_tenant = DshApiTenant::from_platform(platform)?;
   /// println!("{}@{}", dsh_api_tenant.name(), dsh_api_tenant.platform());
   /// # Ok(())
   /// # }
   /// ```
-  pub fn from_platform(platform: DshPlatform) -> Result<Self, DshApiError> {
+  pub fn from_platform(platform: DshPlatform) -> DshApiResult<Self> {
     let tenant_name = match env::var(ENV_VAR_TENANT) {
       Ok(name) => name,
-      Err(_) => return Err(DshApiError::Configuration(format!("environment variable {} not set", ENV_VAR_TENANT))),
+      Err(_) => return Err(DshApiError::configuration(format!("environment variable {} not set", ENV_VAR_TENANT))),
     };
     Ok(DshApiTenant::new(tenant_name, platform))
   }
@@ -165,14 +166,14 @@ impl DshApiTenant {
   ///
   /// ```no_run
   /// # use dsh_api::dsh_api_tenant::DshApiTenant;
-  /// # use dsh_api::DshApiError;
-  /// # fn main() -> Result<(), DshApiError> {
+  /// # use dsh_api::error::DshApiResult;
+  /// # fn main() -> DshApiResult<()> {
   /// let default_tenant = DshApiTenant::try_default()?;
   /// println!("{}@{}", default_tenant.name(), default_tenant.platform());
   /// # Ok(())
   /// # }
   /// ```
-  pub fn try_default() -> Result<Self, DshApiError> {
+  pub fn try_default() -> DshApiResult<Self> {
     let tenant_name = get_default_tenant_name()?;
     let platform = DshPlatform::try_default()?;
     Ok(DshApiTenant::new(tenant_name, platform))
@@ -215,16 +216,22 @@ impl Display for DshApiTenant {
   }
 }
 
-lazy_static! {
-  pub static ref DEFAULT_DSH_API_TENANT: DshApiTenant = DshApiTenant::default();
-}
+/// Lazily initialized default tenant
+///
+/// This method will read the tenant name and platform form the respective
+/// environment variables and will create a`DshApiTenant` if possible.
+///
+/// # Panics
+/// Referencing this value will panic if the environment variable is not set or
+/// if it contains an invalid platform name.
+pub static DEFAULT_DSH_API_TENANT: LazyLock<DshApiTenant> = LazyLock::new(DshApiTenant::default);
 
-fn get_default_tenant_name() -> Result<String, DshApiError> {
+fn get_default_tenant_name() -> DshApiResult<String> {
   match env::var(ENV_VAR_TENANT) {
     Ok(tenant_name) => {
-      debug!("default tenant '{}' from environment variable '{}'", tenant_name, ENV_VAR_TENANT);
+      debug!("tenant '{}' (environment variable '{}')", tenant_name, ENV_VAR_TENANT);
       Ok(tenant_name)
     }
-    Err(_) => Err(DshApiError::Configuration(format!("environment variable '{}' not set", ENV_VAR_TENANT))),
+    Err(_) => Err(DshApiError::configuration(format!("environment variable '{}' not set", ENV_VAR_TENANT))),
   }
 }

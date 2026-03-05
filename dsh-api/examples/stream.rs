@@ -87,25 +87,25 @@ async fn main() -> Result<(), String> {
     "{} {} {:?}",
     internal_managed_stream_id,
     TENANT,
-    client.head_stream_internal_access_read(&internal_managed_stream_id, TENANT).await
+    client.head_stream_internal_access_read(internal_managed_stream_id.as_str(), TENANT).await
   );
   println!(
     "{} {} {:?}",
     internal_managed_stream_id,
     TENANT,
-    client.head_stream_internal_access_write(&internal_managed_stream_id, TENANT).await
+    client.head_stream_internal_access_write(internal_managed_stream_id.as_str(), TENANT).await
   );
   println!(
     "{} {} {:?}",
     public_managed_stream_id,
     TENANT,
-    client.head_stream_public_access_read(&public_managed_stream_id, TENANT).await
+    client.head_stream_public_access_read(public_managed_stream_id.as_str(), TENANT).await
   );
   println!(
     "{} {} {:?}",
     public_managed_stream_id,
     TENANT,
-    client.head_stream_public_access_write(&public_managed_stream_id, TENANT).await
+    client.head_stream_public_access_write(public_managed_stream_id.as_str(), TENANT).await
   );
 
   print_header("has-stream-access");
@@ -159,13 +159,13 @@ async fn main() -> Result<(), String> {
   }
 
   print_header("get_stream_internal_configuration");
-  match client.get_stream_internal_configuration(&internal_managed_stream_id).await {
+  match client.get_stream_internal_configuration(internal_managed_stream_id.as_str()).await {
     Ok(internal_managed_stream) => println!("{}", internal_managed_stream),
     Err(error) => println!("{:#?}", error),
   }
 
   print_header("get_stream_public_configuration");
-  match client.get_stream_public_configuration(&public_managed_stream_id).await {
+  match client.get_stream_public_configuration(public_managed_stream_id.as_str()).await {
     Ok(public_managed_stream) => println!("{}", public_managed_stream),
     Err(error) => println!("{:#?}", error),
   }

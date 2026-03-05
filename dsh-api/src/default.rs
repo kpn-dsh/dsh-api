@@ -14,8 +14,6 @@
 //! * [`BucketStatus::default()`](BucketStatus::default())
 //! * [`Certificate::default()`](Certificate::default())
 //! * [`CertificateStatus::default()`](CertificateStatus::default())
-//! * [`Empty::default()`](Empty::default())
-//! * [`HealthCheck::default()`](HealthCheck::default())
 //! * [`LimitValueCertificateCount::default()`](LimitValueCertificateCount::default())
 //! * [`LimitValueConsumerRate::default()`](LimitValueConsumerRate::default())
 //! * [`LimitValueCpu::default()`](LimitValueCpu::default())
@@ -28,10 +26,8 @@
 //! * [`LimitValueTopicCount::default()`](LimitValueTopicCount::default())
 //! * [`ManagedStream::default()`](ManagedStream::default())
 //! * [`ManagedTenant::default()`](ManagedTenant::default())
-//! * [`Metrics::default()`](Metrics::default())
 //! * [`Notification::default()`](Notification::default())
 //! * [`PathSpec::default()`](PathSpec::default())
-//! * [`PortMapping::default()`](PortMapping::default())
 //! * [`PublicManagedStream::default()`](PublicManagedStream::default())
 //! * [`PublicManagedStreamContract::default()`](PublicManagedStreamContract::default())
 //! * [`Secret::default()`](Secret::default())
@@ -45,15 +41,15 @@
 
 use crate::types::{
   ActualCertificate, AllocationStatus, AppCatalogApp, AppCatalogAppConfiguration, AppCatalogManifest, Application, ApplicationSecret, ApplicationVolumes, Bucket, BucketStatus,
-  Certificate, CertificateStatus, Empty, HealthCheck, LimitValueCertificateCount, LimitValueCertificateCountName, LimitValueConsumerRate, LimitValueConsumerRateName,
-  LimitValueCpu, LimitValueCpuName, LimitValueKafkaAclGroupCount, LimitValueKafkaAclGroupCountName, LimitValueMem, LimitValueMemName, LimitValuePartitionCount,
-  LimitValuePartitionCountName, LimitValueProducerRate, LimitValueProducerRateName, LimitValueRequestRate, LimitValueRequestRateName, LimitValueSecretCount,
-  LimitValueSecretCountName, LimitValueTopicCount, LimitValueTopicCountName, ManagedStream, ManagedTenant, Metrics, Notification, PathSpec, PortMapping, PublicManagedStream,
-  PublicManagedStreamContract, PublicManagedStreamContractPartitioner, PublicManagedStreamKafkaDefaultPartitioner, PublicManagedStreamKafkaDefaultPartitionerKind, Secret, Task,
-  TaskState, TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
+  Certificate, CertificateStatus, LimitValueCertificateCount, LimitValueCertificateCountName, LimitValueConsumerRate, LimitValueConsumerRateName, LimitValueCpu, LimitValueCpuName,
+  LimitValueKafkaAclGroupCount, LimitValueKafkaAclGroupCountName, LimitValueMem, LimitValueMemName, LimitValuePartitionCount, LimitValuePartitionCountName, LimitValueProducerRate,
+  LimitValueProducerRateName, LimitValueRequestRate, LimitValueRequestRateName, LimitValueSecretCount, LimitValueSecretCountName, LimitValueTopicCount, LimitValueTopicCountName,
+  ManagedStream, ManagedTenant, Notification, PathSpec, PublicManagedStream, PublicManagedStreamContract, PublicManagedStreamContractPartitioner,
+  PublicManagedStreamKafkaDefaultPartitioner, PublicManagedStreamKafkaDefaultPartitionerKind, Secret, Task, TaskState, TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
 };
 
 use std::net::Ipv4Addr;
+use std::num::NonZero;
 
 impl Default for ActualCertificate {
   fn default() -> Self {
@@ -107,6 +103,7 @@ impl Default for Application {
       mem: 0,
       metrics: None,
       needs_token: false,
+      node_features: None,
       readable_streams: vec![],
       secrets: vec![],
       single_instance: false,
@@ -158,22 +155,9 @@ impl Default for CertificateStatus {
   }
 }
 
-#[allow(clippy::derivable_impls)]
-impl Default for Empty {
-  fn default() -> Self {
-    Self {}
-  }
-}
-
-impl Default for HealthCheck {
-  fn default() -> Self {
-    Self { path: "".to_string(), port: 0, protocol: None }
-  }
-}
-
 impl Default for LimitValueCertificateCount {
   fn default() -> Self {
-    Self { name: LimitValueCertificateCountName::CertificateCount, value: 0 }
+    Self { name: LimitValueCertificateCountName::CertificateCount, value: NonZero::new(1).unwrap() }
   }
 }
 
@@ -197,13 +181,13 @@ impl Default for LimitValueKafkaAclGroupCount {
 
 impl Default for LimitValueMem {
   fn default() -> Self {
-    Self { name: LimitValueMemName::Mem, value: 0 }
+    Self { name: LimitValueMemName::Mem, value: NonZero::new(1).unwrap() }
   }
 }
 
 impl Default for LimitValuePartitionCount {
   fn default() -> Self {
-    Self { name: LimitValuePartitionCountName::PartitionCount, value: 0 }
+    Self { name: LimitValuePartitionCountName::PartitionCount, value: NonZero::new(1).unwrap() }
   }
 }
 
@@ -215,19 +199,19 @@ impl Default for LimitValueProducerRate {
 
 impl Default for LimitValueRequestRate {
   fn default() -> Self {
-    Self { name: LimitValueRequestRateName::RequestRate, value: 0 }
+    Self { name: LimitValueRequestRateName::RequestRate, value: NonZero::new(1).unwrap() }
   }
 }
 
 impl Default for LimitValueSecretCount {
   fn default() -> Self {
-    Self { name: LimitValueSecretCountName::SecretCount, value: 0 }
+    Self { name: LimitValueSecretCountName::SecretCount, value: NonZero::new(1).unwrap() }
   }
 }
 
 impl Default for LimitValueTopicCount {
   fn default() -> Self {
-    Self { name: LimitValueTopicCountName::TopicCount, value: 0 }
+    Self { name: LimitValueTopicCountName::TopicCount, value: NonZero::new(1).unwrap() }
   }
 }
 
@@ -244,12 +228,6 @@ impl Default for ManagedTenant {
   }
 }
 
-impl Default for Metrics {
-  fn default() -> Self {
-    Self { path: "".to_string(), port: 0 }
-  }
-}
-
 impl Default for Notification {
   fn default() -> Self {
     Self { args: Default::default(), message: "".to_string(), remove: false }
@@ -259,13 +237,6 @@ impl Default for Notification {
 impl Default for PathSpec {
   fn default() -> Self {
     Self { prefix: "".to_string() }
-  }
-}
-
-#[allow(clippy::derivable_impls)]
-impl Default for PortMapping {
-  fn default() -> Self {
-    Self { auth: None, mode: None, paths: vec![], service_group: None, tls: None, vhost: None, whitelist: None }
   }
 }
 

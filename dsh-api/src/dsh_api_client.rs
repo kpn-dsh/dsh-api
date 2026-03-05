@@ -13,7 +13,7 @@
 //!     [environment variables](dsh_api_client_factory/index.html#environment-variables),
 //!   * or you can create a factory explicitly by providing the `platform`,
 //!     `tenant` and API `password` yourself and feeding them to the
-//!     [`DshApiClientFactory::create()`](crate::dsh_api_client_factory::DshApiClientFactory::create)
+//!     [`DshApiClientFactory::create_with_token_fetcher()`](crate::dsh_api_client_factory::DshApiClientFactory::create_with_token_fetcher)
 //!     function.
 //! * Once you have the
 //!   [`DshApiClientFactory`](crate::dsh_api_client_factory::DshApiClientFactory),
@@ -32,8 +32,8 @@
 //! ```ignore
 //! use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 //!
-//! # use dsh_api::DshApiError;
-//! # async fn hide() -> Result<(), DshApiError> {
+//! # use dsh_api::error::DshApiResult;
+//! # async fn hide() -> DshApiResult<()> {
 //! let client = DshApiClientFactory::default().client().await?;
 //! for (application_id, application) in client.list_applications()? {
 //!   println!("{} -> {}", application_id, application);
@@ -44,120 +44,38 @@
 
 use crate::dsh_api_tenant::DshApiTenant;
 use crate::dsh_jwt::DshJwt;
-use crate::generated::Client as GeneratedClient;
+use crate::error::DshApiResult;
 use crate::platform::DshPlatform;
-use crate::token_fetcher::ManagementApiTokenFetcher;
+use crate::token_fetcher::TokenFetcher;
 use crate::{DshApiError, OPENAPI_SPEC};
-use bytes::Bytes;
-use futures::TryStreamExt;
-use log::{debug, log_enabled, trace, Level};
-use progenitor_client::{ByteStream, Error as ProgenitorError, ResponseValue as ProgenitorResponseValue};
-use reqwest::StatusCode as ReqwestStatusCode;
-use std::fmt::{Debug, Display, Formatter};
+use log::{debug, trace};
+use reqwest::{Client, Error as ReqwestError, Response, StatusCode};
+use serde::de::DeserializeOwned;
+use std::fmt::Debug;
+use std::str::{from_utf8, FromStr};
 
-#[derive(Debug)]
 pub struct DshApiClient {
   static_token: Option<String>,
-  token_fetcher: Option<ManagementApiTokenFetcher>,
-  pub(crate) generated_client: GeneratedClient,
+  token_fetcher: Option<TokenFetcher>,
+  pub(crate) client: Client,
   tenant: DshApiTenant,
 }
 
-pub(crate) enum DshApiResponseStatus {
-  Accepted,
-  Created,
-  NoContent,
-  Ok,
-  Unknown,
-}
-
-pub(crate) type DshApiProcessResult<T> = Result<(DshApiResponseStatus, T), DshApiError>;
-
 impl DshApiClient {
-  /// Create a `DshApiClient` from a static token
-  ///
-  /// # Parameters
-  /// * `static_token` - Static token.
-  /// * `generated_client` - Api functions generated from the openapi specification.
-  /// * `tenant` - Dsh api client, containing tenant name and platform.
-  ///
-  /// # Returns
-  /// * [DshApiClient] - The created dsh api client.
-  pub(crate) fn from_static_token(static_token: String, generated_client: GeneratedClient, tenant: DshApiTenant) -> Self {
-    Self { static_token: Some(static_token), token_fetcher: None, generated_client, tenant }
-  }
-
-  /// Create a `DshApiClient` from a token fetcher
-  ///
-  /// # Parameters
-  /// * `token_fetcher` - Token fetcher that creates a token when required.
-  /// * `generated_client` - Api functions generated from the openapi specification.
-  /// * `tenant` - Dsh api client, containing tenant name and platform.
-  ///
-  /// # Returns
-  /// * [DshApiClient] - The created dsh api client.
-  pub(crate) fn from_token_fetcher(token_fetcher: ManagementApiTokenFetcher, generated_client: GeneratedClient, tenant: DshApiTenant) -> Self {
-    Self { static_token: None, token_fetcher: Some(token_fetcher), generated_client, tenant }
-  }
-
   /// # Returns the openapi spec used to generate the client code
   ///
   /// Note that this is not the original openapi specification exposed by the
   /// DSH resource management web service.
   /// The version exposed by this function differs from the original specification as follows:
-  /// * Added authorization header specification to each operation.
-  /// * Added operationId parameter to each operation.
   /// * Depending on whether the `manage` and/or `robot` features are
   ///   enabled or not, not all operations might be present.
   pub fn openapi_spec() -> &'static str {
     OPENAPI_SPEC
   }
 
-  pub(crate) async fn process<T>(&self, progenitor_response: Result<ProgenitorResponseValue<T>, ProgenitorError>) -> DshApiProcessResult<T>
-  where
-    T: Debug,
-  {
-    match progenitor_response {
-      Ok(response_value) => {
-        let response_status = response_value.status();
-        let status = DshApiResponseStatus::from(response_status);
-        let response = response_value.into_inner();
-        if log_enabled!(Level::Trace) {
-          trace!("response / {} / {}\n{:#?}", response_status, status, response);
-        } else {
-          debug!("response / {} / {}", response_status, status);
-        }
-        Ok((status, response))
-      }
-      Err(progenitor_error) => {
-        debug!("progenitor error / {}", progenitor_error);
-        Err(DshApiError::async_from_progenitor_error(progenitor_error).await)
-      }
-    }
-  }
-
-  pub(crate) async fn process_string(&self, progenitor_response: Result<ProgenitorResponseValue<ByteStream>, ProgenitorError>) -> DshApiProcessResult<String> {
-    match progenitor_response {
-      Ok(response_value) => {
-        let response_status = response_value.status();
-        let status = DshApiResponseStatus::from(response_status);
-        let mut inner = response_value.into_inner();
-        let mut string = String::new();
-        while let Some::<Bytes>(ref bytes) = inner.try_next().await? {
-          string.push_str(std::str::from_utf8(bytes)?)
-        }
-        if log_enabled!(Level::Trace) {
-          trace!("response / {} / {}\n{}", response_status, status, string);
-        } else {
-          debug!("response / {} / {}", response_status, status);
-        }
-        Ok((status, string))
-      }
-      Err(progenitor_error) => {
-        debug!("progenitor error / {}", progenitor_error);
-        Err(DshApiError::async_from_progenitor_error(progenitor_error).await)
-      }
-    }
+  /// Returns whether the client has a static token
+  pub fn has_static_token(&self) -> bool {
+    self.static_token.is_some()
   }
 
   /// Returns the static token
@@ -166,8 +84,13 @@ impl DshApiClient {
   }
 
   /// Returns the token fetcher
-  pub fn token_fetcher(&self) -> &Option<ManagementApiTokenFetcher> {
+  pub fn token_fetcher(&self) -> &Option<TokenFetcher> {
     &self.token_fetcher
+  }
+
+  /// Returns whether the client has a static token
+  pub fn has_token_fetcher(&self) -> bool {
+    self.token_fetcher.is_some()
   }
 
   /// Returns the tenant
@@ -188,67 +111,267 @@ impl DshApiClient {
   /// Returns the Authorization header for the rest API
   ///
   /// This method returns a token that can be used to authenticate and authorize a call
-  /// to the DSH resource management web service. These header value are of the form
+  /// to the DSH resource management web service. This header value is of the form
   /// `Bearer ey...`.
   ///
-  /// Since this token has a relatively short lifespan,
-  /// it is advised to request a new token from this method before each API call.
-  /// An internal caching mechanism will make sure that no unnecessary calls will be made.
-  pub async fn token(&self) -> Result<String, DshApiError> {
+  /// Since this token has a relatively short lifespan, it is advised to request a new token
+  /// from this method before each API call. An internal caching mechanism will make sure that
+  /// no unnecessary calls will be made.
+  pub async fn bearer_token(&self) -> DshApiResult<String> {
     if let Some(static_token) = &self.static_token {
       // The static token does not have the 'Bearer' prefix
       Ok(format!("Bearer {}", static_token))
     } else if let Some(token_fetcher) = &self.token_fetcher {
-      // The token_fetcher.get_token() method already includes the 'Bearer' prefix
-      token_fetcher.get_token().await.map_err(DshApiError::from)
+      // The token_fetcher.get_bearer_token() method already includes the 'Bearer' prefix
+      token_fetcher.get_bearer_token().await
     } else {
-      Err(DshApiError::Unexpected("".to_string(), None))
+      Err(DshApiError::configuration("either a static token or a token fetcher must be provided"))
     }
   }
 
-  /// Returns a token for the rest API
+  /// Returns the Authorization header for the rest API
   ///
   /// This method returns a token that can be used to authenticate and authorize a call
+  /// to the DSH resource management web service. This header value is of the form
+  /// `Bearer ey...`.
+  ///
+  /// This method will not use the cached token and will always request a new access token (which
+  /// will overwrite the cached token if available). In normal cases it is preferred to use the
+  /// [`bearer_token()`](self.bearer_token) method instead of this one.
+  /// For static tokens this method has the same effect as the `bearer_token()` method.
+  pub async fn fresh_bearer_token(&self) -> DshApiResult<String> {
+    if let Some(static_token) = &self.static_token {
+      // The static token does not have the 'Bearer' prefix
+      Ok(format!("Bearer {}", static_token))
+    } else if let Some(token_fetcher) = &self.token_fetcher {
+      // The token_fetcher.get_bearer_token() method already includes the 'Bearer' prefix
+      token_fetcher.get_fresh_bearer_token().await
+    } else {
+      Err(DshApiError::configuration("either a static token or a token fetcher must be provided"))
+    }
+  }
+
+  /// Returns the raw access token
+  ///
+  /// This method returns a raw access token that can be used to authenticate and authorize a call
   /// to the DSH resource management web service.
+  ///
   /// Since this token has a relatively short lifespan,
   /// it is advised to request a new token from this method before each API call.
   /// An internal caching mechanism will make sure that no unnecessary calls will be made.
-  pub async fn fresh_jwt(&self) -> Result<DshJwt, DshApiError> {
+  pub async fn raw_token(&self) -> DshApiResult<String> {
     if let Some(static_token) = &self.static_token {
-      DshJwt::from_token(static_token.clone()).map_err(|_| DshApiError::Unexpected("could not parse jwt".to_string(), None))
+      Ok(static_token.clone())
     } else if let Some(token_fetcher) = &self.token_fetcher {
-      token_fetcher
-        .fresh_token()
-        .await
-        .map_err(DshApiError::from)
-        .and_then(|token| DshJwt::from_token(token).map_err(|_| DshApiError::Unexpected("could not parse jwt".to_string(), None)))
+      token_fetcher.get_raw_token().await
     } else {
-      Err(DshApiError::Unexpected("".to_string(), None))
+      Err(DshApiError::configuration("either a static token or a token fetcher must be provided"))
     }
   }
-}
 
-impl Display for DshApiResponseStatus {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    match self {
-      DshApiResponseStatus::Accepted => write!(f, "accepted"),
-      DshApiResponseStatus::Created => write!(f, "created"),
-      DshApiResponseStatus::NoContent => write!(f, "no content"),
-      DshApiResponseStatus::Ok => write!(f, "ok"),
-      DshApiResponseStatus::Unknown => write!(f, "unknown"),
+  /// Returns the raw access token
+  ///
+  /// This method returns a raw access token that can be used to authenticate and authorize a call
+  /// to the DSH resource management web service.
+  ///
+  /// This method will not use the cached token and will always request a new access token (which
+  /// will overwrite the cached token if available). In normal cases it is preferred to use the
+  /// [`raw_token()`](self.raw_token) method instead of this one.
+  /// For static tokens this method has the same effect as the `raw_token()` method.
+  pub async fn fresh_raw_token(&self) -> DshApiResult<String> {
+    if let Some(static_token) = &self.static_token {
+      Ok(static_token.clone())
+    } else if let Some(token_fetcher) = &self.token_fetcher {
+      token_fetcher.get_fresh_raw_token().await
+    } else {
+      Err(DshApiError::configuration("either a static token or a token fetcher must be provided"))
     }
   }
-}
 
-impl From<ReqwestStatusCode> for DshApiResponseStatus {
-  fn from(status: ReqwestStatusCode) -> Self {
-    match status {
-      ReqwestStatusCode::ACCEPTED => Self::Accepted,
-      ReqwestStatusCode::CREATED => Self::Created,
-      ReqwestStatusCode::NO_CONTENT => Self::NoContent,
-      ReqwestStatusCode::OK => Self::Ok,
-      _ => Self::Unknown,
+  /// Returns a json web token
+  ///
+  /// This method returns a struct that contains information from the access token.
+  ///
+  /// Since this token has a relatively short lifespan,
+  /// it is advised to request a new token from this method before each API call.
+  /// An internal caching mechanism will make sure that no unnecessary calls will be made.
+  pub async fn jwt(&self) -> DshApiResult<DshJwt> {
+    if let Some(static_token) = &self.static_token {
+      DshJwt::from_str(static_token).map_err(|_| DshApiError::unexpected("could not parse static jwt token".to_string()))
+    } else if let Some(token_fetcher) = &self.token_fetcher {
+      token_fetcher.get_jwt().await
+    } else {
+      Err(DshApiError::configuration("either a static token or a token fetcher must be provided"))
     }
+  }
+
+  /// Returns a json web token
+  ///
+  /// This method returns a struct that contains information from the access token.
+  ///
+  /// This method will not use the cached token and will always request a new access token (which
+  /// will overwrite the cached token if available). In normal cases it is preferred to use the
+  /// [`jwt()`](self.jwt) method instead of this one.
+  /// For static tokens this method has the same effect as the `jwt()` method.
+  pub async fn fresh_jwt(&self) -> DshApiResult<DshJwt> {
+    if let Some(static_token) = &self.static_token {
+      DshJwt::from_str(static_token).map_err(|_| DshApiError::unexpected("could not parse static jwt token"))
+    } else if let Some(token_fetcher) = &self.token_fetcher {
+      token_fetcher.get_fresh_jwt().await
+    } else {
+      Err(DshApiError::configuration("either a static token or a token fetcher must be provided"))
+    }
+  }
+
+  /// Create a `DshApiClient` from a static token
+  ///
+  /// # Parameters
+  /// * `static_token` - Static token.
+  /// * `client` - Optional Reqwest client. When empty, a default client will be created.
+  /// * `tenant` - Containing tenant name and platform.
+  ///
+  /// # Returns
+  /// * [DshApiClient] - The created dsh api client.
+  pub(crate) fn with_static_token(static_token: String, client: Option<Client>, tenant: DshApiTenant) -> Self {
+    match client {
+      Some(client) => {
+        debug!("create dsh api client from static token");
+        Self { static_token: Some(static_token), token_fetcher: None, client, tenant }
+      }
+      None => {
+        debug!("create dsh api client from static token with default https client");
+        Self { static_token: Some(static_token), token_fetcher: None, client: Client::new(), tenant }
+      }
+    }
+  }
+
+  /// Create a `DshApiClient` from a token fetcher
+  ///
+  /// # Parameters
+  /// * `token_fetcher` - Token fetcher that creates a token when required.
+  /// * `client` - Optional Reqwest client. When empty, a default client will be created.
+  /// * `tenant` - Containing tenant name and platform.
+  ///
+  /// # Returns
+  /// * [DshApiClient] - The created dsh api client.
+  pub(crate) fn with_token_fetcher(token_fetcher: TokenFetcher, client: Option<Client>, tenant: DshApiTenant) -> Self {
+    match client {
+      Some(client) => {
+        debug!("create dsh api client from token fetcher");
+        Self { static_token: None, token_fetcher: Some(token_fetcher), client, tenant }
+      }
+      None => {
+        debug!("create dsh api client from token fetcher with default https client");
+        Self { static_token: None, token_fetcher: Some(token_fetcher), client: Client::new(), tenant }
+      }
+    }
+  }
+
+  // Allow dead_code since this method is used in the generated code
+  #[allow(dead_code)]
+  pub(crate) async fn process_delete(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<()> {
+    self.process_no_content(reqwest_response).await
+  }
+
+  // Allow dead_code since this method is used in the generated code
+  #[allow(dead_code)]
+  pub(crate) async fn process_get_deserializable<T>(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<T>
+  where
+    T: Debug + DeserializeOwned,
+  {
+    match reqwest_response {
+      Ok(response) => match response.status() {
+        StatusCode::OK => response.json::<T>().await.map_err(DshApiError::from),
+        status_code => Self::process_errors(status_code, response).await,
+      },
+      Err(reqwest_error) => Err(DshApiError::from(reqwest_error)),
+    }
+  }
+
+  pub(crate) async fn process_get_string(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<String> {
+    match reqwest_response {
+      Ok(response) => match response.status() {
+        StatusCode::OK => Ok(from_utf8(response.bytes().await?.as_ref())?.to_string()),
+        status_code => Self::process_errors(status_code, response).await,
+      },
+      Err(response_error) => Err(DshApiError::from(response_error)),
+    }
+  }
+
+  // Allow dead_code since this method is used in the generated code
+  #[allow(dead_code)]
+  pub(crate) async fn process_head(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<()> {
+    self.process_no_content(reqwest_response).await
+  }
+
+  // Allow dead_code since this method is used in the generated code
+  #[allow(dead_code)]
+  pub(crate) async fn process_patch(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<()> {
+    self.process_no_content(reqwest_response).await
+  }
+
+  // Allow dead_code since this method is used in the generated code
+  #[allow(dead_code)]
+  pub(crate) async fn process_post(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<()> {
+    self.process_no_content(reqwest_response).await
+  }
+
+  // Allow dead_code since this method is used in the generated code
+  #[allow(dead_code)]
+  pub(crate) async fn process_post_deserializable<T>(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<T>
+  where
+    T: DeserializeOwned,
+  {
+    match reqwest_response {
+      Ok(response) => match response.status() {
+        StatusCode::OK | StatusCode::CREATED | StatusCode::ACCEPTED => response.json::<T>().await.map_err(DshApiError::from),
+        status_code => Self::process_errors(status_code, response).await,
+      },
+      Err(reqwest_error) => Err(DshApiError::from(reqwest_error)),
+    }
+  }
+
+  // Allow dead_code since this method is used in the generated code
+  #[allow(dead_code)]
+  pub(crate) async fn process_put(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<()> {
+    self.process_no_content(reqwest_response).await
+  }
+
+  async fn process_no_content(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<()> {
+    match reqwest_response {
+      Ok(response) => match response.status() {
+        StatusCode::OK | StatusCode::CREATED | StatusCode::ACCEPTED | StatusCode::NO_CONTENT => Self::trace_response_string(response.status(), response).await,
+        status_code => Self::process_errors(status_code, response).await,
+      },
+      Err(reqwest_error) => Err(DshApiError::from(reqwest_error)),
+    }
+  }
+
+  async fn trace_response_string(status_code: StatusCode, response: Response) -> DshApiResult<()> {
+    if let Some(response_string) = Self::get_response_string(response).await {
+      trace!("{} -> response string: {}", status_code, response_string);
+    }
+    Ok(())
+  }
+
+  async fn process_errors<T>(status_code: StatusCode, response: Response) -> DshApiResult<T> {
+    match status_code {
+      StatusCode::BAD_REQUEST => Err(DshApiError::BadRequest { message: Self::get_response_string(response).await }),
+      StatusCode::UNAUTHORIZED => Err(DshApiError::NotAuthorized { message: Self::get_response_string(response).await }),
+      StatusCode::NOT_FOUND => Err(DshApiError::NotFound { message: Self::get_response_string(response).await }),
+      unexpected_status_code => {
+        Err(DshApiError::Unexpected { message: format!("unexpected status code: {}", unexpected_status_code), cause: Self::get_response_string(response).await })
+      }
+    }
+  }
+
+  async fn get_response_string(response: Response) -> Option<String> {
+    response
+      .bytes()
+      .await
+      .ok()
+      .and_then(|response_bytes| from_utf8(response_bytes.as_ref()).map(|response_str| response_str.to_string()).ok())
+      .and_then(|response_string| if response_string.is_empty() { None } else { Some(response_string) })
   }
 }
 

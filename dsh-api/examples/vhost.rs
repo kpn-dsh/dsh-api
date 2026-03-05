@@ -9,8 +9,6 @@ use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 async fn main() -> Result<(), String> {
   initialize_logger();
 
-  let _secret_id = "boss-account-ids";
-
   let client_factory = DshApiClientFactory::default();
   let client = client_factory.client().await?;
 

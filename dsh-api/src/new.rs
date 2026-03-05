@@ -40,6 +40,7 @@ use crate::types::{
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::num::NonZero;
 use std::str::FromStr;
 
 impl AllocationStatus {
@@ -333,10 +334,10 @@ impl LimitValueCertificateCount {
   /// # use dsh_api::types::{LimitValueCertificateCount, LimitValueCertificateCountName};
   /// let limit_value = LimitValueCertificateCount::new(10);
   /// assert_eq!(limit_value.name, LimitValueCertificateCountName::CertificateCount);
-  /// assert_eq!(limit_value.value, 10);
+  /// assert_eq!(limit_value.value.get(), 10);
   /// ```
-  pub fn new(certificate_count: i64) -> Self {
-    Self { name: LimitValueCertificateCountName::CertificateCount, value: certificate_count }
+  pub fn new(certificate_count: u64) -> Self {
+    Self { name: LimitValueCertificateCountName::CertificateCount, value: NonZero::new(certificate_count).expect("certificate count must be greater than zero") }
   }
 }
 
@@ -433,10 +434,10 @@ impl LimitValueMem {
   /// # use dsh_api::types::{LimitValueMem, LimitValueMemName};
   /// let limit_value = LimitValueMem::new(1024);
   /// assert_eq!(limit_value.name, LimitValueMemName::Mem);
-  /// assert_eq!(limit_value.value, 1024);
+  /// assert_eq!(limit_value.value.get(), 1024);
   /// ```
-  pub fn new(mem: i64) -> Self {
-    Self { name: LimitValueMemName::Mem, value: mem }
+  pub fn new(mem: u64) -> Self {
+    Self { name: LimitValueMemName::Mem, value: NonZero::new(mem).expect("memory size must be greater than zero") }
   }
 }
 
@@ -458,10 +459,10 @@ impl LimitValuePartitionCount {
   /// # use dsh_api::types::{LimitValuePartitionCount, LimitValuePartitionCountName};
   /// let limit_value = LimitValuePartitionCount::new(20);
   /// assert_eq!(limit_value.name, LimitValuePartitionCountName::PartitionCount);
-  /// assert_eq!(limit_value.value, 20);
+  /// assert_eq!(limit_value.value.get(), 20);
   /// ```
-  pub fn new(partition_count: i64) -> Self {
-    Self { name: LimitValuePartitionCountName::PartitionCount, value: partition_count }
+  pub fn new(partition_count: u64) -> Self {
+    Self { name: LimitValuePartitionCountName::PartitionCount, value: NonZero::new(partition_count).expect("partition count must be greater than zero") }
   }
 }
 
@@ -508,10 +509,10 @@ impl LimitValueRequestRate {
   /// # use dsh_api::types::{LimitValueRequestRate, LimitValueRequestRateName};
   /// let limit_value = LimitValueRequestRate::new(50);
   /// assert_eq!(limit_value.name, LimitValueRequestRateName::RequestRate);
-  /// assert_eq!(limit_value.value, 50);
+  /// assert_eq!(limit_value.value.get(), 50);
   /// ```
-  pub fn new(request_rate: i64) -> Self {
-    Self { name: LimitValueRequestRateName::RequestRate, value: request_rate }
+  pub fn new(request_rate: u64) -> Self {
+    Self { name: LimitValueRequestRateName::RequestRate, value: NonZero::new(request_rate).expect("request rate must be greater than zero") }
   }
 }
 
@@ -533,10 +534,10 @@ impl LimitValueSecretCount {
   /// # use dsh_api::types::{LimitValueSecretCount, LimitValueSecretCountName};
   /// let limit_value = LimitValueSecretCount::new(20);
   /// assert_eq!(limit_value.name, LimitValueSecretCountName::SecretCount);
-  /// assert_eq!(limit_value.value, 20);
+  /// assert_eq!(limit_value.value.get(), 20);
   /// ```
-  pub fn new(secret_count: i64) -> Self {
-    Self { name: LimitValueSecretCountName::SecretCount, value: secret_count }
+  pub fn new(secret_count: u64) -> Self {
+    Self { name: LimitValueSecretCountName::SecretCount, value: NonZero::new(secret_count).expect("secret count must be greater than zero") }
   }
 }
 
@@ -558,10 +559,10 @@ impl LimitValueTopicCount {
   /// # use dsh_api::types::{LimitValueTopicCount, LimitValueTopicCountName};
   /// let limit_value = LimitValueTopicCount::new(20);
   /// assert_eq!(limit_value.name, LimitValueTopicCountName::TopicCount);
-  /// assert_eq!(limit_value.value, 20);
+  /// assert_eq!(limit_value.value.get(), 20);
   /// ```
-  pub fn new(topic_count: i64) -> Self {
-    Self { name: LimitValueTopicCountName::TopicCount, value: topic_count }
+  pub fn new(topic_count: u64) -> Self {
+    Self { name: LimitValueTopicCountName::TopicCount, value: NonZero::new(topic_count).expect("topic count must be greater than zero") }
   }
 }
 
@@ -689,10 +690,11 @@ impl Notification {
   /// The other field of the `Notification` instance will be set to its default values.
   ///
   /// # Parameters
-  /// * `args` - Attributes to be applied to the template.
+  /// * `remove` - Indicates reason for the notification:
+  ///   * `true` - Notification has to do with removal of the allocation.
+  ///   * `false` - Notification relates to creation/update of the resource.
   /// * `message` - Template for the text of the notification.
-  /// * `remove` - `true` if the notification has to do with removal of the allocation,
-  ///   `false` if it relates to creation/update of the resource
+  /// * `args` - Attributes to be applied to the template.
   ///
   /// # Returns
   /// The created `Notification`.
@@ -703,12 +705,12 @@ impl Notification {
   /// # use std::collections::HashMap;
   /// use dsh_api::types::Notification;
   /// let args = HashMap::<String, String>::new();
-  /// let notification = Notification::new(args, "my notification", true);
-  /// assert_eq!(notification.message, "my notification");
+  /// let notification = Notification::new(true, "my notification", args);
   /// assert!(notification.remove);
+  /// assert_eq!(notification.message, "my notification");
   /// assert!(notification.args.is_empty());
   /// ```
-  pub fn new<T>(args: HashMap<String, String>, message: T, remove: bool) -> Self
+  pub fn new<T>(remove: bool, message: T, args: HashMap<String, String>) -> Self
   where
     T: Into<String>,
   {

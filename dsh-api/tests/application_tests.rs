@@ -162,6 +162,7 @@ fn application(id: Option<String>) -> Application {
     mem: 0,
     metrics: None,
     needs_token: false,
+    node_features: None,
     readable_streams: vec![],
     secrets: vec![
       secret(pfl("secret1"), pfu("SECRET_KEY12")),
@@ -194,12 +195,12 @@ where
   }
 }
 
-fn secret<S, T>(secret_id: S, env_key: T) -> ApplicationSecret
+fn secret<S, T>(secret_name: S, env_key: T) -> ApplicationSecret
 where
   S: Into<String>,
   T: ToString,
 {
-  ApplicationSecret::new(secret_id, &[env_key])
+  ApplicationSecret::new(secret_name, &[env_key])
 }
 
 fn volume<T>(volume_id: T) -> ApplicationVolumes

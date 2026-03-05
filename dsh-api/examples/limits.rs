@@ -5,7 +5,8 @@ mod common;
 #[tokio::main]
 async fn main() -> Result<(), String> {
   use crate::common::{get_client, initialize_logger, print_header};
-  use dsh_api::types::{GetTenantLimitByManagerByTenantByKindKind, LimitValue, LimitValueSecretCount, LimitValueSecretCountName};
+  use dsh_api::types::{LimitValue, LimitValueSecretCount, LimitValueSecretCountName};
+  use std::num::NonZero;
 
   const MANAGED_TENANT_UNDER_TEST: &str = "ajuc-test";
 
@@ -19,22 +20,22 @@ async fn main() -> Result<(), String> {
 
   print_header("get_tenant_limit");
   for kind in [
-    GetTenantLimitByManagerByTenantByKindKind::Certificatecount,
-    GetTenantLimitByManagerByTenantByKindKind::Consumerrate,
-    GetTenantLimitByManagerByTenantByKindKind::Cpu,
-    GetTenantLimitByManagerByTenantByKindKind::Kafkaaclgroupcount,
-    GetTenantLimitByManagerByTenantByKindKind::Mem,
-    GetTenantLimitByManagerByTenantByKindKind::Partitioncount,
-    GetTenantLimitByManagerByTenantByKindKind::Producerrate,
-    GetTenantLimitByManagerByTenantByKindKind::Requestrate,
-    GetTenantLimitByManagerByTenantByKindKind::Secretcount,
-    GetTenantLimitByManagerByTenantByKindKind::Topiccount,
+    LimitValueSecretCountName::CertificateCount,
+    LimitValueSecretCountName::ConsumerRate,
+    LimitValueSecretCountName::Cpu,
+    LimitValueSecretCountName::KafkaAclGroupCount,
+    LimitValueSecretCountName::Mem,
+    LimitValueSecretCountName::PartitionCount,
+    LimitValueSecretCountName::ProducerRate,
+    LimitValueSecretCountName::RequestRate,
+    LimitValueSecretCountName::SecretCount,
+    LimitValueSecretCountName::TopicCount,
   ] {
-    println!("{:?}", client.get_tenant_limit(MANAGED_TENANT_UNDER_TEST, kind).await?);
+    println!("{:?}", client.get_tenant_limit(MANAGED_TENANT_UNDER_TEST, kind.to_string()).await?);
   }
 
   print_header("patch_tenant_limits");
-  let tenant_limits = vec![LimitValue::SecretCount(LimitValueSecretCount { name: LimitValueSecretCountName::SecretCount, value: 10 })];
+  let tenant_limits = vec![LimitValue::SecretCount(LimitValueSecretCount { name: LimitValueSecretCountName::SecretCount, value: NonZero::new(10).unwrap() })];
   println!("{}", serde_json::to_string_pretty(&tenant_limits).unwrap());
   match client.patch_tenant_limit(MANAGED_TENANT_UNDER_TEST, &tenant_limits).await {
     Ok(_) => println!("tenant limits patched"),

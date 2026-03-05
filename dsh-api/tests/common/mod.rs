@@ -1,6 +1,6 @@
 use dsh_api::dsh_api_client::DshApiClient;
 use dsh_api::dsh_api_client_factory::DshApiClientFactory;
-use dsh_api::DshApiError;
+use dsh_api::error::DshApiResult;
 use std::io::Write;
 
 #[allow(dead_code)]
@@ -10,7 +10,16 @@ fn main() {}
 pub fn initialize_logger(header: Option<&str>) {
   header.inspect(|h| print_header(h));
   env_logger::builder()
-    .format(|f, r| writeln!(f, "[{:5}] {} [{}]", r.level(), r.args(), r.target()))
+    .format(|f, r| {
+      writeln!(
+        f,
+        "[{:5}] {} [{}:{}]",
+        r.level(),
+        r.args(),
+        r.target(),
+        r.line().map(|line| line.to_string()).unwrap_or_default()
+      )
+    })
     .try_init();
 }
 
@@ -23,7 +32,7 @@ pub fn print_header(header: &str) {
 #[allow(unused)]
 pub async fn get_client<'a>() -> Result<DshApiClient, String> {
   // Explicit try_factory variable declaration is important since type inference will not work here
-  let try_factory: Result<DshApiClientFactory, DshApiError> = DshApiClientFactory::try_default();
+  let try_factory: DshApiResult<DshApiClientFactory> = DshApiClientFactory::try_default();
   match try_factory {
     Ok(factory) => match factory.client().await {
       Ok(client) => Ok(client),

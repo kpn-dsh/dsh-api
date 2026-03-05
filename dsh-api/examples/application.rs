@@ -51,6 +51,13 @@ async fn main() -> Result<(), String> {
     println!("{} -> {}", application_id, application);
   }
 
+  print_header("client.get_application_configuration_map()");
+  let application_configuration_map = client.get_application_configuration_map().await?;
+  println!("{}", application_configuration_map.len());
+  for (application_id, application) in application_configuration_map {
+    println!("{} -> {:?}", application_id, application);
+  }
+
   print_header(&format!("client.get_application_status('{}')", APPLICATION));
   let application_status: AllocationStatus = client.get_application_status(APPLICATION).await?;
   println!("{} -> {}", APPLICATION, application_status);

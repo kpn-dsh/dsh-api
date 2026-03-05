@@ -28,10 +28,10 @@
 //! * [`application_ids_with_allocation_statuses() -> [application]`](DshApiClient::application_ids_with_allocation_statuses)
 //! * [`applications() -> [application]`](DshApiClient::applications)
 //! * [`applications_dependant_on_bucket(bucket_id) -> [application]`](DshApiClient::applications_dependant_on_bucket)
-//! * [`applications_dependant_on_secret(secret_id) -> [application]`](DshApiClient::applications_dependant_on_secret)
+//! * [`applications_dependant_on_secret(secret_name) -> [application]`](DshApiClient::applications_dependant_on_secret)
 //! * [`applications_dependant_on_scratch_topic(topic_id) -> [application]`](DshApiClient::applications_dependant_on_scratch_topic)
-//! * [`applications_dependant_on_vhost(secret_id) -> [application]`](DshApiClient::applications_dependant_on_vhost)
-//! * [`applications_dependant_on_volume(secret_id) -> [application]`](DshApiClient::applications_dependant_on_volume)
+//! * [`applications_dependant_on_vhost(secret_name) -> [application]`](DshApiClient::applications_dependant_on_vhost)
+//! * [`applications_dependant_on_volume(secret_name) -> [application]`](DshApiClient::applications_dependant_on_volume)
 //! * [`applications_filtered(predicate) -> [(id, application)]`](DshApiClient::applications_filtered)
 //! * [`applications_that_use_env_value(query) -> [(id, app, [env])]`](DshApiClient::applications_that_use_env_value)
 //! * [`guid() -> (gid, uid)`](DshApiClient::guid)
@@ -40,6 +40,7 @@ use crate::app::app_resources;
 use crate::application_types::ApplicationValues;
 use crate::bucket::BucketInjection;
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::platform::CloudProvider;
 use crate::query_processor::{Match, QueryProcessor};
 use crate::secret::SecretInjection;
@@ -49,13 +50,12 @@ use crate::vhost::VhostInjection;
 use crate::volume::VolumeInjection;
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::DshApiError::Unexpected;
-use crate::{bucket, secret, topic, vhost, volume, DependantApplication, DshApiResult};
+use crate::{bucket, secret, topic, vhost, volume, DependantApplication};
 use futures::future::{join, try_join_all};
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 /// # Additional methods to manage applications
 ///
@@ -72,10 +72,10 @@ use std::collections::HashMap;
 /// * [`application_ids_with_allocation_statuses() -> [application]`](DshApiClient::application_ids_with_allocation_statuses)
 /// * [`applications() -> [application]`](DshApiClient::applications)
 /// * [`applications_dependant_on_bucket(bucket_id) -> [application]`](DshApiClient::applications_dependant_on_bucket)
-/// * [`applications_dependant_on_secret(secret_id) -> [application]`](DshApiClient::applications_dependant_on_secret)
+/// * [`applications_dependant_on_secret(secret_name) -> [application]`](DshApiClient::applications_dependant_on_secret)
 /// * [`applications_dependant_on_scratch_topic(topic_id) -> [application]`](DshApiClient::applications_dependant_on_scratch_topic)
-/// * [`applications_dependant_on_vhost(secret_id) -> [application]`](DshApiClient::applications_dependant_on_vhost)
-/// * [`applications_dependant_on_volume(secret_id) -> [application]`](DshApiClient::applications_dependant_on_volume)
+/// * [`applications_dependant_on_vhost(secret_name) -> [application]`](DshApiClient::applications_dependant_on_vhost)
+/// * [`applications_dependant_on_volume(secret_name) -> [application]`](DshApiClient::applications_dependant_on_volume)
 /// * [`applications_filtered(predicate) -> [(id, application)]`](DshApiClient::applications_filtered)
 /// * [`applications_that_use_env_value(query) -> [(id, app, [env])]`](DshApiClient::applications_that_use_env_value)
 /// * [`guid() -> (gid, uid)`](DshApiClient::guid)
@@ -152,25 +152,21 @@ impl DshApiClient {
   /// # Get all application that depend on a given secret
   ///
   /// # Parameters
-  /// * `secret_id` - id of the requested secret
+  /// * `secret_name` - Name of the requested secret.
   ///
   /// # Returns
   /// * `Ok<Vec<`[`DependantApplication`]`>>` - usage.
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
-  pub async fn applications_dependant_on_secret(&self, secret_id: &str) -> DshApiResult<Vec<DependantApplication<SecretInjection>>> {
+  pub async fn applications_dependant_on_secret(&self, secret_name: &str) -> DshApiResult<Vec<DependantApplication<SecretInjection>>> {
     let applications = self.get_application_configuration_map().await?;
     Ok(
-      secret::secret_env_vars_from_applications(secret_id, &applications)
+      secret::secret_env_vars_from_applications(secret_name, &applications)
         .iter()
         .map(|application_values| {
           DependantApplication::new(
             application_values.id.to_string(),
             application_values.application.instances,
-            application_values
-              .values
-              .iter()
-              .map(|env_var| SecretInjection::EnvVar(env_var.to_string()))
-              .collect_vec(),
+            application_values.values.iter().map(|env_var| SecretInjection::env_var(*env_var)).collect_vec(),
           )
         })
         .collect_vec(),
@@ -190,7 +186,7 @@ impl DshApiClient {
     Ok(
       topic::topic_used_in_applications(topic, &applications)
         .iter()
-        .map(|(application_id, application)| DependantApplication::new(application_id.to_string(), application.instances, vec![TopicInjection::Topic(topic.to_string())]))
+        .map(|(application_id, application)| DependantApplication::new(application_id.to_string(), application.instances, vec![TopicInjection::topic(topic)]))
         .collect_vec(),
     )
   }
@@ -215,7 +211,7 @@ impl DshApiClient {
             application_values
               .values
               .iter()
-              .map(|(port, port_mapping)| VhostInjection::Vhost(port.to_string(), Some(port_mapping.to_string())))
+              .map(|(port, port_mapping)| VhostInjection::vhost(*port, Some(port_mapping.to_string())))
               .collect_vec(),
           )
         })
@@ -240,7 +236,7 @@ impl DshApiClient {
           DependantApplication::new(
             application_values.id.to_string(),
             application_values.application.instances,
-            application_values.values.iter().map(|path| VolumeInjection::Volume(path.to_string())).collect_vec(),
+            application_values.values.iter().map(|path| VolumeInjection::volume(*path)).collect_vec(),
           )
         })
         .collect_vec(),
@@ -308,18 +304,17 @@ impl DshApiClient {
   /// * `Ok<(gid, uid)>` - group and user id for the tenant, which are always the same vale
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn guid(&self) -> DshApiResult<(usize, usize)> {
-    lazy_static! {
-      static ref GUID_REGEX: Regex = Regex::new(r"^([0-9]+):([0-9]+)$").unwrap();
-    }
+    static GUID_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^([0-9]+):([0-9]+)$").unwrap());
+
     match self.get_application_configuration_map().await?.iter().take(1).last() {
       Some((_, application)) => match GUID_REGEX.captures(application.user.as_str()) {
         Some(captures) => Ok((
           captures.get(1).unwrap().as_str().parse::<usize>().unwrap(),
           captures.get(2).unwrap().as_str().parse::<usize>().unwrap(),
         )),
-        None => Err(Unexpected(format!("illegal user value {}", application.user), None)),
+        None => Err(DshApiError::unexpected(format!("illegal user value {}", application.user))),
       },
-      None => Err(Unexpected("no applications deployed".to_string(), None)),
+      None => Err(DshApiError::unexpected("no applications deployed")),
     }
   }
 }

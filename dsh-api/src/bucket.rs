@@ -53,12 +53,13 @@
 use crate::app::{app_resources, apps_that_use_resource};
 use crate::application_types::{ApplicationValues, EnvVarInjection};
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::parse::parse_function1;
 use crate::platform::CloudProvider;
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application, Bucket, BucketStatus};
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::{Dependant, DependantApp, DependantApplication, DshApiResult};
+use crate::{Dependant, DependantApp, DependantApplication};
 use futures::future::try_join_all;
 use futures::try_join;
 use itertools::Itertools;
@@ -76,17 +77,33 @@ pub const OBJECT_STORE_SECRET_ACCESS_KEY: &str = "system/objectstore/secret_acce
 pub enum BucketInjection {
   /// Environment variable injection, where the value is the name of the environment variable.
   #[serde(rename = "env")]
-  EnvVar(String),
+  EnvVar { env_var_name: String },
   /// Variable function, where the value is the name of the environment variable.
   #[serde(rename = "variable")]
-  Variable(String),
+  Variable { env_var_name: String },
+}
+
+impl BucketInjection {
+  pub(crate) fn env_var<T>(env_var: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self::EnvVar { env_var_name: env_var.into() }
+  }
+
+  pub(crate) fn variable<T>(env_var: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self::Variable { env_var_name: env_var.into() }
+  }
 }
 
 impl Display for BucketInjection {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      BucketInjection::EnvVar(env_var) => write!(f, "{}", env_var),
-      BucketInjection::Variable(variable) => write!(f, "{{ bucket_name('{}') }}", variable),
+      BucketInjection::EnvVar { env_var_name } => write!(f, "{}", env_var_name),
+      BucketInjection::Variable { env_var_name } => write!(f, "{{ bucket_name('{}') }}", env_var_name),
     }
   }
 }
@@ -126,8 +143,8 @@ impl DshApiClient {
       let mut dependants: Vec<Dependant<BucketInjection>> = vec![];
       let bucket_name = self.platform().bucket_name(self.tenant_name(), bucket_id, access_key_id.as_deref()).ok();
       for application_injections in bucket_injections_from_applications(bucket_id, bucket_name.as_deref(), &applications) {
-        dependants.push(Dependant::application(
-          application_injections.id.to_string(),
+        dependants.push(Dependant::service(
+          application_injections.id,
           application_injections.application.instances,
           application_injections.values,
         ));
@@ -162,10 +179,12 @@ impl DshApiClient {
     match self.platform().cloud_provider() {
       CloudProvider::Azure => match self.object_store_access_key_id_if_required().await {
         Ok(Some(access_key_id)) => Ok(self.platform().bucket_name(self.tenant_name(), bucket_id, Some(access_key_id))?),
-        _ => Err(DshApiError::NotFound(Some(format!(
-          "bucket name for azure requires the object store access key '{}'",
-          OBJECT_STORE_ACCESS_KEY_ID
-        )))),
+        _ => Err(DshApiError::NotFound {
+          message: Some(format!(
+            "bucket name for azure requires the object store access key '{}'",
+            OBJECT_STORE_ACCESS_KEY_ID
+          )),
+        }),
       },
       CloudProvider::AWS => Ok(self.platform().bucket_name(self.tenant_name(), bucket_id, None::<String>)?.to_string()),
     }
@@ -186,11 +205,7 @@ impl DshApiClient {
     let mut dependants: Vec<Dependant<BucketInjection>> = vec![];
     let bucket_name = self.bucket_name(bucket_id).await.ok();
     for application in bucket_injections_from_applications(bucket_id, bucket_name.as_deref(), &application_configuration_map) {
-      dependants.push(Dependant::application(
-        application.id.to_string(),
-        application.application.instances,
-        application.values,
-      ));
+      dependants.push(Dependant::service(application.id, application.application.instances, application.values));
     }
     for (app_id, _, resource_ids) in apps_that_use_resource(bucket_id, &appcatalogapp_configuration_map, &bucket_resources_from_app) {
       dependants.push(Dependant::app(
@@ -276,11 +291,7 @@ impl DshApiClient {
       let mut dependants: Vec<Dependant<BucketInjection>> = vec![];
       let bucket_name = self.platform().bucket_name(self.tenant_name(), bucket_id, access_key_id.as_deref()).ok();
       for application in bucket_injections_from_applications(bucket_id.as_str(), bucket_name.as_deref(), &application_configuration_map) {
-        dependants.push(Dependant::application(
-          application.id.to_string(),
-          application.application.instances,
-          application.values,
-        ));
+        dependants.push(Dependant::service(application.id, application.application.instances, application.values));
       }
       for (app_id, _, resource_ids) in apps_that_use_resource(bucket_id.as_str(), &apps, &bucket_resources_from_app) {
         dependants.push(Dependant::app(
@@ -366,7 +377,7 @@ pub fn bucket_injections_from_application(bucket_id: &str, bucket_name: Option<&
     .filter_map(|(env_key, env_value)| match parse_function1(env_value, "bucket_name") {
       Ok(bucket_string) => {
         if bucket_id == bucket_string {
-          Some(BucketInjection::Variable(env_key.to_string()))
+          Some(BucketInjection::variable(env_key))
         } else {
           None
         }
@@ -374,7 +385,7 @@ pub fn bucket_injections_from_application(bucket_id: &str, bucket_name: Option<&
       Err(_) => match bucket_name {
         Some(name) => {
           if env_value.contains(name) {
-            Some(BucketInjection::EnvVar(env_key.to_string()))
+            Some(BucketInjection::env_var(env_key))
           } else {
             None
           }
@@ -457,27 +468,3 @@ pub fn buckets_from_applications(applications: &HashMap<String, Application>) ->
   application_tuples.sort();
   application_tuples
 }
-
-// /// # Parse bucket string
-// ///
-// /// # Example
-// ///
-// /// ```
-// /// # use std::str::FromStr;
-// /// use dsh_api::bucket::parse_bucket_string;
-// /// assert_eq!(parse_bucket_string("{ bucket_name('my_bucket_name') }"), Ok("my_bucket_name"));
-// /// ```
-// ///
-// /// # Parameters
-// /// * `bucket_string` - the bucket string to be parsed
-// ///
-// /// # Returns
-// /// When the provided string is valid, the method returns the bucket name
-// pub fn parse_bucket_string(bucket_string: &str) -> Result<&str, String> {
-//   parse_function1(bucket_string, "bucket_name")
-// }
-//
-// #[test]
-// fn test_parse_bucket_string() {
-//   assert_eq!(parse_bucket_string("{ bucket_name('my_bucket_name') }"), Ok("my_bucket_name"));
-// }

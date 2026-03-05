@@ -25,7 +25,7 @@
 //! * [`apps_dependant_on_application(application_id) -> [app]`](DshApiClient::apps_dependant_on_application)
 //! * [`apps_dependant_on_bucket(bucket_id) -> [app]`](DshApiClient::apps_dependant_on_bucket)
 //! * [`apps_dependant_on_certificate(certificate_id) -> [app]`](DshApiClient::apps_dependant_on_certificate)
-//! * [`apps_dependant_on_secret(secret_id) -> [app]`](DshApiClient::apps_dependant_on_secret)
+//! * [`apps_dependant_on_secret(secret_name) -> [app]`](DshApiClient::apps_dependant_on_secret)
 //! * [`apps_dependant_on_topic(topic_id) -> [app]`](DshApiClient::apps_dependant_on_topic)
 //! * [`apps_dependant_on_vhost(vhost_id) -> [app]`](DshApiClient::apps_dependant_on_vhost)
 //! * [`apps_dependant_on_volume(volume_id) -> [app]`](DshApiClient::apps_dependant_on_volume)
@@ -34,14 +34,15 @@ use crate::application::application_resources_from_app;
 use crate::bucket::bucket_resources_from_app;
 use crate::certificate::certificate_resources_from_app;
 use crate::dsh_api_client::DshApiClient;
+use crate::error::DshApiResult;
 use crate::secret::secret_resources_from_app;
 use crate::topic::topic_resources_from_app;
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue};
 use crate::vhost::vhost_resources_from_app;
 use crate::volume::volume_resources_from_app;
+use crate::DependantApp;
 #[allow(unused_imports)]
 use crate::DshApiError;
-use crate::{DependantApp, DshApiResult};
 use itertools::Itertools;
 use serde_json::from_str;
 use std::collections::HashMap;
@@ -63,7 +64,7 @@ use std::collections::HashMap;
 /// * [`apps_dependant_on_application(application_id) -> [app]`](DshApiClient::apps_dependant_on_application)
 /// * [`apps_dependant_on_bucket(bucket_id) -> [app]`](DshApiClient::apps_dependant_on_bucket)
 /// * [`apps_dependant_on_certificate(certificate_id) -> [app]`](DshApiClient::apps_dependant_on_certificate)
-/// * [`apps_dependant_on_secret(secret_id) -> [app]`](DshApiClient::apps_dependant_on_secret)
+/// * [`apps_dependant_on_secret(secret_name) -> [app]`](DshApiClient::apps_dependant_on_secret)
 /// * [`apps_dependant_on_topic(topic_id) -> [app]`](DshApiClient::apps_dependant_on_topic)
 /// * [`apps_dependant_on_vhost(vhost_id) -> [app]`](DshApiClient::apps_dependant_on_vhost)
 /// * [`apps_dependant_on_volume(volume_id) -> [app]`](DshApiClient::apps_dependant_on_volume)
@@ -120,7 +121,7 @@ impl DshApiClient {
         app_configurations.sort_by(|(app_id_a, _, _), (app_id_b, _, _)| app_id_a.cmp(app_id_b));
         Ok(app_configurations)
       }
-      Err(error) => Err(DshApiError::Unexpected("error parsing app configuration".to_string(), Some(error.to_string()))),
+      Err(error) => Err(DshApiError::Unexpected { message: "error parsing app configuration".to_string(), cause: Some(error.to_string()) }),
     }
   }
 
@@ -192,14 +193,14 @@ impl DshApiClient {
   /// # Get all apps that depend on a secret
   ///
   /// # Parameters
-  /// * `secret_id` - Identifier of the secret.
+  /// * `secret_name` - Name of the secret.
   ///
   /// # Returns
   /// * `Ok<Vec<DependantApp>>` - Apps that depend on the secret.
   /// * `Err<`[`DshApiError`]`>` - When the request could not be processed by the DSH.
-  pub async fn apps_dependant_on_secret(&self, secret_id: &str) -> DshApiResult<Vec<DependantApp>> {
+  pub async fn apps_dependant_on_secret(&self, secret_name: &str) -> DshApiResult<Vec<DependantApp>> {
     Ok(
-      apps_that_use_secret(secret_id, &self.get_appcatalogapp_configuration_map().await?)
+      apps_that_use_secret(secret_name, &self.get_appcatalogapp_configuration_map().await?)
         .into_iter()
         .map(|(app_id, _, resource_ids)| DependantApp::new(app_id.to_string(), resource_ids.iter().map(|resource_id| resource_id.to_string()).collect_vec()))
         .collect_vec(),
@@ -291,7 +292,7 @@ pub fn apps_that_use_certificate<'a>(certificate_id: &str, apps: &'a HashMap<Str
 /// Find apps that use a given secret
 ///
 /// # Parameters
-/// * `secret_id` - Identifier of the secret to look for.
+/// * `secret_name` - Name of the secret to look for.
 /// * `apps` - Hashmap of all apps.
 ///
 /// # Returns
@@ -299,8 +300,8 @@ pub fn apps_that_use_certificate<'a>(certificate_id: &str, apps: &'a HashMap<Str
 /// * `app_id` - App id of the app that uses the secret,
 /// * `app` - Reference to the app,
 /// * `resource_ids` - Secret resources of the secret in the app.
-pub fn apps_that_use_secret<'a>(secret_id: &str, apps: &'a HashMap<String, AppCatalogApp>) -> Vec<(&'a str, &'a AppCatalogApp, Vec<&'a str>)> {
-  apps_that_use_resource(secret_id, apps, &secret_resources_from_app)
+pub fn apps_that_use_secret<'a>(secret_name: &str, apps: &'a HashMap<String, AppCatalogApp>) -> Vec<(&'a str, &'a AppCatalogApp, Vec<&'a str>)> {
+  apps_that_use_resource(secret_name, apps, &secret_resources_from_app)
 }
 
 /// Find apps that use a given topic
