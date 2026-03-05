@@ -1,8 +1,3 @@
-use dsh_api::types::{
-  LimitValueCertificateCountName, LimitValueConsumerRateName, LimitValueCpuName, LimitValueKafkaAclGroupCountName, LimitValueMemName, LimitValuePartitionCountName,
-  LimitValueProducerRateName, LimitValueRequestRateName, LimitValueSecretCountName, LimitValueTopicCountName, ManagedTenant, ManagedTenantServices, ManagedTenantServicesName,
-};
-
 #[path = "common.rs"]
 mod common;
 
@@ -10,6 +5,10 @@ mod common;
 #[tokio::main]
 async fn main() -> Result<(), String> {
   use crate::common::{get_client, initialize_logger, print_header};
+  use dsh_api::types::{
+    LimitValueCertificateCountName, LimitValueConsumerRateName, LimitValueCpuName, LimitValueKafkaAclGroupCountName, LimitValueMemName, LimitValuePartitionCountName,
+    LimitValueProducerRateName, LimitValueRequestRateName, LimitValueSecretCountName, LimitValueTopicCountName, ManagedTenant, ManagedTenantServices, ManagedTenantServicesName,
+  };
   const MANAGED_TENANT_UNDER_TEST: &str = "ajuc-test";
   const MANAGED_TENANT_TO_CREATE: &str = "ajuc-create";
   const MANAGED_TENANT_TO_DELETE: &str = "ajuc-delete";

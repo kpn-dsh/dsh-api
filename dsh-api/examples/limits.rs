@@ -1,5 +1,3 @@
-use std::num::NonZero;
-
 #[path = "common.rs"]
 mod common;
 
@@ -8,6 +6,7 @@ mod common;
 async fn main() -> Result<(), String> {
   use crate::common::{get_client, initialize_logger, print_header};
   use dsh_api::types::{LimitValue, LimitValueSecretCount, LimitValueSecretCountName};
+  use std::num::NonZero;
 
   const MANAGED_TENANT_UNDER_TEST: &str = "ajuc-test";
 

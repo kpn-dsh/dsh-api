@@ -3,7 +3,6 @@
 mod common;
 
 use std::error::Error;
-use std::num::NonZero;
 
 #[cfg(not(feature = "generic"))]
 fn main() -> Result<(), Box<dyn Error>> {
@@ -16,6 +15,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
   use crate::common::print_header;
   use dsh_api::dsh_api_client_factory::DshApiClientFactory;
   use dsh_api::types::{LimitValue, LimitValueCpu, LimitValueCpuName, LimitValueMem, LimitValueMemName};
+  use std::num::NonZero;
   initialize_logger();
 
   const APPLICATION_ID: &str = "keyring-dev";

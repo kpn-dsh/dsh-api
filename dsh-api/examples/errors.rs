@@ -12,7 +12,9 @@ async fn main() -> Result<(), String> {
 
   test_delete_non_existing_secret(&client).await?;
   test_get_existing_secret(&client).await?;
+  #[cfg(feature = "manage")]
   test_get_tenant_ids(&client).await?;
+  #[cfg(feature = "manage")]
   test_get_tenant_configuration(&client).await?;
   test_get_non_existing_secret(&client).await?;
   test_post_existing_secret(&client).await?;
@@ -39,6 +41,7 @@ async fn test_get_existing_secret(client: &DshApiClient) -> Result<(), String> {
 }
 
 #[allow(unused)]
+#[cfg(feature = "manage")]
 async fn test_get_tenant_ids(client: &DshApiClient) -> Result<(), String> {
   let result = client.get_tenant_ids().await;
   println!("client.get_tenant_ids() -> {:?}", result);
@@ -46,6 +49,7 @@ async fn test_get_tenant_ids(client: &DshApiClient) -> Result<(), String> {
 }
 
 #[allow(unused)]
+#[cfg(feature = "manage")]
 async fn test_get_tenant_configuration(client: &DshApiClient) -> Result<(), String> {
   let result = client.get_tenant_configuration("ajuc-test").await;
   println!("client.get_tenant_configuration('{}') -> {:?}", "ajuc-test", result);
