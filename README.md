@@ -301,27 +301,46 @@ return without any warnings or errors:
 
 Consider configuring your IDE to automatically apply the formatting rules when saving a file.
 
-## Release
+# Publish
 
-This library consists of two crates. The first one (`dsh_api_build_helpers`)
-is required as a `build-dependency` for the second one (`dsh_api`).
+This section describes how to publish the `dsh_api` crate to `crates.io`.
+In this explanation it is assumed that all your local code is committed, pushed and
+merged to `github`.
 
-While developing it is convenient that `dsh_api` uses a local build dependency,
-but for publishing it is required that `dsh_api` only has dependencies to already published crates.
-This means that during development you should have the following build dependency
-in `dsh_api/Cargo.toml`:
+### Publish `dsh_api_build_helpers`
+
+`dsh_api` depends on `dsh_api_build_helpers` for generating code from the `openapi`
+specification (his is a build-time dependency only).
+Therefor the first step is to publish the helper crate.
+Make sure that you have no uncommited code before you publish the crate.
+
+It is a good idea to do a dry-run first. From the root directory of the `dsh_api` project use:
+
+```bash
+> cargo publish -p dsh_api_build_helper --dry-run
+```
+
+When everything is ok you can publish the final crate by omitting the `--dry-run` option:
+
+```bash
+> cargo publish -p dsh_api_build_helper
+```
+
+### Publish `dsh_api`
+
+The next step it to publish `dsh_api` itself. Make sure that the `dsh_api_build_helper` dependency
+is pointing to `crates.io` (published in the previous step) and not to your local code.
+Check the dependency in `dsh-api/Cargo.toml`:
 
 ```toml
 [build-dependencies]
-dsh_api_build_helpers = { path = "../dsh-api-build" }
+# dsh_api_build_helpers = { path = "../dsh-api-build" }
+dsh_api_build_helpers = { version = "0.7.0" }
 ```
 
-When it is time to release, you first have to publish the `dsh_api_build_helpers` crate.
-Once this is ready, you must change the build dependency in `dsh_api` to the published crate:
+Again make sure that you have no uncommited code before you publish the crate.
+After doing a dry-run first (`--dry-run` option) publish the crate using:
 
-```toml
-[build-dependencies]
-dsh_api_build_helpers = "0.6.2"
+```bash
+> cargo publish -p dsh_api
 ```
-
-You can then normally test, build and publish the `dsh_api` crate to `crates.io`.
