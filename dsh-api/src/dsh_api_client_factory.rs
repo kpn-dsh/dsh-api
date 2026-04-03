@@ -167,8 +167,7 @@ impl DshApiClientFactory {
   /// # async fn hide() -> DshApiResult<()> {
   /// let tenant = DshApiTenant::from_tenant("my-tenant")?;
   /// let robot_password = "...";
-  /// let client_factory =
-  ///   DshApiClientFactory::create_with_token_fetcher(tenant, robot_password);
+  /// let client_factory = DshApiClientFactory::create_with_token_fetcher(tenant, robot_password);
   /// let client = client_factory.client().await?;
   /// println!("tenant is {}", client.tenant());
   /// # Ok(())
@@ -457,8 +456,8 @@ impl DshApiPlatformClientFactory {
   /// # Examples
   /// ```no_run
   /// # use dsh_api::error::DshApiResult;
-  /// use dsh_api::platform::DshPlatform;
   /// use dsh_api::dsh_api_client_factory::DshApiPlatformClientFactory;
+  /// use dsh_api::platform::DshPlatform;
   ///
   /// # async fn hide() -> DshApiResult<()> {
   /// let platform = DshPlatform::new("nplz");
@@ -510,7 +509,8 @@ impl DshApiPlatformClientFactory {
   /// # async fn hide() -> DshApiResult<()> {
   /// let platform = DshPlatform::try_from("np-aws-lz-dsh")?;
   /// let static_token = "...";
-  /// let client_factory = DshApiPlatformClientFactory::create_from_static_token(platform, static_token)?;
+  /// let client_factory =
+  ///   DshApiPlatformClientFactory::create_from_static_token(platform, static_token)?;
   /// match client_factory.client("my-tenant").await {
   ///   Ok(client) => println!("tenant is {}", client.tenant()),
   ///   Err(error) => println!("could not create client ({})", error),

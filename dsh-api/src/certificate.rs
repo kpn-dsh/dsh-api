@@ -1,5 +1,4 @@
 //! Module that contains methods and functions to manage certificates.
-//!
 #![doc = mermaid!("diagrams/certificate.mmd")]
 //!
 //! # Generated methods

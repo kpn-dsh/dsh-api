@@ -81,8 +81,7 @@ impl DshApiError {
 /// use dsh_api::log_error;
 ///
 /// fn save(path: PathBuf, data: &[u8]) -> Result<(), std::io::Error> {
-///   write(&path, data)
-///     .map_err(log_error!("writing {} failed, caused by ", path.display()))?;
+///   write(&path, data).map_err(log_error!("writing {} failed, caused by ", path.display()))?;
 ///   Ok(())
 /// }
 /// ```

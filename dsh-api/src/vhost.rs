@@ -91,11 +91,10 @@ impl DshApiClient {
     for ApplicationValues { id, application, values } in vhosts_from_applications(&applications) {
       for (vhost, port, _) in values {
         let dependant_applications = vhosts_map.entry(vhost.clone()).or_default();
-        dependant_applications.push(DependantApplication::new(
-          id.to_string(),
-          application.instances,
-          vec![VhostInjection::Vhost { exposed_port: port.to_string(), zone: None }],
-        ));
+        dependant_applications.push(DependantApplication::new(id.to_string(), application.instances, vec![VhostInjection::Vhost {
+          exposed_port: port.to_string(),
+          zone: None,
+        }]));
       }
     }
     let mut vhosts: Vec<(String, Vec<DependantApplication<VhostInjection>>)> = Vec::from_iter(vhosts_map.into_iter());
@@ -135,11 +134,10 @@ impl DshApiClient {
     for ApplicationValues { id, application, values } in vhosts_from_applications(&application_configuration_map) {
       for (vhost, port, _) in values {
         let dependants = vhosts_with_dependants_map.entry(vhost.clone()).or_default();
-        dependants.push(Dependant::service(
-          id,
-          application.instances,
-          vec![VhostInjection::Vhost { exposed_port: port.to_string(), zone: None }],
-        ));
+        dependants.push(Dependant::service(id, application.instances, vec![VhostInjection::Vhost {
+          exposed_port: port.to_string(),
+          zone: None,
+        }]));
       }
     }
     let mut app_ids = appcatalogapp_configuration_map.keys().collect_vec();

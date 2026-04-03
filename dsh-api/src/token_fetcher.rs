@@ -69,12 +69,7 @@ impl TokenFetcher {
   /// # use dsh_api::platform::DshPlatform;
   /// let platform = DshPlatform::new("nplz");
   /// let dsh_api_tenant = DshApiTenant::new("my-tenant", platform);
-  /// let token_fetcher = TokenFetcher::new(
-  ///   dsh_api_tenant,
-  ///   "my-secret".to_string(),
-  ///   None,
-  ///   None
-  /// );
+  /// let token_fetcher = TokenFetcher::new(dsh_api_tenant, "my-secret".to_string(), None, None);
   /// let token = token_fetcher.get_bearer_token().await?;
   /// # Ok(())
   /// # }
