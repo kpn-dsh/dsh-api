@@ -447,7 +447,12 @@ impl DshPlatform {
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
-  ///   DshPlatform::new("nplz").proxy_consumer_name_acl_group("my-tenant", "my-acl-group", "my-proxy", 2),
+  ///   DshPlatform::new("nplz").proxy_consumer_name_acl_group(
+  ///     "my-tenant",
+  ///     "my-acl-group",
+  ///     "my-proxy",
+  ///     2
+  ///   ),
   ///   "my-tenant.my-acl-group_my-proxy_2".to_string()
   /// );
   /// ```
@@ -758,7 +763,7 @@ impl DshPlatform {
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// assert_eq!(
   ///   DshPlatform::new("nplz")
-  ///     .tenant_proxy_private_bootstrap_servers("my-tenant", "my-proxy")?
+  ///     .tenant_proxy_private_bootstrap_servers("my-tenant", "my-proxy", 3)?
   ///     .first()
   ///     .unwrap(),
   ///   "my-proxy-0.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org:9091"
@@ -766,10 +771,9 @@ impl DshPlatform {
   /// # Ok(())
   /// # }
   /// ```
-  pub fn tenant_proxy_private_bootstrap_servers(&self, tenant_name: impl Display, proxy_name: impl Display) -> Result<Vec<String>, String> {
+  pub fn tenant_proxy_private_bootstrap_servers(&self, tenant_name: impl Display, proxy_name: impl Display, number: u32) -> Result<Vec<String>, String> {
     self.tenant_private_domain(tenant_name).map(|tenant_private_domain| {
-      [0, 1, 2]
-        .iter()
+      (0..number)
         .map(|n| format!("{}-{}.kafka.{}:9091", proxy_name, n, tenant_private_domain))
         .collect_vec()
     })
@@ -786,7 +790,7 @@ impl DshPlatform {
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// assert_eq!(
   ///   DshPlatform::new("nplz").tenant_proxy_private_schema_store_host("my-tenant", "my-proxy")?,
-  ///   "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org:9091"
+  ///   "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org"
   /// );
   /// # Ok(())
   /// # }
@@ -794,7 +798,7 @@ impl DshPlatform {
   pub fn tenant_proxy_private_schema_store_host(&self, tenant_name: impl Display, proxy_name: impl Display) -> Result<String, String> {
     self
       .tenant_private_domain(tenant_name)
-      .map(|tenant_private_domain| format!("{}-schema-store.kafka.{}:9091", proxy_name, tenant_private_domain))
+      .map(|tenant_private_domain| format!("{}-schema-store.kafka.{}", proxy_name, tenant_private_domain))
   }
 
   /// # Returns the public bootstrap servers for a configured proxy
@@ -804,16 +808,16 @@ impl DshPlatform {
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
   ///   DshPlatform::new("nplz")
-  ///     .tenant_proxy_public_bootstrap_servers("my-tenant", "my-proxy")
+  ///     .tenant_proxy_public_bootstrap_servers("my-tenant", "my-proxy", 3)
   ///     .first()
   ///     .unwrap(),
   ///   "my-proxy-0.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com:9091"
   /// );
   /// ```
-  pub fn tenant_proxy_public_bootstrap_servers(&self, tenant_name: impl Display, proxy_name: impl Display) -> Vec<String> {
+  pub fn tenant_proxy_public_bootstrap_servers(&self, tenant_name: impl Display, proxy_name: impl Display, number: u32) -> Vec<String> {
     let tenant_string = tenant_name.to_string();
-    [0, 1, 2]
-      .iter()
+
+    (0..number)
       .map(|n| format!("{}-{}.kafka.{}:9091", proxy_name, n, self.tenant_public_domain(&tenant_string)))
       .collect_vec()
   }
@@ -825,11 +829,11 @@ impl DshPlatform {
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
   ///   DshPlatform::new("nplz").tenant_proxy_public_schema_store_host("my-tenant", "my-proxy"),
-  ///   "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com:9091"
+  ///   "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
   /// );
   /// ```
   pub fn tenant_proxy_public_schema_store_host(&self, tenant_name: impl Display, proxy_name: impl Display) -> String {
-    format!("{}-schema-store.kafka.{}:9091", proxy_name, self.tenant_public_domain(tenant_name))
+    format!("{}-schema-store.kafka.{}", proxy_name, self.tenant_public_domain(tenant_name))
   }
 
   /// # Returns the public domain for an app

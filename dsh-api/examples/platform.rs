@@ -88,7 +88,7 @@ fn print_platform(platform: DshPlatform) {
     Ok(tenant_private_domain) => println!("private domain tenant            {}", tenant_private_domain),
     Err(error) => println!("private domain tenant            {}", error),
   }
-  match platform.tenant_proxy_private_bootstrap_servers(TENANT_NAME, PROXY) {
+  match platform.tenant_proxy_private_bootstrap_servers(TENANT_NAME, PROXY, 3) {
     Ok(boostrap_servers) => println!("proxy private bootstrap servers  {}", boostrap_servers.join("\n                                 ")),
     Err(error) => println!("proxy private bootstrap servers  {}", error),
   }
@@ -101,7 +101,7 @@ fn print_platform(platform: DshPlatform) {
   println!(
     "proxy public bootstrap servers   {}",
     platform
-      .tenant_proxy_public_bootstrap_servers(TENANT_NAME, PROXY)
+      .tenant_proxy_public_bootstrap_servers(TENANT_NAME, PROXY, 3)
       .join("\n                                 ")
   );
   println!(
