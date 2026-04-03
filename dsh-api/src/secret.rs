@@ -56,6 +56,15 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
+pub const BUCKET_ACCESS_IDENTIFIER: &str = "system/bucketaccess/bucket-id/identifier";
+pub const BUCKET_ACCESS_SECRET: &str = "system/bucketaccess/bucket-id/secret";
+pub const DBAAS_DATABASE_PASSWORD_SECRET: &str = "system/dbaas/database_password";
+pub const DBAAS__PASSWORD: &str = "system/dbaas/trifoniusdb_password";
+pub const OBJECT_STORE_ACCESS_KEY_ID: &str = "system/objectstore/access_key_id";
+pub const OBJECT_STORE_SECRET_ACCESS_KEY: &str = "system/objectstore/secret_access_key";
+pub const ROBOT_SECRET: &str = "system/rest-api-client";
+pub const VPN_SECRET: &str = "system/vpn-password";
+
 /// # Describes an injection of a `Secret` in an application
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum SecretInjection {
