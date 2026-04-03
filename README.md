@@ -10,7 +10,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.9.0" 
+dsh_api = "0.10.0" 
 ```
 
 ### Minimal example
@@ -33,11 +33,11 @@ use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let client = DshApiClientFactory::default().client().await?;
-    for (application_id, application) in client.list_applications().await? {
-        println!("{} -> {}", application_id, application);
-    }
-    Ok(())
+  let client = DshApiClientFactory::default().client().await?;
+  for (application_id, application) in client.list_applications().await? {
+    println!("{} -> {}", application_id, application);
+  }
+  Ok(())
 }
 ```
 
@@ -59,20 +59,20 @@ use dsh_api::error::DshApiResult;
 
 #[tokio::main]
 async fn main() -> DshApiResult<()> {
-    let tenant = DshApiTenant::new(
-        "my-tenant".to_string(),
-        DshPlatform::try_from("np-aws-lz-dsh")?
-    );
-    let secret = "...".to_string();
+  let tenant = DshApiTenant::new(
+    "my-tenant".to_string(),
+    DshPlatform::try_from("np-aws-lz-dsh")?
+  );
+  let secret = "...".to_string();
 
-    let client_factory = DshApiClientFactory::create(tenant, secret)?;
-    let client = client_factory.client().await?;
-    let predicate = |application: &Application| application.needs_token;
-    let applications = client.find_applications(&predicate).await?;
-    for (application_id, application) in applications {
-        println!("{} -> {}", application_id, application);
-    }
-    Ok(())
+  let client_factory = DshApiClientFactory::create(tenant, secret)?;
+  let client = client_factory.client().await?;
+  let predicate = |application: &Application| application.needs_token;
+  let applications = client.find_applications(&predicate).await?;
+  for (application_id, application) in applications {
+    println!("{} -> {}", application_id, application);
+  }
+  Ok(())
 }
 ```
 
@@ -91,7 +91,7 @@ The generic methods requires the `generic` feature to be enabled:
 
 ```toml
 [dependencies]
-dsh_api = { version = "0.9.0", features = ["generic"] }
+dsh_api = { version = "0.10.0", features = ["generic"] }
 ```
 
 The example below will add a new secret to the tenant's secret store.
@@ -130,9 +130,9 @@ use dsh_api::DshApiResult;
 
 #[tokio::main]
 async fn main() -> DshApiResult<()> {
-    let client = DshApiClientFactory::default().client().await?;
-    let secret_json = r#"{"name": "secret-name","value": "secret-value"}"#.to_string();
-    client.post("secret", &[], Some(secret_json)).await
+  let client = DshApiClientFactory::default().client().await?;
+  let secret_json = r#"{"name": "secret-name","value": "secret-value"}"#.to_string();
+  client.post("secret", &[], Some(secret_json)).await
 }
 ```
 
