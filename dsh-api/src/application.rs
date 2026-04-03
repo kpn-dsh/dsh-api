@@ -26,6 +26,7 @@
 //!
 //! * [`application_ids() -> [application]`](DshApiClient::application_ids)
 //! * [`application_ids_with_allocation_statuses() -> [application]`](DshApiClient::application_ids_with_allocation_statuses)
+//! * [`application_tasks(id) -> [(task_id, task)]`](DshApiClient::application_tasks)
 //! * [`applications() -> [application]`](DshApiClient::applications)
 //! * [`applications_dependant_on_bucket(bucket_id) -> [application]`](DshApiClient::applications_dependant_on_bucket)
 //! * [`applications_dependant_on_secret(secret_name) -> [application]`](DshApiClient::applications_dependant_on_secret)
@@ -45,7 +46,7 @@ use crate::platform::CloudProvider;
 use crate::query_processor::{Match, QueryProcessor};
 use crate::secret::SecretInjection;
 use crate::topic::TopicInjection;
-use crate::types::{AllocationStatus, AppCatalogApp, AppCatalogAppResourcesValue, Application};
+use crate::types::{AllocationStatus, AppCatalogApp, AppCatalogAppResourcesValue, Application, TaskStatus};
 use crate::vhost::VhostInjection;
 use crate::volume::VolumeInjection;
 #[allow(unused_imports)]
@@ -70,6 +71,7 @@ use std::sync::LazyLock;
 ///
 /// * [`application_ids() -> [application]`](DshApiClient::application_ids)
 /// * [`application_ids_with_allocation_statuses() -> [application]`](DshApiClient::application_ids_with_allocation_statuses)
+/// * [`application_tasks(id) -> [(task_id, task)]`](DshApiClient::application_tasks)
 /// * [`applications() -> [application]`](DshApiClient::applications)
 /// * [`applications_dependant_on_bucket(bucket_id) -> [application]`](DshApiClient::applications_dependant_on_bucket)
 /// * [`applications_dependant_on_secret(secret_name) -> [application]`](DshApiClient::applications_dependant_on_secret)
@@ -97,6 +99,33 @@ impl DshApiClient {
       .collect();
     application_ids.sort();
     Ok(application_ids)
+  }
+
+  /// # Return all tasks of a service
+  ///
+  /// The returned tasks will be sorted by the `TaskStatus.actual.staged_at` field
+  /// (most recent timestamp first).
+  ///
+  /// # Parameters
+  /// * `application_id` - Identifies the application for which the tasks are requested.
+  ///
+  /// # Returns
+  /// * `Ok<Vec<(String, TaskStatus)>>` - Vector of tuples where each tuple contains
+  ///   * `String` - Task id
+  ///   * `TaskStatus` - Task configuration and status
+  /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
+  pub async fn application_tasks(&self, application_id: &str) -> DshApiResult<Vec<(String, TaskStatus)>> {
+    fn timestamp(task_status: &TaskStatus) -> i64 {
+      match task_status.actual {
+        None => 0,
+        Some(ref task) => task.staged_at.timestamp_millis(),
+      }
+    }
+    let task_ids = self.get_task_appid_ids(&application_id).await?;
+    let tasks: Vec<TaskStatus> = try_join_all(task_ids.iter().map(|task_id| self.get_task(&application_id, task_id))).await?;
+    let mut tasks: Vec<(String, TaskStatus)> = task_ids.into_iter().zip(tasks).collect();
+    tasks.sort_by(|(_, task_a), (_, task_b)| timestamp(task_b).cmp(&timestamp(task_a)));
+    Ok(tasks)
   }
 
   /// # List application ids with the corresponding allocation status
