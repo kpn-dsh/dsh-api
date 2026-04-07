@@ -4,6 +4,22 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.10.0] - YYYY-MM-DD
+
+### Added
+
+* Added `application_tasks` method.
+* Added system secret names.
+
+### Changed
+
+* Changed platform functions for generating proxy urls.
+
+### Fixed
+
+* Resolved bug with secrets dependants.
+* Resolved bug with topic dependants.
+
 ## [0.9.0] - 2026-03-05
 
 ### Added
