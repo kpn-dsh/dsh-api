@@ -207,12 +207,8 @@ impl DshApiClient {
     let mut topics = Vec::<(String, Vec<Dependant<TopicInjection>>)>::new();
     for topic_id in topic_ids {
       let mut dependants: Vec<Dependant<TopicInjection>> = vec![];
-      for application in topic_env_vars_from_applications(topic_id.as_str(), &application_configuration_map) {
-        dependants.push(Dependant::service(
-          application.id,
-          application.application.instances,
-          application.values.iter().map(|(env_var, _)| TopicInjection::env_var(*env_var)).collect_vec(),
-        ));
+      for application in topic_injections_from_applications(&topic_id, &application_configuration_map) {
+        dependants.push(Dependant::service(application.id, application.application.instances, application.values));
       }
       for (app_id, _, resource_ids) in apps_that_use_topic(topic_id.as_str(), &appcatalogapp_configuration_map) {
         dependants.push(Dependant::app(
@@ -304,10 +300,8 @@ pub fn topic_injections_from_application(topic_name: &str, application: &Applica
     }
   }
   for application_topic in &application.topics {
-    if let Ok(topic) = TopicString::try_from(application_topic.as_str()) {
-      if topic.name() == topic_name {
-        topic_injections.push(TopicInjection::topic(application_topic))
-      }
+    if application_topic == topic_name {
+      topic_injections.push(TopicInjection::topic(application_topic))
     }
   }
   topic_injections.sort();
