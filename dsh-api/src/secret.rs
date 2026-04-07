@@ -138,7 +138,12 @@ impl DshApiClient {
   ///
   /// Returns the applications, apps and proxies that use the provided secret.
   pub async fn secret_dependants(&self, secret_name: &str) -> DshApiResult<Vec<Dependant<SecretInjection>>> {
-    let (applications, apps, proxies) = try_join!(self.get_application_configuration_map(), self.get_appcatalogapp_configuration_map(), self.proxies())?;
+    let (applications, apps, proxies, certificates) = try_join!(
+      self.get_application_configuration_map(),
+      self.get_appcatalogapp_configuration_map(),
+      self.proxies(),
+      self.certificates()
+    )?;
     let mut dependants: Vec<Dependant<SecretInjection>> = vec![];
     for application in secret_env_vars_from_applications(secret_name, &applications) {
       dependants.push(Dependant::service(
@@ -159,6 +164,9 @@ impl DshApiClient {
     }
     for (proxy_id, proxy) in proxies_that_use_secret(secret_name, &proxies) {
       dependants.push(Dependant::proxy(proxy_id.to_string(), proxy.instances.get()));
+    }
+    for certificate in certificates_that_use_secret(secret_name, &certificates) {
+      dependants.push(Dependant::certificate(certificate.certificate_id, certificate.secret_kind));
     }
     Ok(dependants)
   }
