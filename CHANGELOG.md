@@ -10,10 +10,11 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 * Added `application_tasks` method.
 * Added system secret names.
+* Added `proxy` diagram.
 
 ### Changed
 
-* Changed platform functions for generating proxy urls.
+* Changed `platform` functions for generating `proxy` urls.
 
 ### Fixed
 

@@ -1,4 +1,5 @@
 //! # Additional methods to manage proxies
+#![doc = mermaid!("diagrams/proxy.mmd")]
 //!
 //! Module that contains methods and functions to manage proxies.
 //!
@@ -13,6 +14,7 @@
 //! * [`put_kafkaproxy_configuration(id, proxy)`](DshApiClient::put_kafkaproxy_configuration)
 //!
 //! # Derived methods
+//!
 //! [`DshApiClient`] methods that add extra capabilities but do not directly call the
 //! DSH resource management API. These derived methods depend on the API methods for this.
 //!
@@ -28,6 +30,7 @@ use crate::DependantProxy;
 use crate::DshApiError;
 use futures::future::try_join_all;
 use itertools::Itertools;
+use simple_mermaid::mermaid;
 
 /// # Additional methods to manage proxies
 ///
