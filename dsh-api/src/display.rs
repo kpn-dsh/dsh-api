@@ -378,15 +378,16 @@ impl Notification {
   /// Uses the values in the `args` hashmap to replace the placeholders with the appropriate
   /// values in the `message` template.
   pub fn render_message(&self) -> String {
-    let mut result = self.message.to_string();
+    let mut message = self.message.to_string();
     for (key, value) in &self.args {
       if let Some((_, suffix)) = value.rsplit_once("/") {
-        result = result.replace(&format!("${{urn:{}}}", key), suffix);
+        message = message.replace(&format!("${{urn:{}}}", key), suffix);
+        message = message.replace(&format!("${{urn_list:{}}}", key), suffix);
       } else {
-        result = result.replace(&format!("${{{}}}", key), value);
+        message = message.replace(&format!("${{{}}}", key), value);
       }
     }
-    result
+    message
   }
 }
 
