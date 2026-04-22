@@ -1,9 +1,10 @@
 //! # Defines DSH platforms and their properties
 
+use crate::error::{DshApiError, DshApiResult};
 use crate::{DEFAULT_PLATFORMS, ENV_VAR_PLATFORM, ENV_VAR_PLATFORMS_FILE_NAME};
 use itertools::Itertools;
 use log::{debug, error, info};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -16,7 +17,8 @@ use std::{env, fs};
 /// to get platform related parameters, like domain names and endpoints or to construct
 /// urls related to the platform.
 ///
-/// # Examples
+/// # Example
+///
 /// ```rust
 /// # use std::convert::Infallible;
 /// use dsh_api::platform::DshPlatform;
@@ -59,6 +61,138 @@ pub enum CloudProvider {
   /// Microsoft Azure
   #[serde(rename = "azure")]
   Azure,
+}
+
+#[rustfmt::skip]
+/// # Custom serializer using name
+///
+/// Custom serializer for `DshPlatform`. If you include a `DshPlatform` in an enum, struct or
+/// tuple that implements `Serialize`, the serialized output will include the complete
+/// serialized `DshPlatform` struct with all its fields. If all you want or need is the `name` of
+/// the platform, you can set the `serialize_with`[^ser] and `deserialize_with`[^des]
+/// attributes to this function and its companion function [`deserialize_platform`].
+///
+/// If you prefer to use the `alias` instead of the `name`, see [`serialize_platform_alias`].
+///
+/// # Example
+///
+/// ```rust
+/// # use serde::{Deserialize, Serialize};
+/// use dsh_api::platform::{deserialize_platform, serialize_platform, DshPlatform};
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// #[derive(Debug, Deserialize, PartialEq, Serialize)]
+/// pub struct StructUnderTest {
+///   #[serde(deserialize_with = "deserialize_platform",
+///           serialize_with = "serialize_platform")]
+///   pub platform: DshPlatform,
+/// }
+///
+/// let sut = StructUnderTest { platform: DshPlatform::new("nplz") };
+/// let serialized_sut = serde_json::to_string(&sut)?;
+/// assert_eq!(serialized_sut, r#"{"platform":"np-aws-lz-dsh"}"#);
+/// let deserialized_sut = serde_json::from_str(&serialized_sut)?;
+/// assert_eq!(sut, deserialized_sut);
+/// # Ok(())
+/// # }
+/// ```
+///
+/// [^des]: <https://serde.rs/field-attrs.html#deserialize_with>
+/// [^ser]: <https://serde.rs/field-attrs.html#serialize_with>
+pub fn serialize_platform<S>(platform: &DshPlatform, serialize: S) -> Result<S::Ok, S::Error>
+where
+  S: Serializer,
+{
+  serialize.serialize_str(platform.name())
+}
+
+#[rustfmt::skip]
+/// # Custom serializer using alias
+///
+/// Custom serializer for `DshPlatform`. If you include a `DshPlatform` in an enum, struct or
+/// tuple that implements `Serialize`, the serialized output will include the complete
+/// serialized `DshPlatform` struct with all its fields. If all you want or need is the `alias` of
+/// the platform, you can set the `serialize_with`[^ser] and `deserialize_with`[^des]
+/// attributes to this function and its companion function [`deserialize_platform`].
+///
+/// If you prefer to use the `name` instead of the `alias`, see [`serialize_platform`].
+///
+/// # Example
+///
+/// ```rust
+/// # use serde::{Deserialize, Serialize};
+/// use dsh_api::platform::{
+///   deserialize_platform,
+///   serialize_platform_alias,
+///   DshPlatform
+/// };
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// #[derive(Debug, Deserialize, PartialEq, Serialize)]
+/// pub struct StructUnderTest {
+///   #[serde(deserialize_with = "deserialize_platform",
+///           serialize_with = "serialize_platform_alias")]
+///   pub platform: DshPlatform,
+/// }
+///
+/// let sut = StructUnderTest { platform: DshPlatform::new("np-aws-lz-dsh") };
+/// let serialized_sut = serde_json::to_string(&sut)?;
+/// assert_eq!(serialized_sut, r#"{"platform":"nplz"}"#);
+/// let deserialized_sut = serde_json::from_str(&serialized_sut)?;
+/// assert_eq!(sut, deserialized_sut);
+/// # Ok(())
+/// # }
+/// ```
+///
+/// [^des]: <https://serde.rs/field-attrs.html#deserialize_with>
+/// [^ser]: <https://serde.rs/field-attrs.html#serialize_with>
+pub fn serialize_platform_alias<S>(platform: &DshPlatform, serialize: S) -> Result<S::Ok, S::Error>
+where
+  S: Serializer,
+{
+  serialize.serialize_str(platform.alias())
+}
+
+#[rustfmt::skip]
+/// # Custom deserializer
+///
+/// Custom deserializer for `DshPlatform`. If you include a `DshPlatform` in an enum, struct or
+/// tuple that implements `Deserialize`, this custom deserializer will expect just the `name`
+/// or `alias` for the value of the field, instead of the entire `DshPlatform` struct. To
+/// accomplish this, set the `serialize_with`[^ser] and `deserialize_with`[^des] attributes
+/// to this function and its companion function [`serialize_platform`].
+///
+/// # Examples
+///
+///
+/// ```rust
+/// # use serde::{Deserialize, Serialize};
+/// use dsh_api::platform::{deserialize_platform, serialize_platform, DshPlatform};
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+///
+/// #[derive(Debug, Deserialize, PartialEq, Serialize)]
+/// pub struct StructUnderTest {
+///   #[serde(deserialize_with = "deserialize_platform",
+///           serialize_with = "serialize_platform")]
+///   pub platform: DshPlatform,
+/// }
+///
+/// let sut_json = r#"{"platform":"np-aws-lz-dsh"}"#;
+/// let sut = serde_json::from_str::<StructUnderTest>(sut_json)?;
+/// assert_eq!(sut, StructUnderTest { platform: DshPlatform::new("nplz") });
+/// let serialized_sut = serde_json::to_string(&sut)?;
+/// assert_eq!(serialized_sut, sut_json);
+/// # Ok(())
+/// # }
+/// ```
+///
+/// [^des]: <https://serde.rs/field-attrs.html#deserialize_with>
+/// [^ser]: <https://serde.rs/field-attrs.html#serialize_with>
+pub fn deserialize_platform<'de, D>(deserializer: D) -> Result<DshPlatform, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  DshPlatform::from_str(&String::deserialize(deserializer)?).map_err(serde::de::Error::custom)
 }
 
 const CLIENT_ID_SEPARATOR: &str = ":";
@@ -189,15 +323,66 @@ impl DshPlatform {
     format!("https://{}", self.console_domain())
   }
 
+  #[rustfmt::skip]
   /// # Returns a description of the platform
   ///
   /// # Examples
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(DshPlatform::new("nplz").description(), "Staging platform for KPN internal tenants");
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").description(),
+  ///   "Staging platform for KPN internal tenants"
+  /// );
   /// ```
   pub fn description(&self) -> &str {
     &self.description
+  }
+
+  #[rustfmt::skip]
+  /// # Finds a platform from a domain name
+  ///
+  /// Both a full name and an alias are accepted.
+  ///
+  /// # Example
+  /// ```rust
+  /// # use std::str::FromStr;
+  /// use dsh_api::platform::DshPlatform;
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// let (platform, is_private) =
+  ///   DshPlatform::from_domain("dsh.np.aws.kpn.com")?.unwrap();
+  /// assert_eq!(platform, DshPlatform::new("nplz"));
+  /// assert!(!is_private);
+  /// # Ok(())
+  /// # }
+  /// ```
+  ///
+  /// # Returns
+  /// * `Ok(Some((DshPlatform, false)))` - When a single platform with a matching public vhost
+  ///   domain was found.
+  /// * `Ok(Some((DshPlatform, true)))` - When a single platform with a matching private vhost
+  ///   domain was found.
+  /// * `Ok(None)` - When no match was found.
+  /// * `Err()` - When multiple matches were found.
+  pub fn from_domain(domain_name: &str) -> DshApiResult<Option<(Self, bool)>> {
+    let matching_platforms: Vec<(DshPlatform, bool)> = DSH_PLATFORMS
+      .iter()
+      .filter_map(|platform| {
+        match (
+          platform.public_domain.ends_with(domain_name),
+          platform.private_domain.as_ref().is_some_and(|private_domain| private_domain.ends_with(domain_name)),
+        ) {
+          (false, false) => None,
+          (false, true) => Some((platform.clone(), true)),
+          (true, false) => Some((platform.clone(), false)),
+          (true, true) => None,
+        }
+      })
+      .collect_vec();
+    match matching_platforms.len() {
+      0 => Ok(None),
+      1 => Ok(matching_platforms.first().cloned()),
+      _ => Err(DshApiError::parameter("")),
+    }
   }
 
   /// Returns the endpoint for the http messaging api (multi)
