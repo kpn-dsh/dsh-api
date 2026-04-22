@@ -131,7 +131,19 @@ impl Display for SecretInjection {
 /// * [`secrets_with_dependant_apps() -> Vec<(String, Vec<DependantApp)>`](DshApiClient::secrets_with_dependant_apps)
 /// * [`secrets_with_dependant_proxies() -> Vec<(String, Vec<DependantProxy)>`](DshApiClient::secrets_with_dependant_proxies)
 impl DshApiClient {
-  /// # Returns all secrets with dependant applications, apps and proxies
+  /// # Returns secret value and allocation status
+  ///
+  /// # Parameters
+  /// * `secret_name` - Name of the secret.
+  ///
+  /// # Returns
+  /// Tuple containing the secret value and the allocation status.
+  pub async fn secret_with_status(&self, secret_name: &str) -> DshApiResult<(String, AllocationStatus)> {
+    let (secret_value, allocation_status) = try_join!(self.get_secret(secret_name), self.get_secret_status(secret_name),)?;
+    Ok((secret_value, allocation_status))
+  }
+
+  /// # Returns dependant applications, apps and proxies
   ///
   /// # Parameters
   /// * `secret_name` - Name of the secret to get the dependants for.
