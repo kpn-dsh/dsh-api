@@ -8,7 +8,7 @@ use std::sync::PoisonError;
 pub type DshApiResult<T> = Result<T, DshApiError>;
 
 /// Describes an API error
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum DshApiError {
   /// DSH Api server indicated that the request was not correct (BAD_REQUEST).
   BadRequest { message: Option<String> },
