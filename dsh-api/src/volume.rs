@@ -37,7 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
-/// # Describes an injection of a resource in an application
+/// Describes an injection of a resource in an application.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum VolumeInjection {
   /// Environment variable injection, where the value is the name of the environment variable.
@@ -97,7 +97,7 @@ impl Display for VolumeInjection {
 /// * [`volumes_with_dependant_apps() -> [volume id, [(app id, [resource])]]`](DshApiClient::volumes_with_dependant_apps)
 /// * [`volumes_with_dependants() -> [volume id, [(id, [injection|resource])]]`](DshApiClient::volumes_with_dependants)
 impl DshApiClient {
-  /// # Get volume with usage
+  /// Get volume with usage.
   ///
   /// Returns configuration and usage for a given volume.
   ///
@@ -133,7 +133,7 @@ impl DshApiClient {
     Ok((volume_status, dependants))
   }
 
-  /// # Returns all volumes with dependant applications
+  /// Returns all volumes with dependant applications.
   ///
   /// Returns a sorted list of all volumes together with the applications that use them.
   pub async fn volumes_with_dependant_applications(&self) -> DshApiResult<Vec<(String, Vec<DependantApplication<VolumeInjection>>)>> {
@@ -153,7 +153,7 @@ impl DshApiClient {
     Ok(volumes)
   }
 
-  /// # Returns all volumes with dependant apps
+  /// Returns all volumes with dependant apps.
   ///
   /// Returns a sorted list of all volumes together with the apps that use them.
   pub async fn volumes_with_dependant_apps(&self) -> DshApiResult<Vec<(String, Vec<DependantApp>)>> {
@@ -172,7 +172,7 @@ impl DshApiClient {
     Ok(volumes)
   }
 
-  /// # Returns all volumes with dependant applications and apps
+  /// Returns all volumes with dependant applications and apps.
   ///
   /// Returns a sorted list of all volumes together with the applications and apps that use them.
   pub async fn volumes_with_dependants(&self) -> DshApiResult<Vec<(String, Vec<Dependant<VolumeInjection>>)>> {
@@ -226,7 +226,7 @@ pub fn volume_paths_from_applications<'a>(volume_id: &str, applications: &'a Has
   tuples
 }
 
-/// # Get volumes from an application
+/// Get volumes from an application.
 ///
 /// Get all volumes with their mounting path from an `Application`.
 ///
@@ -253,7 +253,7 @@ pub fn volumes_from_application(application: &Application) -> Vec<(&str, &str)> 
   volumes
 }
 
-/// # Get volumes from applications
+/// Get volumes from applications.
 ///
 /// Get all volumes with their mounting paths from all `Applications`.
 ///
@@ -283,7 +283,7 @@ pub fn volumes_from_applications(applications: &HashMap<String, Application>) ->
   application_tuples
 }
 
-/// Get volume resources from `AppCatalogApp`
+/// Get volume resources from `AppCatalogApp`.
 ///
 /// # Parameters
 /// * `app` - Reference to the app to get the volume resources from.

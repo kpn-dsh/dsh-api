@@ -56,7 +56,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
 
-/// # Managed stream, either internal or public
+/// Managed stream, either internal or public.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum Stream {
   Internal { internal_stream: ManagedStream },
@@ -111,7 +111,7 @@ impl Display for Stream {
 /// * [`managed_stream_revoke_access_rights(stream id, tenant name, rights) -> stream`](DshApiClient::managed_stream_revoke_access_rights)
 /// * [`managed_stream_tenants_with_access_rights(stream id) -> [(tenant name, rights)]`](DshApiClient::managed_stream_tenants_with_access_rights)
 impl DshApiClient {
-  /// # Check whether a managed tenant has access to a managed stream
+  /// Check whether a managed tenant has access to a managed stream.
   ///
   /// Note that this method will return `Ok(None)` when either the managed tenant
   /// or the managed stream does not exist.
@@ -147,7 +147,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Get internal or public managed stream configuration
+  /// Get internal or public managed stream configuration.
   ///
   /// # Parameters
   /// * `managed_stream_id` - managed stream identifier
@@ -181,7 +181,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Get managed stream configurations
+  /// Get managed stream configurations.
   ///
   /// Returns a list of (stream id, stream)-tuples containing the ids and configurations
   /// of the available internal or public managed streams.
@@ -219,7 +219,7 @@ impl DshApiClient {
     Ok(tuples)
   }
 
-  /// # Get internal managed stream configurations
+  /// Get internal managed stream configurations.
   ///
   /// Returns a list of (stream id, stream)-tuples containing the ids and configurations
   /// of the available internal managed streams.
@@ -242,7 +242,7 @@ impl DshApiClient {
     Ok(tuples)
   }
 
-  /// # Get public managed stream configurations
+  /// #Get public managed stream configurations.
   ///
   /// Returns a list of (stream id, stream)-tuples containing the ids and configurations
   /// of the available public managed streams.
@@ -260,7 +260,7 @@ impl DshApiClient {
     Ok(tuples)
   }
 
-  /// # Grant managed stream access rights to managed tenant
+  /// Grant managed stream access rights to managed tenant.
   ///
   /// # Parameters
   /// * `managed_stream_id` - internal or public managed stream to grant access rights to
@@ -304,7 +304,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Revoke managed stream access rights from managed tenant
+  /// #Revoke managed stream access rights from managed tenant.
   ///
   /// # Parameters
   /// * `managed_stream_id` - internal or public managed stream to revoke access rights from
@@ -348,7 +348,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Get tenants that have been granted access rights
+  /// Get tenants that have been granted access rights.
   ///
   /// # Parameters
   /// * `managed_stream_id` - internal or public managed stream to get granted rights for

@@ -4,10 +4,10 @@ use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::sync::PoisonError;
 
-/// Generic result type
+/// Generic result type.
 pub type DshApiResult<T> = Result<T, DshApiError>;
 
-/// Describes an API error
+/// Describes an API error.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum DshApiError {
   /// DSH Api server indicated that the request was not correct (BAD_REQUEST).

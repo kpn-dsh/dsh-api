@@ -51,7 +51,7 @@ use simple_mermaid::mermaid;
 /// * [`certificate_with_dependant_apps(id) -> (CertificateStatus, Vec<DependantApp>)`](DshApiClient::certificate_with_dependant_apps)
 /// * [`certificates_with_dependant_apps() -> Vec<(String, CertificateStatus, Vec<DependantApp>)>`](DshApiClient::certificates_with_dependant_apps)
 impl DshApiClient {
-  /// # Returns all certificates with dependant apps and proxies
+  /// Returns all certificates with dependant apps and proxies.
   ///
   /// Returns a sorted list of all secrets together with the apps and proxies that use them.
   ///
@@ -88,7 +88,7 @@ impl DshApiClient {
     Ok((certificate_status, dependants))
   }
 
-  /// # Return certificate with dependant apps
+  /// Return certificate with dependant apps.
   ///
   /// Returns the certificate configuration for the provided certificate id,
   /// together with the apps that use this certificate.
@@ -120,7 +120,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Return certificate with dependant proxies
+  /// Return certificate with dependant proxies.
   ///
   /// Returns the certificate configuration for the provided certificate id,
   /// together with the proxies that use this certificate.
@@ -142,7 +142,7 @@ impl DshApiClient {
     Ok((certificate_status, dependant_proxies))
   }
 
-  /// # List all certificates with usage
+  /// List all certificates with usage.
   ///
   /// Returns a list of all certificate configurations,
   /// together with the apps and applications that use this certificate.
@@ -184,7 +184,7 @@ impl DshApiClient {
     Ok(certificates_with_usage)
   }
 
-  /// # List all certificates
+  /// List all certificates.
   ///
   /// Returns a list of all certificate ids and their configurations,
   ///
@@ -199,7 +199,7 @@ impl DshApiClient {
     Ok(certificate_ids.into_iter().zip(certificates).collect_vec())
   }
 
-  /// # List all certificates with usage
+  /// List all certificates with usage.
   ///
   /// Returns a list of all certificate configurations,
   /// together with the apps and applications that use this certificate.

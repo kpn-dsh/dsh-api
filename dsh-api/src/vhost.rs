@@ -43,7 +43,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::LazyLock;
 
-/// # Describes an injection of a resource in an application
+/// Describes an injection of a resource in an application.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum VhostInjection {
   /// Environment variable injection, where the value is the name of the environment variable.
@@ -81,7 +81,7 @@ impl Display for VhostInjection {
 }
 
 impl DshApiClient {
-  /// # Returns all vhosts with dependant applications
+  /// Returns all vhosts with dependant applications.
   ///
   /// Returns a sorted list of all vhosts together with the applications use them.
   /// Note that only vhosts that are actually referenced in the applications will be included.
@@ -102,7 +102,7 @@ impl DshApiClient {
     Ok(vhosts)
   }
 
-  /// # Returns all vhosts with dependant apps
+  /// Returns all vhosts with dependant apps.
   ///
   /// Returns a sorted list of all vhosts together with the apps that use them.
   /// Note that only vhosts that are actually referenced in the apps will be included.
@@ -123,7 +123,7 @@ impl DshApiClient {
     Ok(vhosts)
   }
 
-  /// # Returns all vhosts with dependant applications and apps
+  /// Returns all vhosts with dependant applications and apps.
   ///
   /// Returns a sorted list of all vhosts together with the applications and apps that use them.
   /// Note that only vhosts that are actually referenced in the applications and apps
@@ -155,7 +155,7 @@ impl DshApiClient {
   }
 }
 
-/// # Get application port mappings for vhost id
+/// Get application port mappings for vhost id.
 ///
 /// Get all port mappings from an `Application` that use a vhost with `vhost_id`.
 /// When `vhost_id` is not used in `application`, an empty list will be returned.
@@ -186,7 +186,7 @@ pub fn vhost_port_mappings_from_application<'a>(vhost_id: &str, application: &'a
   port_mappings
 }
 
-/// # Get applications port mappings for vhost id
+/// Get applications port mappings for vhost id.
 ///
 /// Get all port mappings from multiple `Application`s that use a vhost with `vhost_id`.
 /// Applications are only included if they reference `vhost_id` at least once.
@@ -257,7 +257,7 @@ pub(crate) fn vhost_strings_from_app(app: &AppCatalogApp) -> Vec<(&str, VhostStr
   resources
 }
 
-/// # Get vhosts from application
+/// Get vhosts from application.
 ///
 /// Get all vhosts used in `Application`.
 ///
@@ -287,7 +287,7 @@ pub fn vhosts_from_application(application: &Application) -> Vec<(String, &str, 
   vhosts
 }
 
-/// # Get all vhosts from applications
+/// Get all vhosts from applications.
 ///
 /// Get all vhosts from all `Application`s.
 /// Applications without configured vhosts will be contained in the list
@@ -349,7 +349,7 @@ impl VhostString {
     Self { vhost_name: vhost_name.into(), kafka, tenant_name: tenant_name.map(Into::<String>::into), zone: zone.map(Into::<String>::into) }
   }
 
-  /// # Parse vhost resource string
+  /// Parse vhost resource string.
   ///
   /// Multiple vhosts using the `join` function are not supported.
   ///
@@ -394,7 +394,7 @@ impl VhostString {
 impl FromStr for VhostString {
   type Err = String;
 
-  /// # Parse vhost string
+  /// Parse vhost string.
   ///
   /// Multiple vhosts using the `join` function are not supported.
   ///

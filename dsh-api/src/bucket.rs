@@ -67,12 +67,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
-/// Secret name for object store access key id
+/// Secret name for object store access key id.
 pub const OBJECT_STORE_ACCESS_KEY_ID: &str = "system/objectstore/access_key_id";
-/// Secret name for object store secret access key
+/// Secret name for object store secret access key.
 pub const OBJECT_STORE_SECRET_ACCESS_KEY: &str = "system/objectstore/secret_access_key";
 
-/// # Describes an injection of a resource in an application
+/// Describes an injection of a resource in an application.
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum BucketInjection {
   /// Environment variable injection, where the value is the name of the environment variable.
@@ -128,7 +128,7 @@ impl Display for BucketInjection {
 /// * [`buckets_with_dependant_apps() -> [(bucket id, bucket, [dependant app])]`](DshApiClient::buckets_with_dependant_apps)
 /// * [`buckets_with_dependants() -> [(bucket_id, [dependant])]`](DshApiClient::bucket_with_dependants)
 impl DshApiClient {
-  /// # Returns all bucket identifiers with dependant applications and apps
+  /// Returns all bucket identifiers with dependant applications and apps.
   ///
   /// Returns a sorted list of all bucket ids together with the applications and apps that use them.
   pub async fn bucket_ids_with_dependants(&self) -> DshApiResult<Vec<(String, Vec<Dependant<BucketInjection>>)>> {
@@ -190,7 +190,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Returns all buckets with dependant applications and apps
+  /// Returns all buckets with dependant applications and apps.
   ///
   /// # Parameters
   /// * `bucket_id` - Identifier of the requested bucket.
@@ -230,7 +230,7 @@ impl DshApiClient {
     Ok(bucket_ids.into_iter().zip(bucket_statuses).collect_vec())
   }
 
-  /// # Returns all buckets with dependant applications
+  /// Returns all buckets with dependant applications.
   ///
   /// Returns a sorted list of all buckets ids, bucket statuses and applications that use them.
   pub async fn buckets_with_dependant_applications(&self) -> DshApiResult<Vec<(String, BucketStatus, Vec<DependantApplication<BucketInjection>>)>> {
@@ -251,7 +251,7 @@ impl DshApiClient {
     Ok(buckets_with_dependant_applications)
   }
 
-  /// # Returns all buckets with dependant apps
+  /// Returns all buckets with dependant apps.
   ///
   /// Returns a sorted list of all buckets ids, buckets and apps that use them.
   pub async fn buckets_with_dependant_apps(&self) -> DshApiResult<Vec<(String, BucketStatus, Vec<DependantApp>)>> {
@@ -270,7 +270,7 @@ impl DshApiClient {
     Ok(buckets_with_dependant_apps)
   }
 
-  /// # Returns all buckets with dependant applications and apps
+  /// Returns all buckets with dependant applications and apps.
   ///
   /// Returns a sorted list of all buckets ids, buckets and applications and apps that use them.
   ///
@@ -304,7 +304,7 @@ impl DshApiClient {
     Ok(buckets_with_dependants)
   }
 
-  /// # Returns the object store secrets
+  /// Returns the object store secrets.
   ///
   /// Returns the object store `access_key_id` and `secret_access_key`.
   pub async fn bucket_secrets(&self) -> DshApiResult<(String, String)> {
@@ -323,7 +323,7 @@ impl DshApiClient {
   }
 }
 
-/// # Get applications environment variables referencing bucket
+/// Get applications environment variables referencing bucket.
 ///
 /// Get all environment variables referencing bucket `bucket_id` or (if available) `bucket_name`
 /// from multiple `Application`s. Applications are only included if they reference bucket
@@ -357,7 +357,7 @@ pub fn bucket_injections_from_applications<'a>(
   application_injections
 }
 
-/// # Get application environment variables referencing bucket
+/// Get application environment variables referencing bucket.
 ///
 /// Get all environment variables referencing bucket `bucket_id` from an `Application`.
 /// When the application does not reference the bucket, an empty list will be returned.
@@ -415,7 +415,7 @@ pub fn bucket_resources_from_app(app: &AppCatalogApp) -> Vec<(&str, &Bucket)> {
   })
 }
 
-/// # Get application environment variables referencing buckets
+/// Get application environment variables referencing buckets.
 ///
 /// Get all environment variables from an `Application` that reference a bucket.
 /// When the application does not reference any buckets, an empty list will be returned.

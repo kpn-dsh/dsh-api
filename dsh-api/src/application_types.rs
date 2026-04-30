@@ -12,7 +12,7 @@ pub struct Database {}
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize)]
 pub struct Vhost {}
 
-/// Represents a resource id and a list of environment variable keys
+/// Represents a resource id and a list of environment variable keys.
 ///
 /// Implements `Debug`, `Eq`, `From<(&str, Vec<&str>)>`, `PartialEq`, `PartialOrd` and `Ord` traits.
 /// Provides a `new` constructor associated function.
@@ -211,7 +211,7 @@ impl ApplicationDiff {
     }
   }
 
-  /// # Check if there are any differences
+  /// Check if there are any differences.
   ///
   /// # Returns
   /// * `true` - struct does not contain any differences
@@ -236,7 +236,7 @@ impl ApplicationDiff {
       && self.writable_streams.is_none()
   }
 
-  /// # List the differences
+  /// List the differences.
   ///
   /// If there are no differences, an empty list will be returned.
   ///

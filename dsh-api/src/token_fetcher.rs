@@ -31,7 +31,7 @@ use std::str::FromStr;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-/// # Fetcher for access tokens
+/// Fetcher for access tokens.
 ///
 /// A token fetcher for obtaining and storing access tokens, enabling authenticated requests
 /// to the DSH resource management API. This struct caches the token in memory and refreshes
@@ -47,7 +47,7 @@ pub struct TokenFetcher {
 type Unpacker<T> = dyn Fn(&AccessTokenContainer) -> DshApiResult<T> + Sync;
 
 impl TokenFetcher {
-  /// # Create a new token fetcher
+  /// Create a new token fetcher.
   ///
   /// After creation the token fetcher can be reused in subsequent calls during the lifetime of
   /// your application. The token will automatically be refreshed when it is about to expire.
@@ -84,7 +84,7 @@ impl TokenFetcher {
     Self { access_token_container: Mutex::new(None), client: client.unwrap_or_default(), client_id, client_secret, dsh_api_tenant }
   }
 
-  /// # Create token fetcher from default settings
+  /// Create token fetcher from default settings.
   ///
   /// This function will create a new `TokenFetcher` from default values, obtained from
   /// environment variables.
@@ -122,7 +122,7 @@ impl TokenFetcher {
     }
   }
 
-  /// # Get a bearer token
+  /// Get a bearer token.
   ///
   /// Obtains a bearer token, using the cached access token if it is still valid, otherwise
   /// fetches a new one. The returned string is formatted as `"{token_type} {access_token}"`.
@@ -130,7 +130,7 @@ impl TokenFetcher {
     self.fetch_container_and_unpack(&Self::unpack_bearer_token).await
   }
 
-  /// # Get a fresh bearer token
+  /// Get a fresh bearer token.
   ///
   /// This function will request a fresh access token, write it in the cache and return the
   /// bearer token.
@@ -138,7 +138,7 @@ impl TokenFetcher {
     self.refresh_container_and_unpack(&Self::unpack_bearer_token).await
   }
 
-  /// # Get a raw token
+  /// Get a raw token.
   ///
   /// Obtains a raw token, using the cached access token if it is still valid, otherwise
   /// fetches a new one.
@@ -146,7 +146,7 @@ impl TokenFetcher {
     self.fetch_container_and_unpack(&Self::unpack_raw_token).await
   }
 
-  /// # Get a fresh raw token
+  /// Get a fresh raw token.
   ///
   /// This function will request a fresh access token, write it in the cache and return the
   /// raw token.
@@ -154,7 +154,7 @@ impl TokenFetcher {
     self.refresh_container_and_unpack(&Self::unpack_raw_token).await
   }
 
-  /// # Get a json web token
+  /// Get a json web token.
   ///
   /// Obtains a json web token, using the cached access token if it is still valid, otherwise
   /// fetches a new one.
@@ -162,7 +162,7 @@ impl TokenFetcher {
     self.fetch_container_and_unpack(&Self::unpack_jwt).await
   }
 
-  /// # Get a fresh json web token
+  /// Get a fresh json web token.
   ///
   /// This function will request a fresh access token, write it in the cache and return the
   /// json web token.
@@ -280,7 +280,7 @@ impl TokenFetcher {
 }
 
 impl Default for TokenFetcher {
-  /// # Create default token fetcher
+  /// Create default token fetcher.
   ///
   /// # Panics
   /// This function will panic if it cannot create a new `TokenFetcher` from the default

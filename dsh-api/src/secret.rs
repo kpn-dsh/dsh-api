@@ -65,7 +65,7 @@ pub const OBJECT_STORE_SECRET_ACCESS_KEY: &str = "system/objectstore/secret_acce
 pub const ROBOT_SECRET: &str = "system/rest-api-client";
 pub const VPN_SECRET: &str = "system/vpn-password";
 
-/// # Describes an injection of a `Secret` in an application
+/// Describes an injection of a `Secret` in an application.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum SecretInjection {
   /// Environment variable injection, where the value is the name of the environment variable.
@@ -131,7 +131,7 @@ impl Display for SecretInjection {
 /// * [`secrets_with_dependant_apps() -> Vec<(String, Vec<DependantApp)>`](DshApiClient::secrets_with_dependant_apps)
 /// * [`secrets_with_dependant_proxies() -> Vec<(String, Vec<DependantProxy)>`](DshApiClient::secrets_with_dependant_proxies)
 impl DshApiClient {
-  /// # Returns secret value and allocation status
+  /// Returns secret value and allocation status.
   ///
   /// # Parameters
   /// * `secret_name` - Name of the secret.
@@ -143,7 +143,7 @@ impl DshApiClient {
     Ok((secret_value, allocation_status))
   }
 
-  /// # Returns dependant applications, apps and proxies
+  /// Returns dependant applications, apps and proxies.
   ///
   /// # Parameters
   /// * `secret_name` - Name of the secret to get the dependants for.
@@ -183,7 +183,7 @@ impl DshApiClient {
     Ok(dependants)
   }
 
-  /// # Returns all secret names
+  /// Returns all secret names.
   ///
   /// Returns a sorted list of all secret names, including the secret id when the secret is a
   /// system secret.
@@ -203,7 +203,7 @@ impl DshApiClient {
     Ok(secret_names)
   }
 
-  /// # Returns names of non-system secrets
+  /// Returns names of non-system secrets.
   ///
   /// Returns a sorted list of all non-system secret names.
   ///
@@ -213,7 +213,7 @@ impl DshApiClient {
     Ok(self.get_secret_ids().await?.into_iter().filter(|secret_id| !is_system_id(secret_id)).collect_vec())
   }
 
-  /// # Returns names of system secrets
+  /// Returns names of system secrets.
   ///
   /// Returns a sorted list of all system secret names with the secret id.
   ///
@@ -232,7 +232,7 @@ impl DshApiClient {
     Ok(secret_names)
   }
 
-  /// # Returns all secrets with dependant applications, apps and proxies
+  /// Returns all secrets with dependant applications, apps and proxies.
   ///
   /// Returns a sorted list of all secrets together with the applications, apps and proxies that
   /// use them.
@@ -281,7 +281,7 @@ impl DshApiClient {
     Ok(secrets)
   }
 
-  /// # Returns all secrets with dependant applications
+  /// Returns all secrets with dependant applications.
   ///
   /// Returns a sorted list of all secrets together with the applications that use them.
   ///
@@ -311,7 +311,7 @@ impl DshApiClient {
     Ok(secrets)
   }
 
-  /// # Returns all secrets with dependant apps
+  /// Returns all secrets with dependant apps.
   ///
   /// Returns a sorted list of all secrets together with the apps that use them.
   ///
@@ -336,7 +336,7 @@ impl DshApiClient {
     Ok(secrets)
   }
 
-  /// # Returns all secrets with dependant certificates
+  /// Returns all secrets with dependant certificates.
   ///
   /// Returns a sorted list of all secrets together with the certificates that use them.
   ///
@@ -358,7 +358,7 @@ impl DshApiClient {
     Ok(secrets)
   }
 
-  /// # Returns all secrets with dependant proxies
+  /// Returns all secrets with dependant proxies.
   ///
   /// Returns a sorted list of all secrets together with the proxies that use them.
   /// # Returns
@@ -380,7 +380,7 @@ impl DshApiClient {
   }
 }
 
-/// # Get application environment variables referencing secret
+/// Get application environment variables referencing secret.
 ///
 /// Get all environment variables from `application` referencing secret with `secret_name`.
 ///
@@ -417,7 +417,7 @@ pub fn secret_env_vars_from_application<'a>(secret_name: &str, application: &'a 
   secret_environment_variables
 }
 
-/// # Get applications environment variables referencing secret
+/// Get applications environment variables referencing secret.
 ///
 /// Get all environment variables from multiple `Application`s referencing secret with `secret_name`.
 /// Applications are only included if they reference secret `secret_name` at least once.
@@ -444,7 +444,7 @@ pub fn secret_env_vars_from_applications<'a>(secret_name: &str, applications: &'
   application_tuples
 }
 
-/// # Checks if secret id is a system secret
+/// Checks if secret id is a system secret.
 ///
 /// Deprecated, use [is_system_id].
 #[deprecated]
@@ -452,17 +452,17 @@ pub fn secret_is_system(secret_id: &str) -> bool {
   is_system_id(secret_id)
 }
 
-/// # Checks if secret id is a system secret id
+/// Checks if secret id is a system secret id.
 pub fn is_system_id(secret_id_name: &str) -> bool {
   secret_id_name.contains('!')
 }
 
-/// # Checks if secret id is a system secret name
+/// Checks if secret id is a system secret name.
 pub fn is_system_name(secret_id_name: &str) -> bool {
   secret_id_name.starts_with("system/")
 }
 
-/// # Converts secret id to secret name
+/// Converts secret id to secret name.
 ///
 /// This function is deprecated, use [`secret_name()`](normalize_secret_name) instead.
 ///
@@ -484,7 +484,7 @@ pub fn secret_id_to_secret_name(secret_id: &String) -> Cow<String> {
   }
 }
 
-/// # Normalize secret id or name
+/// Normalize secret id or name.
 ///
 /// * When the provided secret id or name is a system secret id, this function will convert the
 ///   system secret id to a system secret name and return both.
@@ -511,7 +511,7 @@ pub fn normalize_secret_name(secret_id_name: String) -> (String, Option<String>)
   }
 }
 
-/// Get secret resources from `AppCatalogApp`
+/// Get secret resources from `AppCatalogApp`.
 ///
 /// # Parameters
 /// * `app` - App to get the secret resources from.
@@ -528,7 +528,7 @@ pub fn secret_resources_from_app(app: &AppCatalogApp) -> Vec<(&str, &Secret)> {
   })
 }
 
-/// # Get application environment variables referencing secrets
+/// Get application environment variables referencing secrets.
 ///
 /// Get all environment variables from an `Application` that reference secrets.
 ///
@@ -565,7 +565,7 @@ pub fn secrets_from_application(application: &Application) -> Vec<EnvVarInjectio
     .collect_vec()
 }
 
-/// # Get applications environment variables referencing secrets
+/// Get applications environment variables referencing secrets.
 ///
 /// Get all environment variables referencing secrets from all `Applications`
 ///
@@ -595,7 +595,7 @@ pub fn secrets_from_applications(applications: &HashMap<String, Application>) ->
   application_tuples
 }
 
-/// Find apps that use any of a list of given secret
+/// Find apps that use any of a list of given secret.
 ///
 /// # Parameters
 /// * `secret_names` - Names of the secrets to look for.

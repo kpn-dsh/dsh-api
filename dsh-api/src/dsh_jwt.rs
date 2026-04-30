@@ -22,17 +22,17 @@ pub struct DshJwt {
 }
 
 impl DshJwt {
-  /// Returns expected time before token expires
+  /// Returns expected time before token expires.
   pub fn expires_in(&self) -> Option<i64> {
     self.payload.expires_in()
   }
 
-  /// Whether token is expired
+  /// Whether token is expired.
   pub fn expired(&self) -> Option<bool> {
     self.payload.expired()
   }
 
-  /// Returns list of authorized tenants
+  /// Returns list of authorized tenants.
   pub fn authorized_tenants(&self) -> Option<Vec<&str>> {
     self
       .tenant_permissions
@@ -54,25 +54,25 @@ pub struct DshJwtHeader {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DshJwtPayload {
-  /// Issuer claim (rfc7519 "iss")
+  /// Issuer claim (rfc7519 "iss").
   #[serde(rename = "iss")]
   pub issuer: Option<String>,
-  /// Subject claim (rfc7519 "sub")
+  /// Subject claim (rfc7519 "sub").
   #[serde(rename = "sub")]
   pub subject: Option<String>,
-  /// Audience claim (rfc7519 "aud")
+  /// Audience claim (rfc7519 "aud").
   #[serde(rename = "aud")]
   pub audience: Option<String>,
-  /// Expiration time claim (rfc7519 "exp")
+  /// Expiration time claim (rfc7519 "exp").
   #[serde(rename = "exp")]
   pub expiration_time: Option<i64>,
-  /// Not before claim (rfc7519 "nbf")
+  /// Not before claim (rfc7519 "nbf").
   #[serde(rename = "nbf")]
   pub not_before: Option<i64>,
-  /// Issued at claim (rfc7519 "iat")
+  /// Issued at claim (rfc7519 "iat").
   #[serde(rename = "iat")]
   pub issued_at: Option<i64>,
-  /// Jwt id claim (rfc7519 "jti")
+  /// Jwt id claim (rfc7519 "jti").
   #[serde(rename = "jti")]
   pub jwt_id: Option<String>,
 
@@ -85,7 +85,7 @@ pub struct DshJwtPayload {
   #[serde(rename = "clientHost")]
   pub client_host: Option<String>,
   pub client_id: Option<String>,
-  /// Permission representations claim (dsh specific "dsh_perms")
+  /// Permission representations claim (dsh specific "dsh_perms").
   #[serde(rename = "dsh_perms")]
   pub dsh_permission_representations: Option<Vec<String>>,
   pub email: Option<String>,
@@ -102,7 +102,7 @@ pub struct DshJwtPayload {
 }
 
 impl DshJwtPayload {
-  /// Returns a list of the available rfc7519 claims with their values
+  /// Returns a list of the available rfc7519 claims with their values.
   ///
   /// # Returns
   /// * List of tuples consisting of the claim name and value.
@@ -121,19 +121,19 @@ impl DshJwtPayload {
     .collect_vec()
   }
 
-  /// Returns expected time before token expires
+  /// Returns expected time before token expires.
   pub fn expires_in(&self) -> Option<i64> {
     self
       .expiration_time
       .and_then(|expiration_time| SystemTime::now().duration_since(UNIX_EPOCH).ok().map(|now| expiration_time - now.as_secs() as i64))
   }
 
-  /// Whether token is expired
+  /// Whether token is expired.
   pub fn expired(&self) -> Option<bool> {
     self.expires_in().map(|expires_in| expires_in <= 0)
   }
 
-  /// Returns a list of permissions
+  /// Returns a list of permissions.
   pub fn permissions(&self) -> DshApiResult<Vec<DshPermission>> {
     match &self.dsh_permission_representations {
       Some(representations) => {
@@ -148,7 +148,7 @@ impl DshJwtPayload {
     }
   }
 
-  /// Returns a list with the names of authenticated tenants
+  /// Returns a list with the names of authenticated tenants.
   pub fn authenticated_tenants(&self) -> DshApiResult<Vec<String>> {
     Ok(self.permissions()?.iter().map(|permission| permission.tenant.to_string()).collect_vec())
   }
@@ -181,7 +181,7 @@ impl Display for DshJwt {
   }
 }
 
-/// Split json web token in header and payload json
+/// Split json web token in header and payload json.
 ///
 /// # Parameter
 /// * `jwt` - Json web token.
@@ -195,7 +195,7 @@ pub fn jwt_into_header_payload_json(jwt: &str) -> DshApiResult<(String, String)>
   Ok((header_json, payload_json))
 }
 
-/// Parse json web token string in `DshJwtHeader` and `DshJwtPayload` structs
+/// Parse json web token string in `DshJwtHeader` and `DshJwtPayload` structs.
 ///
 /// # Parameter
 /// * `jwt` - Json web token string.

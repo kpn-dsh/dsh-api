@@ -58,7 +58,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-/// # Additional methods to manage applications
+/// Additional methods to manage applications.
 ///
 /// Module that contains derived methods to manage applications.
 /// * Derived methods - DshApiClient methods that add extra capabilities
@@ -82,7 +82,7 @@ use std::sync::LazyLock;
 /// * [`applications_that_use_env_value(query) -> [(id, app, [env])]`](DshApiClient::applications_that_use_env_value)
 /// * [`guid() -> (gid, uid)`](DshApiClient::guid)
 impl DshApiClient {
-  /// # Return all application ids
+  /// Return all application ids.
   ///
   /// If you also need the application configuration, use
   /// [`applications()`](DshApiClient::applications) instead.
@@ -101,7 +101,7 @@ impl DshApiClient {
     Ok(application_ids)
   }
 
-  /// # Return all tasks of a service
+  /// Return all tasks of a service.
   ///
   /// The returned tasks will be sorted by the `TaskStatus.actual.staged_at` field
   /// (most recent timestamp first).
@@ -128,7 +128,7 @@ impl DshApiClient {
     Ok(tasks)
   }
 
-  /// # List application ids with the corresponding allocation status
+  /// List application ids with the corresponding allocation status.
   ///
   /// # Returns
   /// * `Ok<Vec<(String, `[`AllocationStatus`]`)>>` - list of application ids and allocation statuses
@@ -139,7 +139,7 @@ impl DshApiClient {
     Ok(application_ids.into_iter().zip(allocation_statuses).collect_vec())
   }
 
-  /// # List all application configurations with their ids
+  /// List all application configurations with their ids.
   ///
   /// # Returns
   /// * `Ok<Vec<(String, `[`Application`]`)>>` - list of application ids and configurations
@@ -148,7 +148,7 @@ impl DshApiClient {
     self.applications_filtered(&|_| true).await
   }
 
-  /// # Get all application that depend on a given bucket
+  /// Get all application that depend on a given bucket.
   ///
   /// # Parameters
   /// * `bucket_id` - Identifies the requested bucket.
@@ -178,7 +178,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get all application that depend on a given secret
+  /// Get all application that depend on a given secret.
   ///
   /// # Parameters
   /// * `secret_name` - Name of the requested secret.
@@ -202,7 +202,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get all application that depend on a given vhost
+  /// Get all application that depend on a given vhost.
   ///
   /// # Parameters
   /// * `vhost` - id of the requested vhost
@@ -220,7 +220,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get all application that depend on a given vhost
+  /// Get all application that depend on a given vhost.
   ///
   /// # Parameters
   /// * `vhost` - id of the requested vhost
@@ -248,7 +248,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get all application that depend on a given volume
+  /// Get all application that depend on a given volume.
   ///
   /// # Parameters
   /// * `volume` - id of the requested volume
@@ -272,7 +272,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Find all applications that match a predicate
+  /// Find all applications that match a predicate.
   ///
   /// # Parameters
   /// * `predicate` - predicate that will be used to filter the applications
@@ -292,7 +292,7 @@ impl DshApiClient {
     Ok(matching_applications)
   }
 
-  /// # Find application that use an environment variable value
+  /// Find application that use an environment variable value.
   ///
   /// # Parameters
   /// * `query_process` - [`QueryProcessor`] that is matched against all environment variables of all applications
@@ -324,7 +324,7 @@ impl DshApiClient {
     Ok(matches)
   }
 
-  /// # Get group and user id for the tenant
+  /// Get group and user id for the tenant.
   ///
   /// Read the group and user id for the current tenant. These values are read from a random
   /// application configuration file, so the method will fail if no applications are deployed.

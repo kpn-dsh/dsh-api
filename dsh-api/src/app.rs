@@ -47,7 +47,7 @@ use itertools::Itertools;
 use serde_json::from_str;
 use std::collections::HashMap;
 
-/// # Additional methods to manage apps in the app catalog
+/// Additional methods to manage apps in the app catalog.
 ///
 /// Module that contains methods and functions to manage apps from the app catalog.
 /// * Derived methods - DshApiClient methods that add extra capabilities
@@ -69,7 +69,7 @@ use std::collections::HashMap;
 /// * [`apps_dependant_on_vhost(vhost_id) -> [app]`](DshApiClient::apps_dependant_on_vhost)
 /// * [`apps_dependant_on_volume(volume_id) -> [app]`](DshApiClient::apps_dependant_on_volume)
 impl DshApiClient {
-  /// # Return app configurations
+  /// Return app configurations.
   ///
   /// # Parameters
   /// * `app_id` - Identifier of the app.
@@ -93,7 +93,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Return app configurations
+  /// Return app configurations.
   ///
   /// # Parameters
   /// * `app_id` - Identifier of the app.
@@ -125,7 +125,7 @@ impl DshApiClient {
     }
   }
 
-  /// # List all App ids
+  /// List all App ids.
   ///
   /// If you also need the app configuration, use
   /// [`app_configurations()`](DshApiClient::app_configurations) instead.
@@ -139,7 +139,7 @@ impl DshApiClient {
     Ok(app_ids)
   }
 
-  /// # Get all apps that depend on an application
+  /// Get all apps that depend on an application.
   ///
   /// # Parameters
   /// * `application_id` - Identifier of the application.
@@ -156,7 +156,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get all apps that depend on a bucket
+  /// Get all apps that depend on a bucket.
   ///
   /// # Parameters
   /// * `bucket_id` - Identifier of the application.
@@ -173,7 +173,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get all apps that depend on a certificate
+  /// Get all apps that depend on a certificate.
   ///
   /// # Parameters
   /// * `certificate_id` - Identifier of the certificate.
@@ -190,7 +190,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get all apps that depend on a secret
+  /// Get all apps that depend on a secret.
   ///
   /// # Parameters
   /// * `secret_name` - Name of the secret.
@@ -207,7 +207,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get all apps that depend on a topic
+  /// Get all apps that depend on a topic.
   ///
   /// # Parameters
   /// * `topic_id` - Identifier of the topic.
@@ -224,7 +224,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get all apps that depend on a vhost
+  /// Get all apps that depend on a vhost.
   ///
   /// # Parameters
   /// * `vhost_id` - Identifier of the vhost.
@@ -241,7 +241,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get all apps that depend on a volume
+  /// Get all apps that depend on a volume.
   ///
   /// # Parameters
   /// * `volume_id` - Identifier of the volume.
@@ -259,7 +259,7 @@ impl DshApiClient {
   }
 }
 
-/// Find apps that use an application
+/// Find apps that use an application.
 ///
 /// # Parameters
 /// * `application_id` - Identifier of the application to look for.
@@ -274,7 +274,7 @@ pub fn apps_that_use_application<'a>(application_id: &str, apps: &'a HashMap<Str
   apps_that_use_resource(application_id, apps, &application_resources_from_app)
 }
 
-/// Find apps that use a certificate
+/// Find apps that use a certificate.
 ///
 /// # Parameters
 /// * `certificate_id` - Identifier of the certificate to look for.
@@ -289,7 +289,7 @@ pub fn apps_that_use_certificate<'a>(certificate_id: &str, apps: &'a HashMap<Str
   apps_that_use_resource(certificate_id, apps, &certificate_resources_from_app)
 }
 
-/// Find apps that use a given secret
+/// Find apps that use a given secret.
 ///
 /// # Parameters
 /// * `secret_name` - Name of the secret to look for.
@@ -304,7 +304,7 @@ pub fn apps_that_use_secret<'a>(secret_name: &str, apps: &'a HashMap<String, App
   apps_that_use_resource(secret_name, apps, &secret_resources_from_app)
 }
 
-/// Find apps that use a given topic
+/// Find apps that use a given topic.
 ///
 /// # Parameters
 /// * `topic_id` - Identifier of the topic to look for.
@@ -319,7 +319,7 @@ pub fn apps_that_use_topic<'a>(topic_id: &str, apps: &'a HashMap<String, AppCata
   apps_that_use_resource(topic_id, apps, &topic_resources_from_app)
 }
 
-/// Find apps that use a given vhost
+/// Find apps that use a given vhost.
 ///
 /// # Parameters
 /// * `volume_id` - Identifier of the vhost to look for.
@@ -334,7 +334,7 @@ pub fn apps_that_use_vhost<'a>(vhost_id: &str, apps: &'a HashMap<String, AppCata
   apps_that_use_resource(vhost_id, apps, &vhost_resources_from_app)
 }
 
-/// Find apps that use a given volume
+/// Find apps that use a given volume.
 ///
 /// # Parameters
 /// * `volume_id` - Identifier of the volume to look for.
@@ -349,7 +349,7 @@ pub fn apps_that_use_volume<'a>(volume_id: &str, apps: &'a HashMap<String, AppCa
   apps_that_use_resource(volume_id, apps, &volume_resources_from_app)
 }
 
-/// Get resources of specified variant from `AppCatalogApp`
+/// Get resources of specified variant from `AppCatalogApp`.
 ///
 /// # Parameters
 /// * `app` - Reference to the `AppCatalogApp` to get the resources from.
@@ -372,7 +372,7 @@ pub(crate) fn app_resources<'a, T>(app: &'a AppCatalogApp, get_resource_variant:
   resources
 }
 
-/// Find apps that use a given resource
+/// Find apps that use a given resource.
 ///
 /// # Parameters
 /// * `resource_id` - Identifier of the resource to look for.
@@ -391,7 +391,7 @@ pub(crate) fn apps_that_use_resource<'a, T: 'a>(
 ) -> Vec<(&'a str, &'a AppCatalogApp, Vec<&'a str>)> {
   let mut tuples: Vec<(&str, &'a AppCatalogApp, Vec<&str>)> = vec![];
   for (app_id, app) in apps {
-    for (resource_id_from_app, _resource) in get_resources_variants_from_app(app) {
+    for (resource_id_from_app, _) in get_resources_variants_from_app(app) {
       if resource_id_from_app == resource_id {
         tuples.push((app_id, app, vec![resource_id_from_app]));
       }

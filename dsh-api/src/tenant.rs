@@ -115,7 +115,7 @@ use std::num::NonZeroU64;
 /// * [`managed_tenant_limit(tenant, kind)`](DshApiClient::managed_tenant_limit),
 /// * [`managed_tenant_limits(tenant)`](DshApiClient::managed_tenant_limit).
 impl DshApiClient {
-  /// # Get internal managed streams that the tenant has access to
+  /// Get internal managed streams that the tenant has access to.
   ///
   /// # Parameters
   /// * `managed_tenant` - Managed tenants id.
@@ -141,7 +141,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get managed streams that the tenant has access to
+  /// Get managed streams that the tenant has access to.
   ///
   /// # Parameters
   /// * `managed_tenant` - Managed tenants id.
@@ -169,7 +169,7 @@ impl DshApiClient {
     Ok(internal_streams)
   }
 
-  /// # Get public managed streams that the tenant has access to
+  /// Get public managed streams that the tenant has access to.
   ///
   /// # Parameters
   /// * `managed_tenant` - Managed tenants id.
@@ -195,7 +195,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Check whether a managed tenant has read access to an internal managed stream
+  /// Check whether a managed tenant has read access to an internal managed stream.
   ///
   /// Note that this method will return `Ok(false)` when either the managed tenant
   /// or the internal managed stream does not exist.
@@ -217,7 +217,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Check whether a managed tenant has write access to an internal managed stream
+  /// Check whether a managed tenant has write access to an internal managed stream.
   ///
   /// Note that this method will return `Ok(false)` when either the managed tenant
   /// or the internal managed stream does not exist.
@@ -239,7 +239,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Check whether a managed tenant has read access to a public managed stream
+  /// Check whether a managed tenant has read access to a public managed stream.
   ///
   /// Note that this method will return `Ok(false)` when either the managed tenant
   /// or the public managed stream does not exist.
@@ -261,7 +261,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Check whether a managed tenant has write access to a public managed stream
+  /// Check whether a managed tenant has write access to a public managed stream.
   ///
   /// Note that this method will return `Ok(false)` when either the managed tenant
   /// or the public managed stream does not exist.
@@ -283,7 +283,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Get ids of internal managed streams that the tenant has access to
+  /// Get ids of internal managed streams that the tenant has access to.
   ///
   /// # Parameters
   /// * `managed_tenant` - Managed tenant id.
@@ -315,7 +315,7 @@ impl DshApiClient {
     Ok(internal_access_rights)
   }
 
-  /// # Get managed tenant limit
+  /// Get managed tenant limit.
   ///
   /// # Parameters
   /// * `managed_tenant` - Managed tenant id.
@@ -344,7 +344,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Get managed tenant limits struct
+  /// Get managed tenant limits struct.
   ///
   /// # Parameters
   /// * `managed_tenant` - managed tenants id
@@ -356,7 +356,7 @@ impl DshApiClient {
     Ok(TenantLimits::from(&self.get_tenant_limits(managed_tenant).await?))
   }
 
-  /// # Get ids of public managed streams that the tenant has access to
+  /// Get ids of public managed streams that the tenant has access to.
   ///
   /// # Parameters
   /// * `managed_tenant` - managed tenants id
@@ -433,32 +433,32 @@ impl DshApiClient {
   }
 }
 
-/// Structure that describes all resource limits for a managed tenant
+/// Structure that describes all resource limits for a managed tenant.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TenantLimits {
-  /// Limit for the number of certificates available for the managed tenant
+  /// Limit for the number of certificates available for the managed tenant.
   pub certificate_count: Option<NonZeroU64>,
-  /// Limit for the maximum allowed consumer rate (bytes/sec)
+  /// Limit for the maximum allowed consumer rate (bytes/sec).
   pub consumer_rate: Option<i64>,
-  /// Limit for the number of cpus to provision for the managed tenant (factions of a vCPU core, 1.0 equals 1 vCPU)
+  /// Limit for the number of cpus to provision for the managed tenant (factions of a vCPU core, 1.0 equals 1 vCPU).
   pub cpu: Option<f64>,
-  /// Limit for the number of Kafka ACL groups available for the managed tenant
+  /// Limit for the number of Kafka ACL groups available for the managed tenant.
   pub kafka_acl_group_count: Option<i64>,
-  /// Limit for the amount of memory available for the managed tenant (MiB)
+  /// Limit for the amount of memory available for the managed tenant (MiB).
   pub mem: Option<NonZeroU64>,
-  /// Limit for the number of partitions available for the managed tenant
+  /// Limit for the number of partitions available for the managed tenant.
   pub partition_count: Option<NonZeroU64>,
-  /// Limit for the maximum allowed producer rate (bytes/sec)
+  /// Limit for the maximum allowed producer rate (bytes/sec).
   pub producer_rate: Option<i64>,
-  /// Limit for the maximum allowed request rate (%)
+  /// Limit for the maximum allowed request rate (%).
   pub request_rate: Option<NonZeroU64>,
-  /// Limit for the number of secrets available for the managed tenant
+  /// Limit for the number of secrets available for the managed tenant.
   pub secret_count: Option<NonZeroU64>,
-  /// Limit for the number of topics available for the managed tenant
+  /// Limit for the number of topics available for the managed tenant.
   pub topic_count: Option<NonZeroU64>,
 }
 
-// Serializer for TenantLimits
+// Serializer for TenantLimits.
 //
 // First converts the TenantLimits to a Vec<LimitValue> and then serializes.
 impl Serialize for TenantLimits {
@@ -467,7 +467,7 @@ impl Serialize for TenantLimits {
   }
 }
 
-// Deserializer for TenantLimits
+// Deserializer for TenantLimits.
 //
 // First deserializes a Vec<LimitValue> and then converts.
 impl<'de> Deserialize<'de> for TenantLimits {
@@ -477,7 +477,7 @@ impl<'de> Deserialize<'de> for TenantLimits {
 }
 
 impl TenantLimits {
-  /// # Checks if empty
+  /// Checks if empty.
   ///
   /// # Returns
   /// * `true` - if all fields are `None`
@@ -495,7 +495,7 @@ impl TenantLimits {
       && self.topic_count.is_none()
   }
 
-  /// # Update this struct from another struct
+  /// Update this struct from another struct.
   ///
   /// This method copies all non-empty fields from `other` into `self`.
   /// Existing non-empty fields will be overwritten.

@@ -7,7 +7,7 @@ use itertools::Itertools;
 use regex::Regex;
 use std::fmt::{Display, Formatter};
 
-/// # Represents a part of a matched query.
+/// Represents a part of a matched query.
 #[derive(Debug, PartialEq)]
 pub enum Part {
   /// Represents a part of a string that did match the query.
@@ -23,25 +23,25 @@ pub enum Match {
   /// - First parameter,
   /// - Optional second parameter.
   Expression { kind: String, first_parameter: String, second_parameter: Option<String> },
-  /// Matching and non-matching parts
+  /// Matching and non-matching parts.
   Parts { parts: Vec<Part> },
-  /// Simple match
+  /// Simple match.
   Simple,
 }
 
-/// # Defines the methods in the query processor
+/// Defines the methods in the query processor.
 ///
 /// A `QueryProcessor` will query a `haystack` string for substrings that match a certain pattern.
 /// If there is a match, the result will be a vector with alternating matching and
 /// non-matching parts, represented by [`Part`] enums.
 pub trait QueryProcessor: Send + Sync {
-  /// # Returns a description of the query
+  /// Returns a description of the query.
   ///
   /// # Returns
   /// * a `String` describing the query processor
   fn describe(&self) -> String;
 
-  /// # Applies generic query to string
+  /// Applies generic query to string.
   ///
   /// # Parameters
   /// * `haystack` - `String` that will be matched against the expression query.
@@ -53,7 +53,7 @@ pub trait QueryProcessor: Send + Sync {
   /// * `None` - When the `haystack` did not match the query.
   fn matching(&self, haystack: &str) -> Option<Match>;
 
-  /// # Applies expression query to string
+  /// Applies expression query to string.
   ///
   /// # Parameters
   /// * `haystack` - `String` that will be matched against the expression query.
@@ -63,7 +63,7 @@ pub trait QueryProcessor: Send + Sync {
   /// * `None` - When the `haystack` did not match the query.
   fn matching_expression(&self, haystack: &str) -> Option<(String, String, Option<String>)>;
 
-  /// # Applies parts query to string
+  /// Applies parts query to string.
   ///
   /// # Parameters
   /// * `haystack` - `String` that will be matched against the parts query.
@@ -74,7 +74,7 @@ pub trait QueryProcessor: Send + Sync {
   /// * `None` - When the `haystack` did not match the query.
   fn matching_parts(&self, haystack: &str) -> Option<Vec<Part>>;
 
-  /// # Applies simple query to string
+  /// Applies simple query to string.
   ///
   /// # Parameters
   /// * `haystack` - `String` that will be matched against the simple query.
@@ -541,7 +541,7 @@ impl Part {
     Matching { part: matching_part.into() }
   }
 
-  /// # Create a `Part::NonMatching`
+  /// Create a `Part::NonMatching`.
   ///
   /// # Parameters
   /// `non_matching_part` - the value of this `Part::NonMatching`
