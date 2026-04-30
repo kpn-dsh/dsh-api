@@ -10,7 +10,7 @@ const TENANT_NAME: &str = "my-tenant";
 const VHOST: &str = "my-vhost";
 
 use crate::common::initialize_logger;
-use dsh_api::platform::DshPlatform;
+use dsh_api::platform::{DshPlatform, VhostZone};
 use std::error::Error;
 
 #[tokio::main]
@@ -84,28 +84,32 @@ fn print_platform(platform: DshPlatform) {
   println!("url swagger                      {}", platform.swagger_url());
   println!("url tracing                      {}", platform.tracing_url());
 
-  match platform.tenant_private_domain(TENANT_NAME) {
+  match platform.tenant_domain(TENANT_NAME, VhostZone::Private) {
     Ok(tenant_private_domain) => println!("private domain tenant            {}", tenant_private_domain),
     Err(error) => println!("private domain tenant            {}", error),
   }
-  match platform.tenant_proxy_private_bootstrap_servers(TENANT_NAME, PROXY, 3) {
+  match platform.tenant_proxy_bootstrap_servers(TENANT_NAME, PROXY, VhostZone::Private, 3) {
     Ok(boostrap_servers) => println!("proxy private bootstrap servers  {}", boostrap_servers.join("\n                                 ")),
     Err(error) => println!("proxy private bootstrap servers  {}", error),
   }
-  match platform.tenant_proxy_private_schema_store_host(TENANT_NAME, PROXY) {
+  match platform.tenant_proxy_schema_store_host(TENANT_NAME, PROXY, VhostZone::Private) {
     Ok(schema_store_host) => println!("proxy private schema store host  {}", schema_store_host),
     Err(error) => println!("proxy private schema store host  {}", error),
   }
 
-  println!("public domain tenant             {}", platform.tenant_public_domain(TENANT_NAME));
+  println!(
+    "public domain tenant             {}",
+    platform.tenant_domain(TENANT_NAME, VhostZone::Public).unwrap()
+  );
   println!(
     "proxy public bootstrap servers   {}",
     platform
-      .tenant_proxy_public_bootstrap_servers(TENANT_NAME, PROXY, 3)
+      .tenant_proxy_bootstrap_servers(TENANT_NAME, PROXY, VhostZone::Public, 3)
+      .unwrap()
       .join("\n                                 ")
   );
   println!(
     "proxy public schema store host   {}",
-    platform.tenant_proxy_public_schema_store_host(TENANT_NAME, PROXY)
+    platform.tenant_proxy_schema_store_host(TENANT_NAME, PROXY, VhostZone::Public).unwrap()
   );
 }

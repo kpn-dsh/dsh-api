@@ -10,14 +10,20 @@ static PRODLZ: LazyLock<DshPlatform> = LazyLock::new(|| DshPlatform::new("prodlz
 
 #[test]
 fn test_platform_from_domain() {
-  assert_eq!(DshPlatform::from_domain("dsh-k8s.np.aws.kpn.com").unwrap().unwrap(), (DEVLZ.clone(), false));
-  assert_eq!(DshPlatform::from_domain("dsh-k8s.np.aws.kpn.org").unwrap().unwrap(), (DEVLZ.clone(), true));
-  assert_eq!(DshPlatform::from_domain("dsh.np.aws.kpn.com").unwrap().unwrap(), (NPLZ.clone(), false));
-  assert_eq!(DshPlatform::from_domain("dsh.np.aws.kpn.org").unwrap().unwrap(), (NPLZ.clone(), true));
-  assert_eq!(DshPlatform::from_domain("poc.kpn-dsh.com").unwrap().unwrap(), (POC.clone(), false));
-  assert_eq!(DshPlatform::from_domain("prod.aws.kpn.com").unwrap().unwrap(), (PRODLZ.clone(), false));
-  assert_eq!(DshPlatform::from_domain("prod.aws.kpn.org").unwrap().unwrap(), (PRODLZ.clone(), true));
-  assert_eq!(DshPlatform::from_domain("az.kpn-dsh.com").unwrap().unwrap(), (PRODAZ.clone(), false));
+  assert_eq!(
+    DshPlatform::from_domain("dsh-k8s.np.aws.kpn.com").unwrap().unwrap(),
+    (DEVLZ.clone(), VhostZone::Public)
+  );
+  assert_eq!(
+    DshPlatform::from_domain("dsh-k8s.np.aws.kpn.org").unwrap().unwrap(),
+    (DEVLZ.clone(), VhostZone::Private)
+  );
+  assert_eq!(DshPlatform::from_domain("dsh.np.aws.kpn.com").unwrap().unwrap(), (NPLZ.clone(), VhostZone::Public));
+  assert_eq!(DshPlatform::from_domain("dsh.np.aws.kpn.org").unwrap().unwrap(), (NPLZ.clone(), VhostZone::Private));
+  assert_eq!(DshPlatform::from_domain("poc.kpn-dsh.com").unwrap().unwrap(), (POC.clone(), VhostZone::Public));
+  assert_eq!(DshPlatform::from_domain("prod.aws.kpn.com").unwrap().unwrap(), (PRODLZ.clone(), VhostZone::Public));
+  assert_eq!(DshPlatform::from_domain("prod.aws.kpn.org").unwrap().unwrap(), (PRODLZ.clone(), VhostZone::Private));
+  assert_eq!(DshPlatform::from_domain("az.kpn-dsh.com").unwrap().unwrap(), (PRODAZ.clone(), VhostZone::Public));
   assert!(DshPlatform::from_domain("google.com").unwrap().is_none());
   assert!(DshPlatform::from_domain("google.org").unwrap().is_none());
 }
@@ -65,29 +71,29 @@ fn test_proxy_common_name() {
 #[test]
 fn test_proxy_broker_vhost() {
   assert_eq!(
-    NPLZ.proxy_broker_vhost("my-tenant", "my-proxy", VhostZone::Private, 2).unwrap(),
+    NPLZ.proxy_broker_vhost("my-proxy", "my-tenant", VhostZone::Private, 2).unwrap(),
     "my-proxy-2.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org"
   );
   assert_eq!(
-    NPLZ.proxy_broker_vhost("my-tenant", "my-proxy", VhostZone::Public, 2).unwrap(),
+    NPLZ.proxy_broker_vhost("my-proxy", "my-tenant", VhostZone::Public, 2).unwrap(),
     "my-proxy-2.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
   );
-  assert!(PROD.proxy_broker_vhost("my-tenant", "my-proxy", VhostZone::Private, 2).is_err());
+  assert!(PROD.proxy_broker_vhost("my-proxy", "my-tenant", VhostZone::Private, 2).is_err());
   assert_eq!(
-    PROD.proxy_broker_vhost("my-tenant", "my-proxy", VhostZone::Public, 2).unwrap(),
+    PROD.proxy_broker_vhost("my-proxy", "my-tenant", VhostZone::Public, 2).unwrap(),
     "my-proxy-2.kafka.my-tenant.kpn-dsh.com"
   );
 }
 
 #[test]
 fn test_proxy_consumer_group() {
-  assert_eq!(NPLZ.proxy_consumer_group("my-tenant", "my-proxy", 2), "my-tenant_my-proxy_2".to_string());
+  assert_eq!(NPLZ.proxy_consumer_group("my-proxy", "my-tenant", 2), "my-tenant_my-proxy_2".to_string());
 }
 
 #[test]
 fn test_proxy_consumer_name_acl_group() {
   assert_eq!(
-    NPLZ.proxy_consumer_name_acl_group("my-tenant", "my-acl-group", "my-proxy", 2),
+    NPLZ.proxy_consumer_name_acl_group("my-proxy", "my-acl-group", "my-tenant", 2),
     "my-tenant.my-acl-group_my-proxy_2".to_string()
   );
 }
@@ -95,16 +101,16 @@ fn test_proxy_consumer_name_acl_group() {
 #[test]
 fn test_proxy_schema_store_vhost() {
   assert_eq!(
-    NPLZ.proxy_schema_store_vhost("my-tenant", "my-proxy", VhostZone::Private).unwrap(),
+    NPLZ.proxy_schema_store_vhost("my-proxy", "my-tenant", VhostZone::Private).unwrap(),
     "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org".to_string()
   );
   assert_eq!(
-    NPLZ.proxy_schema_store_vhost("my-tenant", "my-proxy", VhostZone::Public).unwrap(),
+    NPLZ.proxy_schema_store_vhost("my-proxy", "my-tenant", VhostZone::Public).unwrap(),
     "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
   );
-  assert!(PROD.proxy_schema_store_vhost("my-tenant", "my-proxy", VhostZone::Private).is_err());
+  assert!(PROD.proxy_schema_store_vhost("my-proxy", "my-tenant", VhostZone::Private).is_err());
   assert_eq!(
-    PROD.proxy_schema_store_vhost("my-tenant", "my-proxy", VhostZone::Public).unwrap(),
+    PROD.proxy_schema_store_vhost("my-proxy", "my-tenant", VhostZone::Public).unwrap(),
     "my-proxy-schema-store.kafka.my-tenant.kpn-dsh.com".to_string()
   );
 }
