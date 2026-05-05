@@ -54,33 +54,33 @@ fn test_domain() {
 #[test]
 fn test_proxy_common_name() {
   assert_eq!(
-    NPLZ.proxy_common_name("my-tenant", VhostZone::Private).unwrap(),
-    "brokers.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org"
+    NPLZ.proxy_common_name("my-proxy", "my-tenant", VhostZone::Private).unwrap(),
+    "my-proxy.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org"
   );
   assert_eq!(
-    NPLZ.proxy_common_name("my-tenant", VhostZone::Public).unwrap(),
-    "brokers.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
+    NPLZ.proxy_common_name("my-proxy", "my-tenant", VhostZone::Public).unwrap(),
+    "my-proxy.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
   );
-  assert!(PROD.proxy_common_name("my-tenant", VhostZone::Private).is_err());
+  assert!(PROD.proxy_common_name("my-proxy", "my-tenant", VhostZone::Private).is_err());
   assert_eq!(
-    PROD.proxy_common_name("my-tenant", VhostZone::Public).unwrap(),
-    "brokers.kafka.my-tenant.kpn-dsh.com"
+    PROD.proxy_common_name("my-proxy", "my-tenant", VhostZone::Public).unwrap(),
+    "my-proxy.kafka.my-tenant.kpn-dsh.com"
   );
 }
 
 #[test]
 fn test_proxy_broker_vhost() {
   assert_eq!(
-    NPLZ.proxy_broker_vhost("my-proxy", "my-tenant", VhostZone::Private, 2).unwrap(),
+    NPLZ.proxy_vhost("my-proxy", "my-tenant", VhostZone::Private, 2).unwrap(),
     "my-proxy-2.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org"
   );
   assert_eq!(
-    NPLZ.proxy_broker_vhost("my-proxy", "my-tenant", VhostZone::Public, 2).unwrap(),
+    NPLZ.proxy_vhost("my-proxy", "my-tenant", VhostZone::Public, 2).unwrap(),
     "my-proxy-2.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
   );
-  assert!(PROD.proxy_broker_vhost("my-proxy", "my-tenant", VhostZone::Private, 2).is_err());
+  assert!(PROD.proxy_vhost("my-proxy", "my-tenant", VhostZone::Private, 2).is_err());
   assert_eq!(
-    PROD.proxy_broker_vhost("my-proxy", "my-tenant", VhostZone::Public, 2).unwrap(),
+    PROD.proxy_vhost("my-proxy", "my-tenant", VhostZone::Public, 2).unwrap(),
     "my-proxy-2.kafka.my-tenant.kpn-dsh.com"
   );
 }

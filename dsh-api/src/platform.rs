@@ -63,6 +63,7 @@ pub enum CloudProvider {
   Azure,
 }
 
+/// Selects the vhost zone
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum VhostZone {
   #[serde(rename = "private")]
@@ -612,31 +613,6 @@ impl DshPlatform {
   }
 
   #[rustfmt::skip]
-  /// Returns the proxy broker vhost.
-  ///
-  /// # Parameters
-  /// * `proxy_name` - Proxy name.
-  /// * `tenant_name` - Tenant name.
-  /// * `vhost_zone` - Vhost zone.
-  /// * `index` - Proxy broker index.
-  ///
-  /// # Examples
-  /// ```rust
-  /// # use dsh_api::platform::{DshPlatform, VhostZone};
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// assert_eq!(
-  ///   DshPlatform::new("nplz")
-  ///     .proxy_broker_vhost("my-proxy", "my-tenant", VhostZone::Public, 2)?,
-  ///   "my-proxy-2.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
-  /// );
-  /// #   Ok(())
-  /// # }
-  /// ```
-  pub fn proxy_broker_vhost(&self, proxy_name: impl Display, tenant_name: impl Display, vhost_zone: VhostZone, index: usize) -> DshApiResult<String> {
-    Ok(format!("{}-{}.{}", proxy_name, index, self.proxy_vhost_domain(tenant_name, vhost_zone)?))
-  }
-
-  #[rustfmt::skip]
   /// Returns the proxy common name.
   ///
   /// # Parameters
@@ -648,14 +624,15 @@ impl DshPlatform {
   /// # use dsh_api::platform::{DshPlatform, VhostZone};
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// assert_eq!(
-  ///   DshPlatform::new("nplz").proxy_common_name("my-tenant", VhostZone::Public)?,
-  ///   "brokers.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
+  ///   DshPlatform::new("nplz")
+  ///     .proxy_common_name("my-proxy", "my-tenant", VhostZone::Public)?,
+  ///   "my-proxy.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
   /// );
   /// #   Ok(())
   /// # }
   /// ```
-  pub fn proxy_common_name(&self, tenant_name: impl Display, vhost_zone: VhostZone) -> DshApiResult<String> {
-    Ok(format!("brokers.{}", self.proxy_vhost_domain(tenant_name, vhost_zone)?))
+  pub fn proxy_common_name(&self, proxy_name: impl Display, tenant_name: impl Display, vhost_zone: VhostZone) -> DshApiResult<String> {
+    Ok(format!("{}.{}", proxy_name, self.proxy_vhost_domain(tenant_name, vhost_zone)?))
   }
 
   /// Returns the proxy consumer group.
@@ -726,6 +703,31 @@ impl DshPlatform {
   /// ```
   pub fn proxy_schema_store_vhost(&self, proxy_name: impl Display, tenant_name: impl Display, vhost_zone: VhostZone) -> DshApiResult<String> {
     Ok(format!("{}-schema-store.{}", proxy_name, self.proxy_vhost_domain(tenant_name, vhost_zone)?))
+  }
+
+  #[rustfmt::skip]
+  /// Returns the proxy vhost.
+  ///
+  /// # Parameters
+  /// * `proxy_name` - Proxy name.
+  /// * `tenant_name` - Tenant name.
+  /// * `vhost_zone` - Vhost zone.
+  /// * `index` - Proxy vhost index.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::{DshPlatform, VhostZone};
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz")
+  ///     .proxy_vhost("my-proxy", "my-tenant", VhostZone::Public, 2)?,
+  ///   "my-proxy-2.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
+  /// );
+  /// #   Ok(())
+  /// # }
+  /// ```
+  pub fn proxy_vhost(&self, proxy_name: impl Display, tenant_name: impl Display, vhost_zone: VhostZone, index: usize) -> DshApiResult<String> {
+    Ok(format!("{}-{}.{}", proxy_name, index, self.proxy_vhost_domain(tenant_name, vhost_zone)?))
   }
 
   /// Returns the proxy vhost domain.
@@ -1077,7 +1079,7 @@ impl DshPlatform {
   /// * `tenant_name` - Tenant name.
   /// * `vhost_zone` - Vhost zone.
   /// * `port` - Port number.
-  /// * `index` - Number of proxy broker servers.
+  /// * `index` - Number of proxy servers.
   ///
   /// # Examples
   /// ```rust
@@ -1120,7 +1122,7 @@ impl DshPlatform {
   /// * `proxy_name` - Proxy name.
   /// * `tenant_name` - Tenant name.
   /// * `vhost_zone` - Vhost zone.
-  /// * `number_of_servers` - Number of proxy broker servers.
+  /// * `number_of_servers` - Number of proxy servers.
   ///
   /// # Examples
   /// ```rust
@@ -1158,7 +1160,7 @@ impl DshPlatform {
   /// # Parameters
   /// * `proxy_name` - Proxy name.
   /// * `tenant_name` - Tenant name.
-  /// * `number_of_servers` - Number of proxy broker servers.
+  /// * `number_of_servers` - Number of proxy servers.
   ///
   /// # Examples
   /// ```rust
