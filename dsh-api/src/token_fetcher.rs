@@ -75,7 +75,7 @@ impl TokenFetcher {
   /// # }
   /// ```
   pub fn new(dsh_api_tenant: DshApiTenant, client_secret: String, client_id: Option<String>, client: Option<Client>) -> Self {
-    let client_id = client_id.unwrap_or(dsh_api_tenant.platform().tenant_client_id(dsh_api_tenant.name()));
+    let client_id = client_id.unwrap_or(dsh_api_tenant.platform().robot_tenant_client_id(dsh_api_tenant.name()));
     debug!(
       "new token fetcher with client, client id: '{}', url: '{}'",
       client_id,

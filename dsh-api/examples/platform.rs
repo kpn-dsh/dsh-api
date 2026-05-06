@@ -52,8 +52,6 @@ fn print_platform(platform: DshPlatform) {
     None => println!("private domain                   not specified"),
   }
   println!();
-  println!("client id                        {}", platform.client_id());
-  println!("client id tenant                 {}", platform.tenant_client_id(TENANT_NAME));
   println!("domain console                   {}", platform.console_domain());
   println!("domain internal                  {}", platform.internal_domain(TENANT_NAME));
   println!("domain internal service          {}", platform.internal_service_domain(TENANT_NAME, SERVICE_NAME));
@@ -66,6 +64,8 @@ fn print_platform(platform: DshPlatform) {
   }
   println!("public domain app                {}", platform.tenant_public_app_domain(TENANT_NAME, APP_NAME));
   println!("public domain vhost              {}", platform.public_vhost_domain(VHOST));
+  println!("robot client id                  {}", platform.robot_client_id());
+  println!("robot client id tenant           {}", platform.robot_tenant_client_id(TENANT_NAME));
 
   println!("url app catalog tenant           {}", platform.tenant_app_catalog_url(TENANT_NAME));
   println!(

@@ -284,13 +284,10 @@ impl DshPlatform {
 
   /// Returns properly formatted client_id.
   ///
-  /// # Example
-  /// ```
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(DshPlatform::new("nplz").client_id(), "robot:dev-lz-dsh");
-  /// ```
+  /// This method is deprecated, use [`DshPlatform::robot_client_id`] instead.
+  #[deprecated]
   pub fn client_id(&self) -> String {
-    format!("robot{}{}", CLIENT_ID_SEPARATOR, self.realm())
+    self.robot_client_id()
   }
 
   /// Returns the cloud provider for the platform.
@@ -654,11 +651,11 @@ impl DshPlatform {
     format!("{}_{}_{}", tenant_name, proxy_name, index)
   }
 
-  /// Returns the proxy consumer group with acl groups.
+  /// Returns the proxy consumer group for acl groups.
   ///
   /// # Parameters
   /// * `proxy_name` - Proxy name.
-  /// * `acl_group_name` - Acl group name.
+  /// * `acl_group_id` - Acl group id.
   /// * `tenant_name` - Tenant name.
   /// * `index` - Proxy consumer group index.
   ///
@@ -666,17 +663,12 @@ impl DshPlatform {
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
-  ///   DshPlatform::new("nplz").proxy_consumer_name_acl_group(
-  ///     "my-proxy",
-  ///     "my-acl-group",
-  ///     "my-tenant",
-  ///     2
-  ///   ),
+  ///   DshPlatform::new("nplz").proxy_consumer_group_acl("my-proxy", "my-acl-group", "my-tenant", 2),
   ///   "my-tenant.my-acl-group_my-proxy_2"
   /// );
   /// ```
-  pub fn proxy_consumer_name_acl_group(&self, proxy_name: impl Display, acl_group_name: impl Display, tenant_name: impl Display, index: usize) -> String {
-    format!("{}.{}_{}_{}", tenant_name, acl_group_name, proxy_name, index)
+  pub fn proxy_consumer_group_acl(&self, proxy_name: impl Display, acl_group_id: impl Display, tenant_name: impl Display, index: usize) -> String {
+    format!("{}.{}_{}_{}", tenant_name, acl_group_id, proxy_name, index)
   }
 
   /// Returns the proxy schema store vhost.
@@ -840,6 +832,35 @@ impl DshPlatform {
     format!("https://{}/auth/v0/token", self.rest_api_domain())
   }
 
+  /// Returns properly formatted robot client_id.
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(DshPlatform::new("nplz").client_id(), "robot:dev-lz-dsh");
+  /// ```
+  pub fn robot_client_id(&self) -> String {
+    format!("robot{}{}", CLIENT_ID_SEPARATOR, self.realm())
+  }
+
+  #[rustfmt::skip]
+  /// Returns properly formatted robot client_id for tenant.
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  ///
+  /// # Example
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").tenant_client_id("my-tenant"),
+  ///   "robot:dev-lz-dsh:my-tenant"
+  /// );
+  /// ```
+  pub fn robot_tenant_client_id(&self, tenant_name: impl Display) -> String {
+    format!("{}{}{}", self.robot_client_id(), CLIENT_ID_SEPARATOR, tenant_name)
+  }
+
   /// Returns the url of the platform swagger page.
   ///
   /// # Examples
@@ -920,21 +941,12 @@ impl DshPlatform {
   }
 
   #[rustfmt::skip]
-  /// Returns properly formatted client_id for tenant.
+  /// Returns properly formatted robot client_id for tenant.
   ///
-  /// # Parameters
-  /// * `tenant_name` - Tenant name.
-  ///
-  /// # Example
-  /// ```
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::new("nplz").tenant_client_id("my-tenant"),
-  ///   "robot:dev-lz-dsh:my-tenant"
-  /// );
-  /// ```
+  /// This method is deprecated, use [`DshPlatform::robot_tenant_client_id`] instead.
+  #[deprecated]
   pub fn tenant_client_id(&self, tenant_name: impl Display) -> String {
-    format!("{}{}{}", self.client_id(), CLIENT_ID_SEPARATOR, tenant_name)
+    format!("{}{}{}", self.robot_client_id(), CLIENT_ID_SEPARATOR, tenant_name)
   }
 
   /// Returns the url of the platform console for a tenant.
