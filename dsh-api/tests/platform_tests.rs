@@ -93,7 +93,7 @@ fn test_proxy_consumer_group() {
 #[test]
 fn test_proxy_consumer_name_acl_group() {
   assert_eq!(
-    NPLZ.proxy_consumer_name_acl_group("my-proxy", "my-acl-group", "my-tenant", 2),
+    NPLZ.proxy_consumer_group_acl("my-proxy", "my-acl-group", "my-tenant", 2),
     "my-tenant.my-acl-group_my-proxy_2".to_string()
   );
 }
