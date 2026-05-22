@@ -1,8 +1,9 @@
 **.iml
 **.so
 .DS_Store
-/Cargo.lock
-/target
 /.idea
+/Cargo.lock
 /dsh-api/openapi_spec/open-api.json
+/info/
 /scratch/
+/target
