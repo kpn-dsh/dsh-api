@@ -11,6 +11,7 @@
 //! * [`Bucket::new(encrypted, versioned)`](Bucket::new)
 //! * [`Empty::new()`](Empty::new)
 //! * [`HealthCheck::new(path, port)`](HealthCheck::new)
+//! * [`KafkaAclGroupTopic::new(kind, name)`](KafkaAclGroupTopic::new)
 //! * [`LimitValueCertificateCount::new(certificate count)`](LimitValueCertificateCount::new)
 //! * [`LimitValueConsumerRate::new(consumer rate)`](LimitValueConsumerRate::new)
 //! * [`LimitValueCpu::new(cpus)`](LimitValueCpu::new)
@@ -32,10 +33,10 @@
 
 use crate::types::{
   AllocationStatus, AppCatalogApp, AppCatalogAppConfiguration, Application, ApplicationSecret, ApplicationVolumes, Bucket, Empty, HealthCheck, HealthCheckProtocol,
-  LimitValueCertificateCount, LimitValueCertificateCountName, LimitValueConsumerRate, LimitValueConsumerRateName, LimitValueCpu, LimitValueCpuName, LimitValueKafkaAclGroupCount,
-  LimitValueKafkaAclGroupCountName, LimitValueMem, LimitValueMemName, LimitValuePartitionCount, LimitValuePartitionCountName, LimitValueProducerRate, LimitValueProducerRateName,
-  LimitValueRequestRate, LimitValueRequestRateName, LimitValueSecretCount, LimitValueSecretCountName, LimitValueTopicCount, LimitValueTopicCountName, ManagedStreamId,
-  ManagedTenant, ManagedTenantServices, ManagedTenantServicesName, Metrics, Notification, PathSpec, Secret, Vhost, Volume,
+  KafkaAclGroupTopic, KafkaAclGroupTopicKind, LimitValueCertificateCount, LimitValueCertificateCountName, LimitValueConsumerRate, LimitValueConsumerRateName, LimitValueCpu,
+  LimitValueCpuName, LimitValueKafkaAclGroupCount, LimitValueKafkaAclGroupCountName, LimitValueMem, LimitValueMemName, LimitValuePartitionCount, LimitValuePartitionCountName,
+  LimitValueProducerRate, LimitValueProducerRateName, LimitValueRequestRate, LimitValueRequestRateName, LimitValueSecretCount, LimitValueSecretCountName, LimitValueTopicCount,
+  LimitValueTopicCountName, ManagedStreamId, ManagedTenant, ManagedTenantServices, ManagedTenantServicesName, Metrics, Notification, PathSpec, Secret, Vhost, Volume,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -311,6 +312,36 @@ impl HealthCheck {
     T: Into<String>,
   {
     Self { path: path.into(), port, protocol: Some(HealthCheckProtocol::Https) }
+  }
+}
+
+impl KafkaAclGroupTopic {
+  #[rustfmt::skip]
+  /// Create a new `KafkaAclGroupTopic`.
+  ///
+  /// Create a new `KafkaAclGroupTopic` from the provided parameters.
+  ///
+  /// # Parameters
+  /// * `kind` - Topic kind, `Internal`, `Public` or `Topic`
+  /// * `topic` - Topic name
+  ///
+  /// # Returns
+  /// The created `KafkaAclGroupTopic`.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// # use dsh_api::types::{KafkaAclGroupTopic, KafkaAclGroupTopicKind};
+  /// let kafka_group_id_topic =
+  ///   KafkaAclGroupTopic::new(KafkaAclGroupTopicKind::Topic, "my-topic");
+  /// assert_eq!(kafka_group_id_topic.kind, KafkaAclGroupTopicKind::Topic);
+  /// assert_eq!(kafka_group_id_topic.name, "my-topic");
+  /// ```
+  pub fn new<T>(kind: KafkaAclGroupTopicKind, name: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self { kind, name: name.into() }
   }
 }
 
