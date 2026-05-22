@@ -71,29 +71,29 @@ fn test_proxy_common_name() {
 #[test]
 fn test_proxy_broker_vhost() {
   assert_eq!(
-    NPLZ.proxy_vhost("my-proxy", "my-tenant", VhostZone::Private, 2).unwrap(),
+    NPLZ.proxy_vhost("my-tenant", "my-proxy", VhostZone::Private, 2).unwrap(),
     "my-proxy-2.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org"
   );
   assert_eq!(
-    NPLZ.proxy_vhost("my-proxy", "my-tenant", VhostZone::Public, 2).unwrap(),
+    NPLZ.proxy_vhost("my-tenant", "my-proxy", VhostZone::Public, 2).unwrap(),
     "my-proxy-2.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
   );
-  assert!(PROD.proxy_vhost("my-proxy", "my-tenant", VhostZone::Private, 2).is_err());
+  assert!(PROD.proxy_vhost("my-tenant", "my-proxy", VhostZone::Private, 2).is_err());
   assert_eq!(
-    PROD.proxy_vhost("my-proxy", "my-tenant", VhostZone::Public, 2).unwrap(),
+    PROD.proxy_vhost("my-tenant", "my-proxy", VhostZone::Public, 2).unwrap(),
     "my-proxy-2.kafka.my-tenant.kpn-dsh.com"
   );
 }
 
 #[test]
 fn test_proxy_consumer_group() {
-  assert_eq!(NPLZ.proxy_consumer_group("my-proxy", "my-tenant", 2), "my-tenant_my-proxy_2".to_string());
+  assert_eq!(NPLZ.proxy_consumer_group("my-tenant", "my-proxy", 2), "my-tenant_my-proxy_2".to_string());
 }
 
 #[test]
 fn test_proxy_consumer_name_acl_group() {
   assert_eq!(
-    NPLZ.proxy_consumer_group_acl("my-proxy", "my-acl-group", "my-tenant", 2),
+    NPLZ.proxy_consumer_group_acl("my-tenant", "my-proxy", "my-acl-group", 2),
     "my-tenant.my-acl-group_my-proxy_2".to_string()
   );
 }
@@ -101,16 +101,16 @@ fn test_proxy_consumer_name_acl_group() {
 #[test]
 fn test_proxy_schema_store_vhost() {
   assert_eq!(
-    NPLZ.proxy_schema_store_vhost("my-proxy", "my-tenant", VhostZone::Private).unwrap(),
+    NPLZ.proxy_schema_store_vhost("my-tenant", "my-proxy", VhostZone::Private).unwrap(),
     "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org".to_string()
   );
   assert_eq!(
-    NPLZ.proxy_schema_store_vhost("my-proxy", "my-tenant", VhostZone::Public).unwrap(),
+    NPLZ.proxy_schema_store_vhost("my-tenant", "my-proxy", VhostZone::Public).unwrap(),
     "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com".to_string()
   );
-  assert!(PROD.proxy_schema_store_vhost("my-proxy", "my-tenant", VhostZone::Private).is_err());
+  assert!(PROD.proxy_schema_store_vhost("my-tenant", "my-proxy", VhostZone::Private).is_err());
   assert_eq!(
-    PROD.proxy_schema_store_vhost("my-proxy", "my-tenant", VhostZone::Public).unwrap(),
+    PROD.proxy_schema_store_vhost("my-tenant", "my-proxy", VhostZone::Public).unwrap(),
     "my-proxy-schema-store.kafka.my-tenant.kpn-dsh.com".to_string()
   );
 }

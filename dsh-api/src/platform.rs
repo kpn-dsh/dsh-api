@@ -327,6 +327,25 @@ impl DshPlatform {
     format!("https://{}", self.console_domain())
   }
 
+  /// Returns the consumer group for a service.
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  /// * `service_name` - Name/id of the service.
+  /// * `index` - Proxy consumer group index.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").consumer_group("my-tenant", "my-service", 2),
+  ///   "my-tenant_my-service_2"
+  /// );
+  /// ```
+  pub fn consumer_group(&self, tenant_name: impl Display, service_name: impl Display, index: usize) -> String {
+    format!("{}_{}_{}", tenant_name, service_name, index)
+  }
+
   #[rustfmt::skip]
   /// Returns a description of the platform.
   ///
@@ -635,47 +654,49 @@ impl DshPlatform {
   /// Returns the proxy consumer group.
   ///
   /// # Parameters
-  /// * `proxy_name` - Proxy name.
   /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
   /// * `index` - Proxy consumer group index.
   ///
   /// # Examples
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
-  ///   DshPlatform::new("nplz").proxy_consumer_group("my-proxy", "my-tenant", 2),
+  ///   DshPlatform::new("nplz").proxy_consumer_group("my-tenant", "my-proxy", 2),
   ///   "my-tenant_my-proxy_2"
   /// );
   /// ```
-  pub fn proxy_consumer_group(&self, proxy_name: impl Display, tenant_name: impl Display, index: usize) -> String {
+  pub fn proxy_consumer_group(&self, tenant_name: impl Display, proxy_name: impl Display, index: usize) -> String {
     format!("{}_{}_{}", tenant_name, proxy_name, index)
   }
 
+  #[rustfmt::skip]
   /// Returns the proxy consumer group for acl groups.
   ///
   /// # Parameters
+  /// * `tenant_name` - Tenant name.
   /// * `proxy_name` - Proxy name.
   /// * `acl_group_id` - Acl group id.
-  /// * `tenant_name` - Tenant name.
   /// * `index` - Proxy consumer group index.
   ///
   /// # Examples
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
-  ///   DshPlatform::new("nplz").proxy_consumer_group_acl("my-proxy", "my-acl-group", "my-tenant", 2),
+  ///   DshPlatform::new("nplz")
+  ///     .proxy_consumer_group_acl("my-tenant", "my-proxy", "my-acl-group", 2),
   ///   "my-tenant.my-acl-group_my-proxy_2"
   /// );
   /// ```
-  pub fn proxy_consumer_group_acl(&self, proxy_name: impl Display, acl_group_id: impl Display, tenant_name: impl Display, index: usize) -> String {
+  pub fn proxy_consumer_group_acl(&self, tenant_name: impl Display, proxy_name: impl Display, acl_group_id: impl Display, index: usize) -> String {
     format!("{}.{}_{}_{}", tenant_name, acl_group_id, proxy_name, index)
   }
 
   /// Returns the proxy schema store vhost.
   ///
   /// # Parameters
-  /// * `proxy_name` - Proxy name.
   /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
   /// * `vhost_zone` - Vhost zone.
   ///
   /// # Examples
@@ -684,8 +705,8 @@ impl DshPlatform {
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// assert_eq!(
   ///   DshPlatform::new("nplz").proxy_schema_store_vhost(
-  ///     "my-proxy",
   ///     "my-tenant",
+  ///     "my-proxy",
   ///     VhostZone::Public
   ///   )?,
   ///   "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
@@ -693,7 +714,7 @@ impl DshPlatform {
   /// #   Ok(())
   /// # }
   /// ```
-  pub fn proxy_schema_store_vhost(&self, proxy_name: impl Display, tenant_name: impl Display, vhost_zone: VhostZone) -> DshApiResult<String> {
+  pub fn proxy_schema_store_vhost(&self, tenant_name: impl Display, proxy_name: impl Display, vhost_zone: VhostZone) -> DshApiResult<String> {
     Ok(format!("{}-schema-store.{}", proxy_name, self.proxy_vhost_domain(tenant_name, vhost_zone)?))
   }
 
@@ -701,8 +722,8 @@ impl DshPlatform {
   /// Returns the proxy vhost.
   ///
   /// # Parameters
-  /// * `proxy_name` - Proxy name.
   /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
   /// * `vhost_zone` - Vhost zone.
   /// * `index` - Proxy vhost index.
   ///
@@ -712,13 +733,13 @@ impl DshPlatform {
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// assert_eq!(
   ///   DshPlatform::new("nplz")
-  ///     .proxy_vhost("my-proxy", "my-tenant", VhostZone::Public, 2)?,
+  ///     .proxy_vhost("my-tenant", "my-proxy", VhostZone::Public, 2)?,
   ///   "my-proxy-2.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
   /// );
   /// #   Ok(())
   /// # }
   /// ```
-  pub fn proxy_vhost(&self, proxy_name: impl Display, tenant_name: impl Display, vhost_zone: VhostZone, index: usize) -> DshApiResult<String> {
+  pub fn proxy_vhost(&self, tenant_name: impl Display, proxy_name: impl Display, vhost_zone: VhostZone, index: usize) -> DshApiResult<String> {
     Ok(format!("{}-{}.{}", proxy_name, index, self.proxy_vhost_domain(tenant_name, vhost_zone)?))
   }
 
@@ -1087,8 +1108,8 @@ impl DshPlatform {
   /// for the platform is defined. If it is not, an `Err` will be returned.
   ///
   /// # Parameters
-  /// * `proxy_name` - Proxy name.
   /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
   /// * `vhost_zone` - Vhost zone.
   /// * `port` - Port number.
   /// * `index` - Number of proxy servers.
@@ -1100,8 +1121,8 @@ impl DshPlatform {
   /// assert_eq!(
   ///   DshPlatform::new("nplz")
   ///     .tenant_proxy_bootstrap_server(
-  ///       "my-proxy",
   ///       "my-tenant",
+  ///       "my-proxy",
   ///       VhostZone::Private,
   ///       Some(19091),
   ///       2
@@ -1113,8 +1134,8 @@ impl DshPlatform {
   /// ```
   pub fn tenant_proxy_bootstrap_server(
     &self,
-    proxy_name: impl Display,
     tenant_name: impl Display,
+    proxy_name: impl Display,
     vhost_zone: VhostZone,
     port: Option<usize>,
     index: usize,
@@ -1125,14 +1146,15 @@ impl DshPlatform {
     }
   }
 
+  #[rustfmt::skip]
   /// Returns the bootstrap servers for a configured proxy.
   ///
   /// The private bootstrap server can only be constructed if the optional private domain
   /// for the platform is defined. If it is not, an `Err` will be returned.
   ///
   /// # Parameters
-  /// * `proxy_name` - Proxy name.
   /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
   /// * `vhost_zone` - Vhost zone.
   /// * `number_of_servers` - Number of proxy servers.
   ///
@@ -1140,9 +1162,15 @@ impl DshPlatform {
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// use dsh_api::platform::VhostZone;
   /// assert_eq!(
   ///   DshPlatform::new("nplz")
-  ///     .tenant_proxy_private_bootstrap_servers("my-proxy", "my-tenant", 3)?
+  ///     .tenant_proxy_bootstrap_servers(
+  ///       "my-tenant",
+  ///       "my-proxy",
+  ///       VhostZone::Private,
+  ///       3
+  ///     )?
   ///     .first()
   ///     .unwrap(),
   ///   "my-proxy-0.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org:9091"
@@ -1152,13 +1180,13 @@ impl DshPlatform {
   /// ```
   pub fn tenant_proxy_bootstrap_servers(
     &self,
-    proxy_name: impl Display,
     tenant_name: impl Display,
+    proxy_name: impl Display,
     vhost_zone: VhostZone,
     number_of_servers: usize,
   ) -> Result<Vec<String>, String> {
     (0..number_of_servers)
-      .map(|index| self.tenant_proxy_bootstrap_server(&proxy_name, &tenant_name, vhost_zone.clone(), None, index))
+      .map(|index| self.tenant_proxy_bootstrap_server(&tenant_name, &proxy_name, vhost_zone.clone(), None, index))
       .collect::<Result<Vec<_>, _>>()
   }
 
@@ -1170,8 +1198,8 @@ impl DshPlatform {
   /// This method is deprecated, use [`DshPlatform::tenant_proxy_bootstrap_servers`] instead.
   ///
   /// # Parameters
-  /// * `proxy_name` - Proxy name.
   /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
   /// * `number_of_servers` - Number of proxy servers.
   ///
   /// # Examples
@@ -1180,7 +1208,7 @@ impl DshPlatform {
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// assert_eq!(
   ///   DshPlatform::new("nplz")
-  ///     .tenant_proxy_private_bootstrap_servers("my-proxy", "my-tenant", 3)?
+  ///     .tenant_proxy_private_bootstrap_servers("my-tenant", "my-proxy", 3)?
   ///     .first()
   ///     .unwrap(),
   ///   "my-proxy-0.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org:9091"
@@ -1189,7 +1217,7 @@ impl DshPlatform {
   /// # }
   /// ```
   #[deprecated]
-  pub fn tenant_proxy_private_bootstrap_servers(&self, proxy_name: impl Display, tenant_name: impl Display, number_of_servers: usize) -> Result<Vec<String>, String> {
+  pub fn tenant_proxy_private_bootstrap_servers(&self, tenant_name: impl Display, proxy_name: impl Display, number_of_servers: usize) -> Result<Vec<String>, String> {
     self.tenant_domain(tenant_name, VhostZone::Private).map(|tenant_private_domain| {
       (0..number_of_servers)
         .map(|index| format!("{}-{}.kafka.{}:9091", proxy_name, index, tenant_private_domain))
