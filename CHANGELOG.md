@@ -8,13 +8,46 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ### Added
 
-* Added `application_tasks` method.
-* Added system secret names.
+* Added `application::application_tasks` method.
+* Added `secret` constants for system secret names.
+* Added `secret::secret_with_status` method.
 * Added `proxy` diagram.
+* Added `platform` methods:
+    * `DshPlatform::consumer_group`.
+    * `DshPlatform::from_domain`,
+    * `DshPlatform::robot_client_id`,
+    * `DshPlatform::robot_tenant_client_id`.
+    * Custom serializer and deserializer.
+* Added `platform::VhostZone` enum.
+* Added `Display` and `new`implementations for `KafkaAclGroupTopic`.
 
 ### Changed
 
-* Changed `platform` functions for generating `proxy` urls.
+* Platform proxy methods improved.
+* Changed `platform` methods for generating `proxy` urls:
+    * `DshPlatform::proxy_consumer_group_acl`
+    * `DshPlatform::proxy_consumer_group`
+    * `DshPlatform::proxy_schema_store_vhost`
+    * `DshPlatform::proxy_vhost`
+    * `DshPlatform::tenant_proxy_bootstrap_server`
+    * `DshPlatform::tenant_proxy_bootstrap_servers`
+    * `DshPlatform::tenant_proxy_private_bootstrap_servers`
+
+### Deprecated
+
+* Deprecated `platform` methods:
+    * `DshPlatform::client_id`.
+    * `DshPlatform::tenant_client_id`.
+    * `DshPlatform::tenant_private_domain`.
+    * `DshPlatform::tenant_proxy_private_bootstrap_servers`.
+    * `DshPlatform::tenant_proxy_private_schema_store_host`.
+    * `DshPlatform::tenant_proxy_public_bootstrap_servers`.
+    * `DshPlatform::tenant_proxy_public_schema_store_host`.
+    * `DshPlatform::tenant_public_domain`.
+
+### Removed
+
+* Removed deprecated method `DshPlatform::tenant_public_apps_domain`.
 
 ### Fixed
 
