@@ -329,13 +329,12 @@ When everything is ok you can publish the final crate by omitting the `--dry-run
 ### Publish `dsh_api`
 
 The next step it to publish `dsh_api` itself. Make sure that the `dsh_api_build_helper` dependency
-is pointing to `crates.io` (published in the previous step) and not to your local code.
+is pointing to the proper version at `crates.io` (published in the previous step).
 Check the dependency in `dsh-api/Cargo.toml`:
 
 ```toml
 [build-dependencies]
-# dsh_api_build_helpers = { path = "../dsh-api-build" }
-dsh_api_build_helpers = { version = "0.7.0" }
+dsh_api_build_helpers = { path = "../dsh-api-build", version = "0.7.0" }
 ```
 
 Again make sure that you have no uncommited code before you publish the crate.
