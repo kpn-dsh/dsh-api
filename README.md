@@ -287,16 +287,16 @@ The following features are defined:
 
 ## Coding guidelines
 
-Before pushing code to `github`, make sure that all unit tests pass,
-that you adhere to the code formatting defined in`rustfmt.toml` and
-that you have run the `clippy` linter. The following commands should
-return without any warnings or errors:
+Before pushing code to `github`, make sure that all unit tests pass, that you adhere to the code
+formatting defined in`rustfmt.toml`, that you have run the `clippy` linter and did the license
+check. The following commands should return without any warnings or errors:
 
 ```bash
 > cargo clippy --all-features
 > cargo doc --all-features
 > cargo test --all-features
 > cargo +nightly fmt --check
+> cargo deny check licenses
 ```
 
 Consider configuring your IDE to automatically apply the formatting rules when saving a file.
