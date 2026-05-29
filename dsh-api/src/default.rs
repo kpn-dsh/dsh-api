@@ -248,7 +248,7 @@ impl Default for PublicManagedStream {
 }
 
 impl Default for PublicManagedStreamContract {
-  /// # Returns the "default value" for a `PublicManagedStreamContract`.
+  /// Returns the "default value" for a `PublicManagedStreamContract`.
   ///
   /// Note that the `partitioner` field will be set to the default Kafka partitioner.
   fn default() -> Self {
@@ -268,7 +268,7 @@ impl Default for Secret {
 }
 
 impl Default for Task {
-  /// # Returns the "default value" for a `Task`.
+  /// Returns the "default value" for a `Task`.
   ///
   /// Note that
   /// * the `host` field will be set to `Ipv4Addr::UNSPECIFIED`

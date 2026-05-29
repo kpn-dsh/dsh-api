@@ -33,12 +33,9 @@ fn test_managed_tenant_new() {
   assert_eq!(managed_tenant.manager, "manager");
   assert_eq!(managed_tenant.name, "tenant");
   assert_eq!(managed_tenant.services.len(), 3);
-  assert_eq!(
-    managed_tenant.services,
-    vec![
-      ManagedTenantServices { enabled: true, name: ManagedTenantServicesName::Monitoring },
-      ManagedTenantServices { enabled: false, name: ManagedTenantServicesName::Tracing },
-      ManagedTenantServices { enabled: false, name: ManagedTenantServicesName::Vpn },
-    ]
-  );
+  assert_eq!(managed_tenant.services, vec![
+    ManagedTenantServices { enabled: true, name: ManagedTenantServicesName::Monitoring },
+    ManagedTenantServices { enabled: false, name: ManagedTenantServicesName::Tracing },
+    ManagedTenantServices { enabled: false, name: ManagedTenantServicesName::Vpn },
+  ]);
 }

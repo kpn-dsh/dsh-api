@@ -15,7 +15,7 @@ pub struct DshApiTenant {
 }
 
 impl DshApiTenant {
-  /// # Create new DSH API tenant
+  /// Create new DSH API tenant.
   ///
   /// # Parameters
   /// * `name` - Client tenant's name.
@@ -44,7 +44,7 @@ impl DshApiTenant {
     Self { name: name.into(), platform }
   }
 
-  /// # Create new DSH API tenant from tenant's name
+  /// Create new DSH API tenant from tenant's name.
   ///
   /// This factory function will attempt to create a `DshapiTenant` instance from the provided
   /// tenant's name.
@@ -81,7 +81,7 @@ impl DshApiTenant {
     Ok(DshApiTenant::new(tenant_name, platform))
   }
 
-  /// # Create new DSH API tenant from tenant's name and platform
+  /// Create new DSH API tenant from tenant's name and platform.
   ///
   /// This factory function will attempt to create a `DshapiTenant` instance from the provided
   /// tenant's name.
@@ -116,7 +116,7 @@ impl DshApiTenant {
     Ok(DshApiTenant::new(tenant_name, platform))
   }
 
-  /// # Create new DSH API tenant from platform
+  /// Create new DSH API tenant from platform.
   ///
   /// This factory function will attempt to create a `DshapiTenant` instance from the provided
   /// `platform`. The tenant's name will be read from the environment variable.

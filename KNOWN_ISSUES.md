@@ -1,6 +1,10 @@
 # Known issues
 
-### Incorrect limit values for managed tenants
+## DSH Resource Management API
+
+DSH Resource Management API OpenAPI specification is at version `1.12.0`.
+
+## Incorrect limit values for managed tenants
 
 The openapi specification/schema for `LimitValue` is designed in such a way that the variant
 of the enum can only be determined from the value of a field inside the enum. This makes it

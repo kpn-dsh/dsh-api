@@ -10,7 +10,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.9.0" 
+dsh_api = "0.10.0" 
 ```
 
 ### Minimal example
@@ -33,11 +33,11 @@ use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let client = DshApiClientFactory::default().client().await?;
-    for (application_id, application) in client.list_applications().await? {
-        println!("{} -> {}", application_id, application);
-    }
-    Ok(())
+  let client = DshApiClientFactory::default().client().await?;
+  for (application_id, application) in client.list_applications().await? {
+    println!("{} -> {}", application_id, application);
+  }
+  Ok(())
 }
 ```
 
@@ -59,20 +59,20 @@ use dsh_api::error::DshApiResult;
 
 #[tokio::main]
 async fn main() -> DshApiResult<()> {
-    let tenant = DshApiTenant::new(
-        "my-tenant".to_string(),
-        DshPlatform::try_from("np-aws-lz-dsh")?
-    );
-    let secret = "...".to_string();
+  let tenant = DshApiTenant::new(
+    "my-tenant".to_string(),
+    DshPlatform::try_from("np-aws-lz-dsh")?
+  );
+  let secret = "...".to_string();
 
-    let client_factory = DshApiClientFactory::create(tenant, secret)?;
-    let client = client_factory.client().await?;
-    let predicate = |application: &Application| application.needs_token;
-    let applications = client.find_applications(&predicate).await?;
-    for (application_id, application) in applications {
-        println!("{} -> {}", application_id, application);
-    }
-    Ok(())
+  let client_factory = DshApiClientFactory::create(tenant, secret)?;
+  let client = client_factory.client().await?;
+  let predicate = |application: &Application| application.needs_token;
+  let applications = client.find_applications(&predicate).await?;
+  for (application_id, application) in applications {
+    println!("{} -> {}", application_id, application);
+  }
+  Ok(())
 }
 ```
 
@@ -91,7 +91,7 @@ The generic methods requires the `generic` feature to be enabled:
 
 ```toml
 [dependencies]
-dsh_api = { version = "0.9.0", features = ["generic"] }
+dsh_api = { version = "0.10.0", features = ["generic"] }
 ```
 
 The example below will add a new secret to the tenant's secret store.
@@ -130,9 +130,9 @@ use dsh_api::DshApiResult;
 
 #[tokio::main]
 async fn main() -> DshApiResult<()> {
-    let client = DshApiClientFactory::default().client().await?;
-    let secret_json = r#"{"name": "secret-name","value": "secret-value"}"#.to_string();
-    client.post("secret", &[], Some(secret_json)).await
+  let client = DshApiClientFactory::default().client().await?;
+  let secret_json = r#"{"name": "secret-name","value": "secret-value"}"#.to_string();
+  client.post("secret", &[], Some(secret_json)).await
 }
 ```
 
@@ -287,41 +287,59 @@ The following features are defined:
 
 ## Coding guidelines
 
-Before pushing code to `github`, make sure that all unit tests pass,
-that you adhere to the code formatting defined in`rustfmt.toml` and
-that you have run the `clippy` linter. The following commands should
-return without any warnings or errors:
+Before pushing code to `github`, make sure that all unit tests pass, that you adhere to the code
+formatting defined in`rustfmt.toml`, that you have run the `clippy` linter and did the license
+check. The following commands should return without any warnings or errors:
 
 ```bash
 > cargo clippy --all-features
 > cargo doc --all-features
 > cargo test --all-features
 > cargo +nightly fmt --check
+> cargo deny check licenses
 ```
 
 Consider configuring your IDE to automatically apply the formatting rules when saving a file.
 
-## Release
+# Publish
 
-This library consists of two crates. The first one (`dsh_api_build_helpers`)
-is required as a `build-dependency` for the second one (`dsh_api`).
+This section describes how to publish the `dsh_api` crate to `crates.io`.
+In this explanation it is assumed that all your local code is committed, pushed and
+merged to `github`.
 
-While developing it is convenient that `dsh_api` uses a local build dependency,
-but for publishing it is required that `dsh_api` only has dependencies to already published crates.
-This means that during development you should have the following build dependency
-in `dsh_api/Cargo.toml`:
+### Publish `dsh_api_build_helpers`
+
+`dsh_api` depends on `dsh_api_build_helpers` for generating code from the `openapi`
+specification (his is a build-time dependency only).
+Therefor the first step is to publish the helper crate.
+Make sure that you have no uncommited code before you publish the crate.
+
+It is a good idea to do a dry-run first. From the root directory of the `dsh_api` project use:
+
+```bash
+> cargo publish -p dsh_api_build_helper --dry-run
+```
+
+When everything is ok you can publish the final crate by omitting the `--dry-run` option:
+
+```bash
+> cargo publish -p dsh_api_build_helper
+```
+
+### Publish `dsh_api`
+
+The next step it to publish `dsh_api` itself. Make sure that the `dsh_api_build_helper` dependency
+is pointing to the proper version at `crates.io` (published in the previous step).
+Check the dependency in `dsh-api/Cargo.toml`:
 
 ```toml
 [build-dependencies]
-dsh_api_build_helpers = { path = "../dsh-api-build" }
+dsh_api_build_helpers = { path = "../dsh-api-build", version = "0.7.0" }
 ```
 
-When it is time to release, you first have to publish the `dsh_api_build_helpers` crate.
-Once this is ready, you must change the build dependency in `dsh_api` to the published crate:
+Again make sure that you have no uncommited code before you publish the crate.
+After doing a dry-run first (`--dry-run` option) publish the crate using:
 
-```toml
-[build-dependencies]
-dsh_api_build_helpers = "0.6.2"
+```bash
+> cargo publish -p dsh_api
 ```
-
-You can then normally test, build and publish the `dsh_api` crate to `crates.io`.

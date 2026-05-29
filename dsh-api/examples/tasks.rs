@@ -6,8 +6,8 @@ use crate::common::{initialize_logger, print_header};
 use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 use dsh_api::types::{AllocationStatus, TaskStatus};
 
-const APPLICATION: &str = "flink-cluster-jobmanager";
-const TASK_ID: &str = "65b969ffbf-9d89w-00000000";
+const APPLICATION: &str = "cmd";
+const TASK_ID: &str = "5fbf9fdff8-g7d2m-00000000";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -30,6 +30,12 @@ async fn main() -> Result<(), String> {
   println!("{} -> {}", APPLICATION, task_appid_ids.len());
   for task_appid_id in task_appid_ids {
     println!("{}", task_appid_id);
+  }
+
+  print_header(&format!("client.get_application_tasks('{}')", APPLICATION));
+  let application_tasks = client.application_tasks(APPLICATION).await?;
+  for (task_id, task_status) in application_tasks {
+    println!("{} -> {}", task_id, task_status.actual.unwrap().staged_at);
   }
 
   print_header("client.get_task_ids()");

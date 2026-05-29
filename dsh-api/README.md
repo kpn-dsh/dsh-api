@@ -13,7 +13,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.9.0" 
+dsh_api = "0.10.0" 
 ```
 
 The example will print a list of all the applications that are deployed
@@ -33,11 +33,11 @@ use dsh_api::dsh_api_client_factory::DshApiClientFactory;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let client = DshApiClientFactory::default().client().await?;
-    for (application_id, application) in client.list_applications().await? {
-        println!("{} -> {}", application_id, application);
-    }
-    Ok(())
+  let client = DshApiClientFactory::default().client().await?;
+  for (application_id, application) in client.list_applications().await? {
+    println!("{} -> {}", application_id, application);
+  }
+  Ok(())
 }
 ```
 

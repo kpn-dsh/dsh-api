@@ -62,7 +62,7 @@ pub struct DshApiClient {
 }
 
 impl DshApiClient {
-  /// # Returns the openapi spec used to generate the client code
+  /// Returns the openapi spec used to generate the client code.
   ///
   /// Note that this is not the original openapi specification exposed by the
   /// DSH resource management web service.
@@ -73,42 +73,42 @@ impl DshApiClient {
     OPENAPI_SPEC
   }
 
-  /// Returns whether the client has a static token
+  /// Returns whether the client has a static token.
   pub fn has_static_token(&self) -> bool {
     self.static_token.is_some()
   }
 
-  /// Returns the static token
+  /// Returns the static token.
   pub fn static_token(&self) -> &Option<String> {
     &self.static_token
   }
 
-  /// Returns the token fetcher
+  /// Returns the token fetcher.
   pub fn token_fetcher(&self) -> &Option<TokenFetcher> {
     &self.token_fetcher
   }
 
-  /// Returns whether the client has a static token
+  /// Returns whether the client has a static token.
   pub fn has_token_fetcher(&self) -> bool {
     self.token_fetcher.is_some()
   }
 
-  /// Returns the tenant
+  /// Returns the tenant.
   pub fn tenant(&self) -> &DshApiTenant {
     &self.tenant
   }
 
-  /// Returns the name of the tenant
+  /// Returns the name of the tenant.
   pub fn tenant_name(&self) -> &str {
     self.tenant.name()
   }
 
-  /// Returns the platform
+  /// Returns the platform.
   pub fn platform(&self) -> &DshPlatform {
     self.tenant.platform()
   }
 
-  /// Returns the Authorization header for the rest API
+  /// Returns the Authorization header for the rest API.
   ///
   /// This method returns a token that can be used to authenticate and authorize a call
   /// to the DSH resource management web service. This header value is of the form
@@ -129,7 +129,7 @@ impl DshApiClient {
     }
   }
 
-  /// Returns the Authorization header for the rest API
+  /// Returns the Authorization header for the rest API.
   ///
   /// This method returns a token that can be used to authenticate and authorize a call
   /// to the DSH resource management web service. This header value is of the form
@@ -151,7 +151,7 @@ impl DshApiClient {
     }
   }
 
-  /// Returns the raw access token
+  /// Returns the raw access token.
   ///
   /// This method returns a raw access token that can be used to authenticate and authorize a call
   /// to the DSH resource management web service.
@@ -169,7 +169,7 @@ impl DshApiClient {
     }
   }
 
-  /// Returns the raw access token
+  /// Returns a fresh raw access token.
   ///
   /// This method returns a raw access token that can be used to authenticate and authorize a call
   /// to the DSH resource management web service.
@@ -188,7 +188,7 @@ impl DshApiClient {
     }
   }
 
-  /// Returns a json web token
+  /// Returns a json web token.
   ///
   /// This method returns a struct that contains information from the access token.
   ///
@@ -205,7 +205,7 @@ impl DshApiClient {
     }
   }
 
-  /// Returns a json web token
+  /// Returns a json web token.
   ///
   /// This method returns a struct that contains information from the access token.
   ///
@@ -223,7 +223,7 @@ impl DshApiClient {
     }
   }
 
-  /// Create a `DshApiClient` from a static token
+  /// Create a `DshApiClient` from a static token.
   ///
   /// # Parameters
   /// * `static_token` - Static token.
@@ -245,7 +245,7 @@ impl DshApiClient {
     }
   }
 
-  /// Create a `DshApiClient` from a token fetcher
+  /// Create a `DshApiClient` from a token fetcher.
   ///
   /// # Parameters
   /// * `token_fetcher` - Token fetcher that creates a token when required.
@@ -267,7 +267,7 @@ impl DshApiClient {
     }
   }
 
-  // Allow dead_code since this method is used in the generated code
+  // Allow dead_code since this method is used in the generated code.
   #[allow(dead_code)]
   pub(crate) async fn process_delete(&self, reqwest_response: Result<Response, ReqwestError>) -> DshApiResult<()> {
     self.process_no_content(reqwest_response).await

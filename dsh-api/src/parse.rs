@@ -9,7 +9,9 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::LazyLock;
 
-/// Enum that describes an auth string. Auth strings are used in the `exposedPorts` section
+/// Enum that describes an auth string.
+///
+/// Auth strings are used in the `exposedPorts` section
 /// of a service definition file and are deserialized into the  `auth` field of the
 /// [`PortMapping`](crate::types::PortMapping) data structure.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -30,7 +32,7 @@ pub enum AuthString {
 }
 
 impl AuthString {
-  /// # Create an `AuthString::Basic`
+  /// Create an `AuthString::Basic`.
   ///
   /// # Parameters
   /// * `realm` - optional realm
@@ -43,7 +45,7 @@ impl AuthString {
     Self::Basic { realm: realm.map(Into::<String>::into), username: username.into() }
   }
 
-  /// # Create an `AuthString::Fwd`
+  /// Create an `AuthString::Fwd`.
   ///
   /// # Parameters
   /// * `endpoint` - the authentication service endpoint
@@ -55,7 +57,7 @@ impl AuthString {
     Self::Fwd { authentication_service_endpoint: endpoint.into(), headers: headers.map(Into::into) }
   }
 
-  /// # Create an `AuthString::SystemFwd`
+  /// Create an `AuthString::SystemFwd`.
   ///
   /// # Parameters
   /// * `roles` - comma separated list of accepted roles
@@ -70,7 +72,7 @@ impl AuthString {
 impl FromStr for AuthString {
   type Err = String;
 
-  /// # Parse auth string
+  /// Parse auth string.
   ///
   /// # Example
   ///
@@ -167,7 +169,7 @@ pub enum ImageString {
 }
 
 impl ImageString {
-  /// # Create an `ImageString::Registry`
+  /// Create an `ImageString::Registry`.
   ///
   /// # Parameters
   /// * `registry` - registry that contains the image (`app` or `registry`)
@@ -178,7 +180,7 @@ impl ImageString {
     Self::Registry { image: RegistryImage { tenant, id, version } }
   }
 
-  /// # Create an `ImageString::App`
+  /// Create an `ImageString::App`.
   ///
   /// # Parameters
   /// * `stage` - stage of development (`draft` or `release`)
@@ -190,7 +192,7 @@ impl ImageString {
     Self::App { image: AppImage { stage, supplier, tenant, id, version } }
   }
 
-  /// Get the image id
+  /// Get the image id.
   pub fn id(&self) -> String {
     match self {
       ImageString::Registry { image } => image.id.clone(),
@@ -199,7 +201,7 @@ impl ImageString {
     }
   }
 
-  /// Get the image id
+  /// Get the image source.
   pub fn source(&self) -> &str {
     match self {
       ImageString::Registry { .. } => "harbor",
@@ -208,7 +210,7 @@ impl ImageString {
     }
   }
 
-  /// Get the image tenant
+  /// Get the image tenant.
   pub fn tenant(&self) -> String {
     match self {
       ImageString::Registry { image } => image.tenant.clone(),
@@ -217,7 +219,7 @@ impl ImageString {
     }
   }
 
-  /// Get the image version
+  /// Get the image version.
   pub fn version(&self) -> String {
     match self {
       ImageString::Registry { image } => image.version.clone(),
@@ -228,7 +230,7 @@ impl ImageString {
 }
 
 impl From<&str> for ImageString {
-  /// # Parse image string
+  /// Parse image string.
   ///
   /// # Example
   ///
@@ -362,7 +364,7 @@ pub fn parse_basic_authentication_string(basic_authentication_string: &str) -> R
   }
 }
 
-/// # Parse function string
+/// Parse function string.
 ///
 /// # Example
 ///
@@ -390,7 +392,7 @@ pub fn parse_function1<'a>(string: &'a str, f_name: &str) -> Result<&'a str, Str
   }
 }
 
-/// # Parse function string with two parameters
+/// Parse function string with two parameters.
 ///
 /// # Example
 ///
@@ -422,7 +424,7 @@ pub fn parse_function2<'a>(string: &'a str, f_name: &str) -> Result<(&'a str, &'
   }
 }
 
-/// # Parse function string with one or two parameters
+/// Parse function string with one or two parameters.
 ///
 /// # Example
 ///
@@ -452,7 +454,7 @@ pub fn parse_function<'a>(string: &'a str, f_name: &str) -> Result<(&'a str, Opt
   }
 }
 
-/// # Parse volume string
+/// Parse volume string.
 ///
 /// # Example
 ///
@@ -471,7 +473,7 @@ pub fn parse_volume_string(volume_string: &str) -> Result<&str, String> {
   parse_function1(volume_string, "volume")
 }
 
-/// # Parse topic string
+/// Parse topic string.
 ///
 /// # Example
 ///

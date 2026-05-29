@@ -11,6 +11,7 @@
 //! * [`Bucket::new(encrypted, versioned)`](Bucket::new)
 //! * [`Empty::new()`](Empty::new)
 //! * [`HealthCheck::new(path, port)`](HealthCheck::new)
+//! * [`KafkaAclGroupTopic::new(kind, name)`](KafkaAclGroupTopic::new)
 //! * [`LimitValueCertificateCount::new(certificate count)`](LimitValueCertificateCount::new)
 //! * [`LimitValueConsumerRate::new(consumer rate)`](LimitValueConsumerRate::new)
 //! * [`LimitValueCpu::new(cpus)`](LimitValueCpu::new)
@@ -32,10 +33,10 @@
 
 use crate::types::{
   AllocationStatus, AppCatalogApp, AppCatalogAppConfiguration, Application, ApplicationSecret, ApplicationVolumes, Bucket, Empty, HealthCheck, HealthCheckProtocol,
-  LimitValueCertificateCount, LimitValueCertificateCountName, LimitValueConsumerRate, LimitValueConsumerRateName, LimitValueCpu, LimitValueCpuName, LimitValueKafkaAclGroupCount,
-  LimitValueKafkaAclGroupCountName, LimitValueMem, LimitValueMemName, LimitValuePartitionCount, LimitValuePartitionCountName, LimitValueProducerRate, LimitValueProducerRateName,
-  LimitValueRequestRate, LimitValueRequestRateName, LimitValueSecretCount, LimitValueSecretCountName, LimitValueTopicCount, LimitValueTopicCountName, ManagedStreamId,
-  ManagedTenant, ManagedTenantServices, ManagedTenantServicesName, Metrics, Notification, PathSpec, Secret, Vhost, Volume,
+  KafkaAclGroupTopic, KafkaAclGroupTopicKind, LimitValueCertificateCount, LimitValueCertificateCountName, LimitValueConsumerRate, LimitValueConsumerRateName, LimitValueCpu,
+  LimitValueCpuName, LimitValueKafkaAclGroupCount, LimitValueKafkaAclGroupCountName, LimitValueMem, LimitValueMemName, LimitValuePartitionCount, LimitValuePartitionCountName,
+  LimitValueProducerRate, LimitValueProducerRateName, LimitValueRequestRate, LimitValueRequestRateName, LimitValueSecretCount, LimitValueSecretCountName, LimitValueTopicCount,
+  LimitValueTopicCountName, ManagedStreamId, ManagedTenant, ManagedTenantServices, ManagedTenantServicesName, Metrics, Notification, PathSpec, Secret, Vhost, Volume,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -44,7 +45,7 @@ use std::num::NonZero;
 use std::str::FromStr;
 
 impl AllocationStatus {
-  /// # Create a new `AllocationStatus`
+  /// Create a new `AllocationStatus`.
   ///
   /// Create a new `AllocationStatus` from the provided parameters.
   /// The other fields of the `AllocationStatus` instance will be set to their default values.
@@ -75,7 +76,7 @@ impl AllocationStatus {
 }
 
 impl AppCatalogApp {
-  /// # Create a new `AppCatalogApp`
+  /// Create a new `AppCatalogApp`.
   ///
   /// Create a new `AppCatalogApp` from the provided parameters.
   /// The other fields of the `AppCatalogApp` instance will be set to their default values.
@@ -108,7 +109,7 @@ impl AppCatalogApp {
 }
 
 impl AppCatalogAppConfiguration {
-  /// # Create a new `AppCatalogAppConfiguration`
+  /// Create a new `AppCatalogAppConfiguration`.
   ///
   /// Create a new `AppCatalogAppConfiguration` from the provided parameters.
   /// The other fields of the `AppCatalogAppConfiguration` instance will be set to their default values.
@@ -144,7 +145,7 @@ impl AppCatalogAppConfiguration {
 }
 
 impl Application {
-  /// # Create a new `Application`
+  /// Create a new `Application`.
   ///
   /// Create a new `Application` from the provided parameters.
   /// The other fields of the `Application` instance will be set to their default values.
@@ -179,7 +180,7 @@ impl Application {
 }
 
 impl ApplicationSecret {
-  /// # Create a new `ApplicationSecret`
+  /// Create a new `ApplicationSecret`.
   ///
   /// Create a new `ApplicationSecret` from the provided parameters.
   ///
@@ -217,7 +218,7 @@ impl ApplicationSecret {
 }
 
 impl ApplicationVolumes {
-  /// # Create a new `ApplicationVolumes`
+  /// Create a new `ApplicationVolumes`.
   ///
   /// Create a new `ApplicationVolumes` from the provided parameter.
   ///
@@ -243,7 +244,7 @@ impl ApplicationVolumes {
 }
 
 impl Bucket {
-  /// # Create a new `Bucket`
+  /// Create a new `Bucket`.
   ///
   /// Create a new `Bucket` from the provided parameters.
   ///
@@ -268,8 +269,6 @@ impl Bucket {
 }
 
 impl Empty {
-  /// # Create a new `Empty`
-  ///
   /// Create a new `Empty`.
   ///
   /// # Returns
@@ -287,7 +286,7 @@ impl Empty {
 }
 
 impl HealthCheck {
-  /// # Create a new `HealthCheck`
+  /// Create a new `HealthCheck`.
   ///
   /// Create a new `HealthCheck` from the provided parameters.
   /// The `protocol` field of the `HealthCheck` instance will be set to `Https`.
@@ -316,8 +315,38 @@ impl HealthCheck {
   }
 }
 
+impl KafkaAclGroupTopic {
+  #[rustfmt::skip]
+  /// Create a new `KafkaAclGroupTopic`.
+  ///
+  /// Create a new `KafkaAclGroupTopic` from the provided parameters.
+  ///
+  /// # Parameters
+  /// * `kind` - Topic kind, `Internal`, `Public` or `Topic`
+  /// * `topic` - Topic name
+  ///
+  /// # Returns
+  /// The created `KafkaAclGroupTopic`.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// # use dsh_api::types::{KafkaAclGroupTopic, KafkaAclGroupTopicKind};
+  /// let kafka_group_id_topic =
+  ///   KafkaAclGroupTopic::new(KafkaAclGroupTopicKind::Topic, "my-topic");
+  /// assert_eq!(kafka_group_id_topic.kind, KafkaAclGroupTopicKind::Topic);
+  /// assert_eq!(kafka_group_id_topic.name, "my-topic");
+  /// ```
+  pub fn new<T>(kind: KafkaAclGroupTopicKind, name: T) -> Self
+  where
+    T: Into<String>,
+  {
+    Self { kind, name: name.into() }
+  }
+}
+
 impl LimitValueCertificateCount {
-  /// # Create a new `LimitValueCertificateCount`
+  /// Create a new `LimitValueCertificateCount`.
   ///
   /// Create a new `LimitValueCertificateCount` from the provided parameter.
   /// The `name` field will be set to [LimitValueCertificateCountName::CertificateCount].
@@ -342,7 +371,7 @@ impl LimitValueCertificateCount {
 }
 
 impl LimitValueConsumerRate {
-  /// # Create a new `LimitValueConsumerRate`
+  /// Create a new `LimitValueConsumerRate`.
   ///
   /// Create a new `LimitValueConsumerRate` from the provided parameter.
   /// The `name` field will be set to [LimitValueCertificateCountName::CertificateCount].
@@ -367,7 +396,7 @@ impl LimitValueConsumerRate {
 }
 
 impl LimitValueCpu {
-  /// # Create a new `LimitValueCpu`
+  /// Create a new `LimitValueCpu`.
   ///
   /// Create a new `LimitValueCpu` from the provided parameter.
   /// The `name` field will be set to [LimitValueCpuName::Cpu].
@@ -392,7 +421,7 @@ impl LimitValueCpu {
 }
 
 impl LimitValueKafkaAclGroupCount {
-  /// # Create a new `LimitValueKafkaAclGroupCount`
+  /// Create a new `LimitValueKafkaAclGroupCount`.
   ///
   /// Create a new `LimitValueKafkaAclGroupCount` from the provided parameter.
   /// The `name` field will be set to [LimitValueKafkaAclGroupCountName::KafkaAclGroupCount].
@@ -417,7 +446,7 @@ impl LimitValueKafkaAclGroupCount {
 }
 
 impl LimitValueMem {
-  /// # Create a new `LimitValueMem`
+  /// Create a new `LimitValueMem`.
   ///
   /// Create a new `LimitValueMem` from the provided parameter.
   /// The `name` field will be set to [LimitValueMemName::Mem].
@@ -442,7 +471,7 @@ impl LimitValueMem {
 }
 
 impl LimitValuePartitionCount {
-  /// # Create a new `LimitValuePartitionCount`
+  /// Create a new `LimitValuePartitionCount`.
   ///
   /// Create a new `LimitValuePartitionCount` from the provided parameter.
   /// The `name` field will be set to [LimitValuePartitionCountName::PartitionCount].
@@ -467,7 +496,7 @@ impl LimitValuePartitionCount {
 }
 
 impl LimitValueProducerRate {
-  /// # Create a new `LimitValueProducerRate`
+  /// Create a new `LimitValueProducerRate`.
   ///
   /// Create a new `LimitValueProducerRate` from the provided parameter.
   /// The `name` field will be set to [LimitValueProducerRateName::ProducerRate].
@@ -492,7 +521,7 @@ impl LimitValueProducerRate {
 }
 
 impl LimitValueRequestRate {
-  /// # Create a new `LimitValueRequestRate`
+  /// Create a new `LimitValueRequestRate`.
   ///
   /// Create a new `LimitValueRequestRate` from the provided parameter.
   /// The `name` field will be set to [LimitValueRequestRateName::RequestRate].
@@ -517,7 +546,7 @@ impl LimitValueRequestRate {
 }
 
 impl LimitValueSecretCount {
-  /// # Create a new `LimitValueSecretCount`
+  /// Create a new `LimitValueSecretCount`.
   ///
   /// Create a new `LimitValueSecretCount` from the provided parameter.
   /// The `name` field will be set to [LimitValueSecretCountName::SecretCount].
@@ -542,7 +571,7 @@ impl LimitValueSecretCount {
 }
 
 impl LimitValueTopicCount {
-  /// # Create a new `LimitValueTopicCount`
+  /// Create a new `LimitValueTopicCount`.
   ///
   /// Create a new `LimitValueTopicCount` from the provided parameter.
   /// The `name` field will be set to [LimitValueTopicCountName::TopicCount].
@@ -567,7 +596,7 @@ impl LimitValueTopicCount {
 }
 
 impl ManagedStreamId {
-  /// # Create a new `ManagedStreamId`
+  /// Create a new `ManagedStreamId`.
   ///
   /// Create a new `ManagedStreamId` from the provided parameters.
   ///
@@ -611,7 +640,7 @@ impl ManagedStreamId {
 }
 
 impl ManagedTenant {
-  /// # Create a new `ManagedTenant`
+  /// Create a new `ManagedTenant`.
   ///
   /// Create a new `ManagedTenant` from the provided parameters.
   /// The `services` field will be configured such that `Monitoring` is enabled
@@ -655,7 +684,7 @@ impl ManagedTenant {
 }
 
 impl Metrics {
-  /// # Create a new `Metrics`
+  /// Create a new `Metrics`.
   ///
   /// Create a new `Metrics` from the provided parameters.
   /// The other fields of the `Metrics` instance will be set to their default values.
@@ -684,7 +713,7 @@ impl Metrics {
 }
 
 impl Notification {
-  /// # Create a new `Notification`
+  /// Create a new `Notification`.
   ///
   /// Create a new `Notification` from the provided parameters.
   /// The other field of the `Notification` instance will be set to its default values.
@@ -719,7 +748,7 @@ impl Notification {
 }
 
 impl PathSpec {
-  /// # Create a new `PathSpec`
+  /// Create a new `PathSpec`.
   ///
   /// Create a new `PathSpec` from the provided parameter.
   ///
@@ -746,7 +775,7 @@ impl PathSpec {
 }
 
 impl Secret {
-  /// # Create a new `Secret`
+  /// Create a new `Secret`.
   ///
   /// Create a new `Secret` from the provided parameters.
   ///
@@ -775,7 +804,7 @@ impl Secret {
 }
 
 impl Vhost {
-  /// # Create a new `Vhost`
+  /// Create a new `Vhost`.
   ///
   /// Create a new `Vhost` from the provided parameter.
   ///
@@ -801,7 +830,7 @@ impl Vhost {
 }
 
 impl Volume {
-  /// # Create a new `Volume`
+  /// Create a new `Volume`.
   ///
   /// Create a new `Volume` from the provided parameter.
   ///

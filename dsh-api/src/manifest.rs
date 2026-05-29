@@ -54,7 +54,7 @@ use std::str::FromStr;
 /// * [`manifest_all_versions() -> [(manifest id, [manifest])]`](DshApiClient::manifest_all_versions)
 /// * [`manifests_latest_version(draft) -> [(manifest id, manifest)]`](DshApiClient::manifests_latest_version)
 impl DshApiClient {
-  /// # Return manifest by id and version
+  /// Return manifest by id and version.
   ///
   /// Returns the manifest with the specified id and version.
   ///
@@ -76,7 +76,7 @@ impl DshApiClient {
       .ok_or(DshApiError::not_found())
   }
 
-  /// # Return latest version of manifest by id
+  /// Return latest version of manifest by id.
   ///
   /// Returns the latest version of the manifest with the specified id.
   ///
@@ -98,7 +98,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Return all versions of manifest by id
+  /// Return all versions of manifest by id.
   ///
   /// Returns a list of all versions of an app catalog manifest with the provided manifest_id.
   ///
@@ -119,7 +119,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Return all manifests
+  /// Return all manifests.
   ///
   /// # Returns
   /// * `Ok<Vec<Manifest>>` - Vector containing Manifest objects in unspecified order.
@@ -128,7 +128,7 @@ impl DshApiClient {
     self.get_appcatalog_manifests().await?.iter().map(Manifest::try_from).try_collect()
   }
 
-  /// # Return raw manifest by id and version
+  /// Return raw manifest by id and version.
   ///
   /// Returns the raw manifest as a json formatted string.
   ///
@@ -154,7 +154,7 @@ impl DshApiClient {
     Err(DshApiError::not_found())
   }
 
-  /// # Return raw manifest latest version
+  /// Return raw manifest latest version.
   ///
   /// Returns the latest version of raw manifest as a json formatted string.
   ///
@@ -194,7 +194,7 @@ impl DshApiClient {
     }
   }
 
-  /// # Return sorted list of all App Catalog manifest ids
+  /// Return sorted list of all App Catalog manifest ids.
   ///
   /// # Returns
   /// * `Ok<Vec<String>>` - Vector containing all manifest ids sorted.
@@ -212,7 +212,7 @@ impl DshApiClient {
     Ok(ids)
   }
 
-  /// # Return list of all available versions of all manifests
+  /// Return list of all available versions of all manifests.
   ///
   /// # Returns
   /// * `Ok<Vec<(id, Vec<(version, draft)>)>>` - Vector containing pairs of manifest ids and
@@ -234,7 +234,7 @@ impl DshApiClient {
     Ok(id_versions_pairs)
   }
 
-  /// # Return list of all manifests with all available manifest versions
+  /// Return list of all manifests with all available manifest versions.
   ///
   /// # Returns
   /// * `Ok<Vec<(id, Vec<manifest>)>>` - vector containing pairs of ids and versions,
@@ -259,7 +259,7 @@ impl DshApiClient {
     Ok(id_manifests)
   }
 
-  /// # Return list of all latest versions of App Catalog manifests
+  /// Return list of all latest versions of App Catalog manifests.
   ///
   /// # Parameters
   /// * allow_draft - whether the returned latest manifests can be a draft manifests or not

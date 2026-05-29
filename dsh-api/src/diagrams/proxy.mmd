@@ -1,0 +1,64 @@
+classDiagram
+    KafkaProxy ..|> KafkaProxyZone: zone
+    KafkaProxy o-- CertificateStatus: certificate
+    KafkaProxy o-- Certificate: secret_name_ca_chain
+    KafkaProxy o-- Validations
+    CertificateStatus o-- ActualCertificate: actual
+    ActualCertificate o-- Certificate: cert_chain_secret
+    ActualCertificate o-- PKI: passphrase_secret
+    ActualCertificate o-- PKI: key_secret
+
+    class KafkaProxy {
+        certificate: String
+        cpus: f64
+        enable_kafka_acl_groups: bool
+        instances: NonZeroU64
+        mem: i64
+        name: Option~String~
+        schema_store: Option~bool~
+        schema_store_cpus: Option~f64~
+        schema_store_mem: Option~i64~
+        secret_name_ca_chain: String
+        validations: Vec~Validations~
+        zone: KafkaProxyZone
+    }
+    link KafkaProxy "../types/struct.KafkaProxy.html"
+
+    class KafkaProxyZone {
+        &lt;&lt;enumeration&gt;&gt;
+        Private
+        Public
+    }
+    link KafkaProxyZone "../types/enum.KafkaProxyZone.html"
+
+    class CertificateStatus {
+        actual: Option~ActualCertificate~
+        ...
+    }
+    link CertificateStatus "../types/struct.CertificateStatus.html"
+
+    class ActualCertificate {
+        cert_chain_secret: String
+        distinguished_name: String
+        dns_names: Vec~String~
+        key_secret: String
+        not_after: chrono:: DateTime
+        not_before: chrono:: DateTime
+        passphrase_secret: Option~String~
+        serial_number: String
+    }
+    link ActualCertificate "../types/struct.ActualCertificate.html"
+
+    class PKI {
+        &lt;&lt;Secret&gt;&gt;
+    }
+    link PKI "../types/struct.Secret.html"
+
+    class Certificate {
+        &lt;&lt;Secret&gt;&gt;
+    }
+    link Certificate "../types/struct.Secret.html"
+
+    class Validations {
+    }
+    link Validations "../types/struct.Validations.html"

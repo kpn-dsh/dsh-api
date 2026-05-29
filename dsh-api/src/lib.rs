@@ -177,9 +177,9 @@ pub mod version;
 pub mod vhost;
 pub mod volume;
 
-/// # Returns the version of the lib crate
+/// Returns the version of the lib crate.
 ///
-/// ## Example
+/// # Example
 ///
 /// ```
 /// # use dsh_api::version::Version;
@@ -190,11 +190,11 @@ pub fn crate_version() -> &'static Version {
   &CRATE_VERSION
 }
 
-/// # Returns the version of the openapi spec
+/// Returns the version of the openapi spec.
 ///
 /// Version number of the openapi file that the crate has been generated from.
 ///
-/// ## Example
+/// # Example
 ///
 /// ```
 /// # use dsh_api::version::Version;
@@ -204,7 +204,7 @@ pub fn openapi_version() -> &'static Version {
   DshApiClient::api_version()
 }
 
-/// # Indicates access rights
+/// Indicates access rights.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum AccessRights {
   /// Indicates read access to a resource
@@ -215,7 +215,7 @@ pub enum AccessRights {
   Write,
 }
 
-/// # Describes an app dependency
+/// Describes an app dependency.
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
 /// a volume or an environment variable) is used by a dependant app.
@@ -254,7 +254,7 @@ impl Ord for DependantApp {
   }
 }
 
-/// # Describes an application dependency
+/// Describes an application dependency.
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
 /// a volume or an environment variable) is used by a dependant application.
@@ -319,7 +319,7 @@ impl Display for CertificateSecretKind {
   }
 }
 
-/// # Describes a certificate dependency
+/// Describes a certificate dependency.
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret) is
 /// used by a certificate. This struct represents one usage of the resource by a certificate.
@@ -357,7 +357,7 @@ impl Ord for DependantCertificate {
   }
 }
 
-/// # Describes a proxy dependency
+/// Describes a proxy dependency.
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
 /// or a certificate) is used by a proxy.
@@ -396,7 +396,7 @@ impl Ord for DependantProxy {
   }
 }
 
-/// # Describes a Trifonius dependency
+/// Describes a Trifonius dependency.
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
 /// a volume or an environment variable) is used by a dependant application.
@@ -483,7 +483,7 @@ impl<T: Ord> Ord for DependantTrifonius<T> {
   }
 }
 
-/// # Describes a app or application dependency
+/// Describes a app or application dependency.
 ///
 /// There are a number of methods that return whether a certain resource (e.g. a secret,
 /// a volume or an environment variable) is used by a dependant app or application.

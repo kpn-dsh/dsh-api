@@ -1,4 +1,5 @@
 //! # Additional methods to manage proxies
+#![doc = mermaid!("diagrams/proxy.mmd")]
 //!
 //! Module that contains methods and functions to manage proxies.
 //!
@@ -13,6 +14,7 @@
 //! * [`put_kafkaproxy_configuration(id, proxy)`](DshApiClient::put_kafkaproxy_configuration)
 //!
 //! # Derived methods
+//!
 //! [`DshApiClient`] methods that add extra capabilities but do not directly call the
 //! DSH resource management API. These derived methods depend on the API methods for this.
 //!
@@ -28,6 +30,7 @@ use crate::DependantProxy;
 use crate::DshApiError;
 use futures::future::try_join_all;
 use itertools::Itertools;
+use simple_mermaid::mermaid;
 
 /// # Additional methods to manage proxies
 ///
@@ -44,7 +47,7 @@ use itertools::Itertools;
 /// * [`proxies_dependant_on_certificate(id) -> Vec<DependantProxy>`](DshApiClient::proxies_dependant_on_certificate)
 /// * [`proxies_dependant_on_secret(id) -> Vec<DependantProxy>`](DshApiClient::proxies_dependant_on_secret)
 impl DshApiClient {
-  /// # Return proxy configurations
+  /// Return proxy configurations.
   ///
   /// # Returns
   /// * `Ok<(String, KafkaProxy)>` - Tuple containing the proxy ids and proxy configurations.
@@ -55,7 +58,7 @@ impl DshApiClient {
     Ok(proxy_ids.into_iter().zip(proxies).collect_vec())
   }
 
-  /// # Get all proxies that depend on a certificate
+  /// Get all proxies that depend on a certificate.
   ///
   /// # Parameters
   /// * `certificate_id` - Identifier of the certificate.
@@ -72,7 +75,7 @@ impl DshApiClient {
     )
   }
 
-  /// # Get all apps that depend on a secret
+  /// Get all apps that depend on a secret.
   ///
   /// # Parameters
   /// * `secret_name` - Name of the secret.
@@ -90,7 +93,7 @@ impl DshApiClient {
   }
 }
 
-/// Find proxies that use a certificate
+/// Find proxies that use a certificate.
 ///
 /// # Parameters
 /// * `certificate_id` - Identifier of the certificate to look for.
@@ -108,7 +111,7 @@ pub fn proxies_that_use_certificate<'a>(certificate_id: &str, proxies: &'a [(Str
     .collect_vec()
 }
 
-/// Find proxies that use a secret
+/// Find proxies that use a secret.
 ///
 /// # Parameters
 /// * `secret_name` - Name of the secret to look for.

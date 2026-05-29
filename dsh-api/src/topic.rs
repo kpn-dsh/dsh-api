@@ -39,7 +39,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
-/// # Describes an injection of a resource in an application
+/// Describes an injection of a resource in an application.
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum TopicInjection {
   /// Environment variable injection, where the value is the name of the environment variable.
@@ -93,7 +93,7 @@ impl Display for TopicInjection {
 /// * [`topics_with_dependant_apps() -> [topic id, [app id, [resource]]]`](DshApiClient::topics_with_dependant_apps)
 /// * [`topics_with_dependants() -> [topic id, [dependant]]`](DshApiClient::topics_with_dependants)
 impl DshApiClient {
-  /// # Returns dependants of a topic
+  /// Returns dependants of a topic.
   ///
   /// # Parameters
   /// * `topic_id` - Identifies the scratch topic.
@@ -112,7 +112,7 @@ impl DshApiClient {
     Ok(dependant_applications)
   }
 
-  /// # Returns dependants of a topic
+  /// Returns dependants of a topic.
   ///
   /// # Parameters
   /// * `topic_id` - Identifies the scratch topic.
@@ -130,7 +130,7 @@ impl DshApiClient {
     Ok(dependant_apps)
   }
 
-  /// # Returns dependants of a topic
+  /// Returns dependants of a topic.
   ///
   /// # Parameters
   /// * `topic_id` - Identifies the scratch topic.
@@ -156,7 +156,7 @@ impl DshApiClient {
     Ok(dependants)
   }
 
-  /// # Returns all topics with dependant applications
+  /// Returns all topics with dependant applications.
   ///
   /// Returns a sorted list of all topics together with the applications that use them.
   pub async fn topics_with_dependant_applications(&self) -> DshApiResult<Vec<(String, Vec<DependantApplication<TopicInjection>>)>> {
@@ -176,7 +176,7 @@ impl DshApiClient {
     Ok(topics)
   }
 
-  /// # Returns all topics with dependant apps
+  /// Returns all topics with dependant apps.
   ///
   /// Returns a sorted list of all topics together with the apps that use them.
   pub async fn topics_with_dependant_apps(&self) -> DshApiResult<Vec<(String, Vec<DependantApp>)>> {
@@ -195,7 +195,7 @@ impl DshApiClient {
     Ok(topics)
   }
 
-  /// # Returns all topics with dependant applications and apps
+  /// Returns all topics with dependant applications and apps.
   ///
   /// Returns a sorted list of all topics together with the applications and apps that use them.
   pub async fn topics_with_dependants(&self) -> DshApiResult<Vec<(String, Vec<Dependant<TopicInjection>>)>> {
@@ -207,12 +207,8 @@ impl DshApiClient {
     let mut topics = Vec::<(String, Vec<Dependant<TopicInjection>>)>::new();
     for topic_id in topic_ids {
       let mut dependants: Vec<Dependant<TopicInjection>> = vec![];
-      for application in topic_env_vars_from_applications(topic_id.as_str(), &application_configuration_map) {
-        dependants.push(Dependant::service(
-          application.id,
-          application.application.instances,
-          application.values.iter().map(|(env_var, _)| TopicInjection::env_var(*env_var)).collect_vec(),
-        ));
+      for application in topic_injections_from_applications(&topic_id, &application_configuration_map) {
+        dependants.push(Dependant::service(application.id, application.application.instances, application.values));
       }
       for (app_id, _, resource_ids) in apps_that_use_topic(topic_id.as_str(), &appcatalogapp_configuration_map) {
         dependants.push(Dependant::app(
@@ -226,7 +222,7 @@ impl DshApiClient {
   }
 }
 
-/// # Get application environment variables referencing topic
+/// Get application environment variables referencing topic.
 ///
 /// Get all environment variables referencing topic `topic_id` from an `Application`.
 /// When the application does not reference the topic, an empty list will be returned.
@@ -253,7 +249,7 @@ pub fn topic_env_vars_from_application<'a>(topic_name: &str, application: &'a Ap
   env_var_keys
 }
 
-/// # Get applications environment variables referencing topics
+/// Get applications environment variables referencing topics.
 ///
 /// Get all environment variables referencing topic `topic_id` from multiple `Application`s.
 /// Applications are only included if they reference topic `topic_id` at least once.
@@ -281,7 +277,7 @@ pub fn topic_env_vars_from_applications<'a>(topic_id: &str, applications: &'a Ha
   application_injections
 }
 
-/// # Get application environment variables referencing topic
+/// Get application environment variables referencing topic.
 ///
 /// Get all environment variables referencing topic `topic_id` from an `Application`.
 /// When the application does not reference the topic, an empty list will be returned.
@@ -304,17 +300,15 @@ pub fn topic_injections_from_application(topic_name: &str, application: &Applica
     }
   }
   for application_topic in &application.topics {
-    if let Ok(topic) = TopicString::try_from(application_topic.as_str()) {
-      if topic.name() == topic_name {
-        topic_injections.push(TopicInjection::topic(application_topic))
-      }
+    if application_topic == topic_name {
+      topic_injections.push(TopicInjection::topic(application_topic))
     }
   }
   topic_injections.sort();
   topic_injections
 }
 
-/// # Get applications environment variables referencing topics
+/// Get applications environment variables referencing topics.
 ///
 /// Get all environment variables referencing topic `topic_id` from multiple `Application`s.
 /// Applications are only included if they reference topic `topic_id` at least once.
@@ -342,7 +336,7 @@ pub fn topic_injections_from_applications<'a>(topic_id: &str, applications: &'a 
   application_injections
 }
 
-/// Get topic resources from `AppCatalogApp`
+/// Get topic resources from `AppCatalogApp`.
 ///
 /// # Parameters
 /// * `app` - app to get the topic resources from
@@ -359,7 +353,7 @@ pub fn topic_resources_from_app(app: &AppCatalogApp) -> Vec<(&str, &Topic)> {
   })
 }
 
-/// # Check whether `topic_id` in used in an `Application`
+/// Check whether `topic_id` in used in an `Application`.
 ///
 /// # Parameters
 /// * `topic_id` - id of the topic to look for
@@ -372,7 +366,7 @@ pub fn topic_used_in_application(topic_id: &str, application: &Application) -> b
   application.topics.iter().any(|id| id == topic_id)
 }
 
-/// # Get all `Applications` that use scratch topic
+/// Get all `Applications` that use scratch topic.
 ///
 /// Get all `Applications` that use the scratch topic with `topic_id`.
 ///
@@ -395,7 +389,7 @@ pub fn topic_used_in_applications<'a>(topic_id: &str, applications: &'a HashMap<
   application_tuples
 }
 
-/// # Get all scratch topic ids from an `Application`
+/// Get all scratch topic ids from an `Application`.
 ///
 /// # Parameters
 /// * `application` - reference to the `Application`
@@ -406,7 +400,7 @@ pub fn topics_from_application(application: &Application) -> Vec<&str> {
   application.topics.iter().map(|topic_id| topic_id.as_str()).collect_vec()
 }
 
-/// # Get scratch topic ids from applications
+/// Get scratch topic ids from applications.
 ///
 /// Get all scratch topic ids from all `Application`s.
 /// Application will only be included of they contain at least one scratch topic.

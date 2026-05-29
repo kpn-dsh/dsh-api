@@ -20,6 +20,7 @@
 //! * [`CertificateStatus::fmt()`](CertificateStatus::fmt)
 //! * [`Empty::fmt()`](Empty::fmt)
 //! * [`HealthCheck::fmt()`](HealthCheck::fmt)
+//! * [`KafkaAclGroupTopic::fmt()`](KafkaAclGroupTopic::fmt)
 //! * [`LimitValue::fmt()`](LimitValue::fmt)
 //! * [`LimitValueCertificateCount::fmt()`](LimitValueCertificateCount::fmt)
 //! * [`LimitValueConsumerRate::fmt()`](LimitValueConsumerRate::fmt)
@@ -53,10 +54,10 @@
 
 use crate::types::{
   ActualCertificate, AllocationStatus, AppCatalogApp, AppCatalogAppConfiguration, AppCatalogAppResourcesValue, AppCatalogManifest, Application, ApplicationSecret,
-  ApplicationVolumes, Bucket, BucketStatus, Certificate, CertificateStatus, Empty, HealthCheck, LimitValue, LimitValueCertificateCount, LimitValueConsumerRate, LimitValueCpu,
-  LimitValueKafkaAclGroupCount, LimitValueMem, LimitValuePartitionCount, LimitValueProducerRate, LimitValueRequestRate, LimitValueSecretCount, LimitValueTopicCount, ManagedStream,
-  ManagedStreamId, ManagedTenant, Metrics, NodeFeatures, NodepoolActual, Notification, PathSpec, PortMapping, PublicManagedStream, Secret, Task, TaskStatus, Topic, TopicStatus,
-  Vhost, Volume, VolumeStatus,
+  ApplicationVolumes, Bucket, BucketStatus, Certificate, CertificateStatus, Empty, HealthCheck, KafkaAclGroupTopic, KafkaAclGroupTopicKind, LimitValue, LimitValueCertificateCount,
+  LimitValueConsumerRate, LimitValueCpu, LimitValueKafkaAclGroupCount, LimitValueMem, LimitValuePartitionCount, LimitValueProducerRate, LimitValueRequestRate,
+  LimitValueSecretCount, LimitValueTopicCount, ManagedStream, ManagedStreamId, ManagedTenant, Metrics, NodeFeatures, NodepoolActual, Notification, PathSpec, PortMapping,
+  PublicManagedStream, Secret, Task, TaskStatus, Topic, TopicStatus, Vhost, Volume, VolumeStatus,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -242,6 +243,16 @@ impl Display for HealthCheck {
   }
 }
 
+impl Display for KafkaAclGroupTopic {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self.kind {
+      KafkaAclGroupTopicKind::Internal => write!(f, "internal:{}", self.name),
+      KafkaAclGroupTopicKind::Public => write!(f, "public:{}", self.name),
+      KafkaAclGroupTopicKind::Topic => write!(f, "topic:{}", self.name),
+    }
+  }
+}
+
 impl Display for LimitValue {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
@@ -378,15 +389,16 @@ impl Notification {
   /// Uses the values in the `args` hashmap to replace the placeholders with the appropriate
   /// values in the `message` template.
   pub fn render_message(&self) -> String {
-    let mut result = self.message.to_string();
+    let mut message = self.message.to_string();
     for (key, value) in &self.args {
       if let Some((_, suffix)) = value.rsplit_once("/") {
-        result = result.replace(&format!("${{urn:{}}}", key), suffix);
+        message = message.replace(&format!("${{urn:{}}}", key), suffix);
+        message = message.replace(&format!("${{urn_list:{}}}", key), suffix);
       } else {
-        result = result.replace(&format!("${{{}}}", key), value);
+        message = message.replace(&format!("${{{}}}", key), value);
       }
     }
-    result
+    message
   }
 }
 

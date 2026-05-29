@@ -46,7 +46,7 @@ use std::collections::HashMap;
 /// * [`nodepool_with_dependant_applications(id) -> (nodepool, [dependant])`](DshApiClient::nodepool_with_dependant_applications)
 /// * [`nodepools_with_dependant_applications() -> [(id, nodepool, [dependant])]`](DshApiClient::nodepools_with_dependant_applications)
 impl DshApiClient {
-  /// # Get all nodepools
+  /// Get all nodepools.
   ///
   /// Returns all nodepool ids and configurations.
   ///
@@ -59,7 +59,7 @@ impl DshApiClient {
     Ok(nodepool_ids.into_iter().zip(nodepool_actuals).collect_vec())
   }
 
-  /// # Get nodepool with usage dependant applications
+  /// Get nodepool with usage dependant applications.
   ///
   /// Returns the configuration of a given nodepool with the ids and instance numbers of the
   /// applications that depend on the nodepool.
@@ -84,7 +84,7 @@ impl DshApiClient {
     Ok((nodepool_actual, dependants))
   }
 
-  /// # Returns all nodepools with their dependant applications
+  /// Returns all nodepools with their dependant applications.
   ///
   /// Returns a sorted list of all nodepool ids, nodepool configurations and lists of applications
   /// that use them.
