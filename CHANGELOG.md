@@ -4,14 +4,13 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
-## [0.10.0] - YYYY-MM-DD
+## [0.10.0] - 2026-05-29
 
 ### Added
 
 * Added `application::application_tasks` method.
 * Added `secret` constants for system secret names.
 * Added `secret::secret_with_status` method.
-* Added `proxy` diagram.
 * Added `platform` methods:
     * `DshPlatform::consumer_group`.
     * `DshPlatform::from_domain`,
@@ -20,6 +19,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
     * Custom serializer and deserializer.
 * Added `platform::VhostZone` enum.
 * Added `Display` and `new`implementations for `KafkaAclGroupTopic`.
+* Added `proxy` diagram.
 
 ### Changed
 
