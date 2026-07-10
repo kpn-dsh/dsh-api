@@ -90,7 +90,7 @@ impl DshApiClient {
   /// * `Err<`[`DshApiError`]`>` - When the request could not be processed.
   pub async fn manifest_latest_version(&self, manifest_id: &str, allow_draft_version: bool) -> DshApiResult<Manifest> {
     match self.manifest_all_versions(manifest_id).await {
-      Ok(manifests) => match manifests.into_iter().filter(|manifest| !manifest.draft || allow_draft_version).next_back() {
+      Ok(manifests) => match manifests.into_iter().rfind(|manifest| !manifest.draft || allow_draft_version) {
         Some(latest_manifest) => Ok(latest_manifest),
         None => Err(DshApiError::not_found()),
       },

@@ -385,7 +385,7 @@ pub fn topic_used_in_applications<'a>(topic_id: &str, applications: &'a HashMap<
     .iter()
     .filter_map(|(application_id, application)| if topic_used_in_application(topic_id, application) { Some((application_id.as_str(), application)) } else { None })
     .collect_vec();
-  application_tuples.sort_by(|(id_a, _), (id_b, _)| id_a.cmp(id_b));
+  application_tuples.sort_by_key(|(id_a, _)| *id_a);
   application_tuples
 }
 
@@ -415,7 +415,7 @@ pub fn topics_from_application(application: &Application) -> Vec<&str> {
 /// * lists of scratch topic ids used in the applications, sorted by id
 ///
 /// The list will be sorted by application id.
-pub fn topics_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<&str>> {
+pub fn topics_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<'_, &str>> {
   let mut application_tuples = applications
     .iter()
     .filter_map(|(application_id, application)| {

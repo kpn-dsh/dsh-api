@@ -158,12 +158,14 @@ pub fn nodepool_from_applications<'a>(nodepool_id: &str, applications: &'a HashM
 /// * Single item list containing the node features.
 ///
 /// The list is sorted by application id.
-pub fn nodepools_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<&NodeFeatures>> {
+pub fn nodepools_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<'_, &NodeFeatures>> {
   let mut application_tuples = applications
     .iter()
-    .filter_map(|(application_id, application)| match &application.node_features {
-      Some(node_features) => Some(ApplicationValues::new(application_id, application, vec![node_features])),
-      None => None,
+    .filter_map(|(application_id, application)| {
+      application
+        .node_features
+        .as_ref()
+        .map(|node_features| ApplicationValues::new(application_id, application, vec![node_features]))
     })
     .collect_vec();
   application_tuples.sort();

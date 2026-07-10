@@ -124,7 +124,7 @@ impl DshApiClient {
     let task_ids = self.get_task_appid_ids(&application_id).await?;
     let tasks: Vec<TaskStatus> = try_join_all(task_ids.iter().map(|task_id| self.get_task(&application_id, task_id))).await?;
     let mut tasks: Vec<(String, TaskStatus)> = task_ids.into_iter().zip(tasks).collect();
-    tasks.sort_by(|(_, task_a), (_, task_b)| timestamp(task_b).cmp(&timestamp(task_a)));
+    tasks.sort_by_key(|(_, task)| timestamp(task));
     Ok(tasks)
   }
 

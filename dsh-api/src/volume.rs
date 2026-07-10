@@ -249,7 +249,7 @@ pub fn volumes_from_application(application: &Application) -> Vec<(&str, &str)> 
         .ok()
     })
     .collect_vec();
-  volumes.sort_by(|(volume_a, _), (volume_b, _)| volume_a.cmp(volume_b));
+  volumes.sort_by_key(|(volume, _)| *volume);
   volumes
 }
 
@@ -267,7 +267,7 @@ pub fn volumes_from_application(application: &Application) -> Vec<(&str, &str)> 
 /// * sorted list of pairs of volume ids and mounting paths
 ///
 /// The list is sorted by application id.
-pub fn volumes_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<(&str, &str)>> {
+pub fn volumes_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<'_, (&str, &str)>> {
   let mut application_tuples = applications
     .iter()
     .filter_map(|(application_id, application)| {

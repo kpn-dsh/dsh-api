@@ -97,7 +97,7 @@ impl DshApiClient {
         }]));
       }
     }
-    let mut vhosts: Vec<(String, Vec<DependantApplication<VhostInjection>>)> = Vec::from_iter(vhosts_map.into_iter());
+    let mut vhosts: Vec<(String, Vec<DependantApplication<VhostInjection>>)> = Vec::from_iter(vhosts_map);
     vhosts.sort_by(|(vhost_id_a, _), (vhost_id_b, _)| vhost_id_a.cmp(vhost_id_b));
     Ok(vhosts)
   }
@@ -149,7 +149,7 @@ impl DshApiClient {
         dependants.push(Dependant::app(app_id.clone(), vec![vhost_string.to_string()]));
       }
     }
-    let mut vhosts: Vec<(String, Vec<Dependant<VhostInjection>>)> = Vec::from_iter(vhosts_with_dependants_map.into_iter());
+    let mut vhosts: Vec<(String, Vec<Dependant<VhostInjection>>)> = Vec::from_iter(vhosts_with_dependants_map);
     vhosts.sort_by(|(vhost_id_a, _), (vhost_id_b, _)| vhost_id_a.cmp(vhost_id_b));
     Ok(vhosts)
   }
@@ -182,7 +182,7 @@ pub fn vhost_port_mappings_from_application<'a>(vhost_id: &str, application: &'a
       })
     })
     .collect_vec();
-  port_mappings.sort_by(|(port_a, _), (port_b, _)| port_a.cmp(port_b));
+  port_mappings.sort_by_key(|(port, _)| *port);
   port_mappings
 }
 
@@ -253,7 +253,7 @@ pub(crate) fn vhost_strings_from_app(app: &AppCatalogApp) -> Vec<(&str, VhostStr
       }
     }
   }
-  resources.sort_by(|(resource_id_a, _), (resource_id_b, _)| resource_id_a.cmp(resource_id_b));
+  resources.sort_by_key(|(resource_id, _)| *resource_id);
   resources
 }
 
@@ -301,7 +301,7 @@ pub fn vhosts_from_application(application: &Application) -> Vec<(String, &str, 
 /// * application id
 /// * application reference
 /// * lists of vhost ids, ports and port mappings used in the application
-pub fn vhosts_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<(String, &str, &PortMapping)>> {
+pub fn vhosts_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<'_, (String, &str, &PortMapping)>> {
   let mut vhosts: Vec<ApplicationValues<(String, &str, &PortMapping)>> = vec![];
   for (application_id, application) in applications {
     for (port, port_mapping) in &application.exposed_ports {

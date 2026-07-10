@@ -429,7 +429,7 @@ pub fn bucket_resources_from_app(app: &AppCatalogApp) -> Vec<(&str, &Bucket)> {
 /// * list of environment variables referencing the bucket
 ///
 /// The list is sorted by bucket id.
-pub fn buckets_from_application(application: &Application) -> Vec<EnvVarInjection> {
+pub fn buckets_from_application(application: &Application) -> Vec<EnvVarInjection<'_>> {
   let mut buckets = HashMap::<&str, Vec<&str>>::new();
   for (env_key, env_value) in &application.env {
     if let Ok(bucket_id) = parse_function1(env_value, "bucket_name") {
@@ -457,7 +457,7 @@ pub fn buckets_from_application(application: &Application) -> Vec<EnvVarInjectio
 ///   sorted by bucket id
 ///
 /// The list is sorted by application id.
-pub fn buckets_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<EnvVarInjection>> {
+pub fn buckets_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<'_, EnvVarInjection<'_>>> {
   let mut application_tuples: Vec<ApplicationValues<EnvVarInjection>> = vec![];
   for (application_id, application) in applications {
     let injections: Vec<EnvVarInjection> = buckets_from_application(application);

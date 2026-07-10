@@ -84,7 +84,7 @@ fn write_encode_path_method(writer: &mut dyn Write) -> Result<(), Box<dyn Error>
     indoc!(
       r#"
         #[doc(hidden)]
-          fn encode_path(pc: &str) -> PercentEncode {{
+          fn encode_path(pc: &str) -> PercentEncode<'_> {{
             const PATH_SET: &AsciiSet = &CONTROLS
               .add(b' ')
               .add(b'\"')
