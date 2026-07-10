@@ -10,7 +10,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.10.0" 
+dsh_api = "0.10.1" 
 ```
 
 ### Minimal example
@@ -91,7 +91,7 @@ The generic methods requires the `generic` feature to be enabled:
 
 ```toml
 [dependencies]
-dsh_api = { version = "0.10.0", features = ["generic"] }
+dsh_api = { version = "0.10.1", features = ["generic"] }
 ```
 
 The example below will add a new secret to the tenant's secret store.
@@ -292,13 +292,15 @@ formatting defined in`rustfmt.toml`, that you have run the `clippy` linter and d
 check. The following commands should return without any warnings or errors:
 
 ```bash
-> cargo clippy --all-features
-> cargo doc --all-features
-> cargo test --all-features
+> cargo all-features clippy
+> cargo all-features doc
+> cargo all-features test
 > cargo +nightly fmt --check
 > cargo deny check licenses
 ```
 
+Note that these checks assume that the
+[`cargo-all-features`](https://github.com/frewsxcv/cargo-all-features) crate is installed.
 Consider configuring your IDE to automatically apply the formatting rules when saving a file.
 
 # Publish

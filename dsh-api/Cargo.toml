@@ -2,7 +2,7 @@
 [package]
 name = "dsh_api"
 readme = "README.md"
-version = "0.10.0"
+version = "0.10.1"
 authors.workspace = true
 description.workspace = true
 edition.workspace = true
