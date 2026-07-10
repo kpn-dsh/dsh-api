@@ -198,7 +198,7 @@ pub fn crate_version() -> &'static Version {
 ///
 /// ```
 /// # use dsh_api::version::Version;
-/// assert_eq!(dsh_api::openapi_version(), &Version::new(1, 11, 1, None));
+/// assert_eq!(dsh_api::openapi_version(), &Version::new(1, 13, 0, None));
 /// ```
 pub fn openapi_version() -> &'static Version {
   DshApiClient::api_version()
