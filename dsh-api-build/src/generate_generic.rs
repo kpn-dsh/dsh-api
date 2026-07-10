@@ -15,6 +15,7 @@ pub fn generate_generic(writer: &mut dyn Write, openapi_spec: &OpenAPI) -> Resul
   writeln!(writer, "use crate::DshApiResult;")?;
   writeln!(writer, "use crate::DshApiError;")?;
   writeln!(writer, "use crate::types::*;")?;
+  writeln!(writer, "#[cfg(feature = \"manage\")]")?;
   writeln!(writer, "use std::str::FromStr;")?;
   writeln!(writer)?;
   writeln!(writer, "impl DshApiClient {{")?;
