@@ -4,6 +4,18 @@ All notable changes to the DSH Api Client project will be documented in this fil
 
 ## [Unreleased]
 
+## [0.10.1] - YYYY-MM-DD
+
+### Added
+
+### Changed
+
+* Openapi specification version 1.13.0.
+
+### Fixed
+
+* Unused import warning (`FromStr`) in generated generic code.
+
 ## [0.10.0] - 2026-05-29
 
 ### Added
