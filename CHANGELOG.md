@@ -2,15 +2,15 @@
 
 All notable changes to the DSH Api Client project will be documented in this file.
 
-## [Unreleased]
-
 ## [0.10.1] - YYYY-MM-DD
 
 ### Added
 
+* Method `DshPlatform::validate_vhost_domain`.
+
 ### Changed
 
-* Openapi specification version 1.13.0.
+* Openapi specification updated to version 1.13.0.
 
 ### Fixed
 

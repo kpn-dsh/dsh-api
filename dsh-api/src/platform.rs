@@ -4,6 +4,7 @@ use crate::error::{DshApiError, DshApiResult};
 use crate::{DEFAULT_PLATFORMS, ENV_VAR_PLATFORM, ENV_VAR_PLATFORMS_FILE_NAME};
 use itertools::Itertools;
 use log::{debug, error, info};
+use regex::Regex;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -433,7 +434,7 @@ impl DshPlatform {
     match matching_platforms.len() {
       0 => Ok(None),
       1 => Ok(matching_platforms.first().cloned()),
-      _ => Err(DshApiError::parameter("")),
+      _ => Err(DshApiError::parameter(format!("domain '{}' matches to multiple domains", domain_name))),
     }
   }
 
@@ -1436,6 +1437,74 @@ impl DshPlatform {
       },
       Err(_) => Err(format!("environment variable '{}' not set", ENV_VAR_PLATFORM)),
     }
+  }
+
+  /// Validate vhost domain.
+  ///
+  /// Validates whether a vhost domain is valid for this `DshPlatform`. If it is valid, some
+  /// parameters are returned. If it is not valid, an error is returned.
+  ///
+  /// # Parameters
+  /// * `vhost_domain` - Vhost domain to validate.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::{DshPlatform, VhostZone};
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// let (vhost, tenant, kafka, zone) = DshPlatform::new("nplz")
+  ///   .validate_vhost_domain("my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org")?;
+  /// assert_eq!(vhost, "my-vhost");
+  /// assert_eq!(tenant, Some("my-tenant".to_string()));
+  /// assert_eq!(kafka, false);
+  /// assert_eq!(zone, VhostZone::Private);
+  /// #   Ok(())
+  /// # }
+  /// ```
+  ///
+  /// # Returns
+  /// * `Ok((subdomain, Option(vhost), kafka, zone))`
+  ///   * `subdomain` - Vhost subdomain string.
+  ///   * `tenant` - Optional tenant name.
+  ///   * `kafka` - `true` if vhost domain is for a Kafka proxy, `false` otherwise.
+  ///   * `zone` - Vhost zone, `Public` or `Private`.
+  /// * `Err()` - When `vhost_domain` is not valid for this platform.
+  pub fn validate_vhost_domain(&self, vhost_domain: &str) -> DshApiResult<(String, Option<String>, bool, VhostZone)> {
+    // Parses the domain prefix
+    // Returns None when prefix is not valid
+    fn validate(public_subdomain: &str, zone: VhostZone) -> Option<(String, Option<String>, bool, VhostZone)> {
+      static PART_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z0-9][a-z0-9\-]*[a-z0-9]$").unwrap());
+
+      let parts = public_subdomain.split(".").collect_vec();
+      if parts.iter().all(|part| part.len() <= 63 && PART_REGEX.is_match(part)) {
+        if parts.len() == 1 {
+          Some((parts.first().unwrap().to_string(), None, false, zone))
+        } else if parts.len() == 2 {
+          Some((parts.first().unwrap().to_string(), Some(parts.get(1).unwrap().to_string()), false, zone))
+        } else {
+          if *parts.get(parts.len() - 2).unwrap() == "kafka" {
+            let subdomain = parts.iter().take(parts.len() - 2).join(".");
+            Some((subdomain, Some(parts.last().unwrap().to_string()), true, zone))
+          } else {
+            let subdomain = parts.iter().take(parts.len() - 1).join(".");
+            Some((subdomain, Some(parts.last().unwrap().to_string()), false, zone))
+          }
+        }
+      } else {
+        None
+      }
+    }
+
+    vhost_domain
+      .strip_suffix(&format!(".{}", self.public_domain()))
+      .and_then(|public_domain_prefix| validate(public_domain_prefix, VhostZone::Public))
+      .or_else(|| {
+        self.private_domain().and_then(|private_domain| {
+          vhost_domain
+            .strip_suffix(&format!(".{}", private_domain))
+            .and_then(|private_domain_prefix| validate(private_domain_prefix, VhostZone::Private))
+        })
+      })
+      .ok_or_else(|| DshApiError::conversion(format!("vhost domain '{}' not valid for platform {}", vhost_domain, self.name())))
   }
 }
 

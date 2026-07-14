@@ -1,3 +1,4 @@
+use dsh_api::error::{DshApiError, DshApiResult};
 use dsh_api::platform::{DshPlatform, VhostZone};
 use std::sync::LazyLock;
 
@@ -152,4 +153,97 @@ fn test_public_vhost_domain() {
   assert_eq!(PROD.public_domain(), "kpn-dsh.com");
   assert_eq!(PRODAZ.public_domain(), "az.kpn-dsh.com");
   assert_eq!(PRODLZ.public_domain(), "dsh-prod.dsh.prod.aws.kpn.com");
+}
+
+#[test]
+fn test_validate_vhost_domain() {
+  static VHOST_DOMAINS: LazyLock<Vec<(&DshPlatform, &str, DshApiResult<(String, Option<String>, bool, VhostZone)>)>> = LazyLock::new(|| {
+    vec![
+      (
+        &NPLZ,
+        "my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org",
+        Ok(("my-vhost".to_string(), Some("my-tenant".to_string()), false, VhostZone::Private)),
+      ),
+      (
+        &NPLZ,
+        "my-subdomain.my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org",
+        Ok(("my-subdomain.my-vhost".to_string(), Some("my-tenant".to_string()), false, VhostZone::Private)),
+      ),
+      (
+        &NPLZ,
+        "my-subsubdomain.my-subdomain.my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org",
+        Ok((
+          "my-subsubdomain.my-subdomain.my-vhost".to_string(),
+          Some("my-tenant".to_string()),
+          false,
+          VhostZone::Private,
+        )),
+      ),
+      (
+        &NPLZ,
+        "vhost.dsh-dev.dsh.np.aws.kpn.org",
+        Ok(("vhost".to_string(), None, false, VhostZone::Private)),
+      ),
+      (
+        &NPLZ,
+        "my-broker-0.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org",
+        Ok(("my-broker-0".to_string(), Some("my-tenant".to_string()), true, VhostZone::Private)),
+      ),
+      (
+        &NPLZ,
+        "my-broker-subdomain-0.my-broker-0.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org",
+        Ok((
+          "my-broker-subdomain-0.my-broker-0".to_string(),
+          Some("my-tenant".to_string()),
+          true,
+          VhostZone::Private,
+        )),
+      ),
+      (
+        &NPLZ,
+        "my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.com",
+        Ok(("my-vhost".to_string(), Some("my-tenant".to_string()), false, VhostZone::Public)),
+      ),
+      (&NPLZ, "vhost.dsh-dev.dsh.np.aws.kpn.com", Ok(("vhost".to_string(), None, false, VhostZone::Public))),
+      (
+        &NPLZ,
+        "my-broker-0.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com",
+        Ok(("my-broker-0".to_string(), Some("my-tenant".to_string()), true, VhostZone::Public)),
+      ),
+      (
+        &POC,
+        "my-vhost.my-tenant.poc.kpn-dsh.com",
+        Ok(("my-vhost".to_string(), Some("my-tenant".to_string()), false, VhostZone::Public)),
+      ),
+      (
+        &PROD,
+        "my-vhost.my-tenant.kpn-dsh.com",
+        Ok(("my-vhost".to_string(), Some("my-tenant".to_string()), false, VhostZone::Public)),
+      ),
+      (
+        &PRODLZ,
+        "my-vhost.my-tenant.dsh-prod.dsh.prod.aws.kpn.com",
+        Ok(("my-vhost".to_string(), Some("my-tenant".to_string()), false, VhostZone::Public)),
+      ),
+      (
+        &PRODAZ,
+        "my-vhost.my-tenant.az.kpn-dsh.com",
+        Ok(("my-vhost".to_string(), Some("my-tenant".to_string()), false, VhostZone::Public)),
+      ),
+      (
+        &NPLZ,
+        "my_vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org",
+        Err(DshApiError::Conversion { message: "vhost domain 'my_vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org' not valid for platform np-aws-lz-dsh".to_string() }),
+      ),
+      (
+        &NPLZ,
+        "my-vhost.my-tenant.google.com",
+        Err(DshApiError::Conversion { message: "vhost domain 'my-vhost.my-tenant.google.com' not valid for platform np-aws-lz-dsh".to_string() }),
+      ),
+    ]
+  });
+
+  for (platform_ut, vhost_domain_ut, result_ut) in VHOST_DOMAINS.iter() {
+    assert_eq!(platform_ut.validate_vhost_domain(vhost_domain_ut), *result_ut);
+  }
 }
