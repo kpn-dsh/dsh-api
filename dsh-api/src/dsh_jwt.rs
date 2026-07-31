@@ -8,7 +8,7 @@ use base64::Engine;
 use itertools::Itertools;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -158,13 +158,12 @@ impl DshJwtPayload {
 pub struct DshPermission {
   pub realm: String,
   pub tenant: String,
-  pub manage: bool,
-  pub view: bool,
+  pub permissions: HashSet<String>,
 }
 
 impl DshPermission {
   pub fn new(realm: String, tenant: String) -> Self {
-    Self { realm, tenant, manage: false, view: false }
+    Self { realm, tenant, permissions: HashSet::new() }
   }
 }
 
@@ -234,15 +233,12 @@ impl FromStr for DshJwt {
       Some(representations) => {
         let mut tenant_permissions_map: HashMap<String, DshPermission> = HashMap::new();
         for representation in representations {
-          DshPermission::from_str(representation).map(|dsh_permission| {
-            let manage = dsh_permission.manage;
-            let view = dsh_permission.view;
-            let mapped = tenant_permissions_map.entry(dsh_permission.tenant.to_string()).or_insert_with(|| dsh_permission);
-            if manage {
-              mapped.manage = true;
+          DshPermission::from_str(representation).map(|dsh_permission| match tenant_permissions_map.get_mut(&dsh_permission.tenant) {
+            Some(tenant_permission) => {
+              tenant_permission.permissions.extend(dsh_permission.permissions);
             }
-            if view {
-              mapped.view = true;
+            None => {
+              tenant_permissions_map.insert(dsh_permission.tenant.clone(), dsh_permission);
             }
           })?;
         }
@@ -298,16 +294,7 @@ impl Display for DshJwtPayload {
 
 impl Display for DshPermission {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(
-      f,
-      "manage:{}:{}:{}",
-      self.realm,
-      self.tenant,
-      [if self.manage { Some("manage") } else { None }, if self.view { Some("view") } else { None }]
-        .iter()
-        .flatten()
-        .join("+")
-    )
+    write!(f, "manage:{}:{}:{}", self.realm, self.tenant, self.permissions.iter().sorted().join("+"))
   }
 }
 
@@ -315,16 +302,14 @@ impl FromStr for DshPermission {
   type Err = DshApiError;
 
   fn from_str(permission_representation: &str) -> DshApiResult<Self> {
-    static VALUE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^manage:([a-z][a-z0-9-]*):([a-z][a-z0-9-]*):(manage|view)$").unwrap());
+    static VALUE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^manage:([a-z][a-z0-9-]*):([a-z][a-z0-9-]*):([a-z][a-z0-9-_]*)$").unwrap());
     match VALUE_REGEX.captures(permission_representation) {
       Some(captures) => {
+        let realm = captures.get(1).map(|realm_match| realm_match.as_str()).unwrap().to_string();
+        let tenant = captures.get(2).map(|tenant_match| tenant_match.as_str()).unwrap().to_string();
         let kind = captures.get(3).map(|tenant_match| tenant_match.as_str()).unwrap_or_default();
-        Ok(Self {
-          realm: captures.get(1).map(|realm_match| realm_match.as_str()).unwrap().to_string(),
-          tenant: captures.get(2).map(|tenant_match| tenant_match.as_str()).unwrap().to_string(),
-          manage: kind == "manage",
-          view: kind == "view",
-        })
+        let permissions = HashSet::from([kind.to_string()]);
+        Ok(Self { realm, tenant, permissions })
       }
       None => Err(DshApiError::conversion("illegal permission representation")),
     }
@@ -336,8 +321,7 @@ fn test_dsh_permission_from_str() {
   let dsh_permission = DshPermission::from_str("manage:dev-lz-dsh:greenbox-dev:view").unwrap();
   assert_eq!(dsh_permission.realm, "dev-lz-dsh");
   assert_eq!(dsh_permission.tenant, "greenbox-dev");
-  assert_eq!(dsh_permission.manage, false);
-  assert_eq!(dsh_permission.view, true);
+  assert_eq!(dsh_permission.permissions, HashSet::from(["view".to_string()]));
 }
 
 #[test]
@@ -347,7 +331,7 @@ fn test_dsh_permission_display() {
     "manage:dev-lz-dsh:greenbox-dev:view"
   );
   assert_eq!(
-    DshPermission { realm: "my-realm".to_string(), tenant: "my-tenant".to_string(), manage: true, view: true }.to_string(),
+    DshPermission { realm: "my-realm".to_string(), tenant: "my-tenant".to_string(), permissions: HashSet::from(["manage".to_string(), "view".to_string()]) }.to_string(),
     "manage:my-realm:my-tenant:manage+view"
   );
 }
