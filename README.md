@@ -10,7 +10,7 @@ To make the library available to your rust application add it to your dependenci
 
 ```toml
 [dependencies]
-dsh_api = "0.10.1" 
+dsh_api = "0.11.0" 
 ```
 
 ### Minimal example
@@ -91,7 +91,7 @@ The generic methods requires the `generic` feature to be enabled:
 
 ```toml
 [dependencies]
-dsh_api = { version = "0.10.1", features = ["generic"] }
+dsh_api = { version = "0.11.0", features = ["generic"] }
 ```
 
 The example below will add a new secret to the tenant's secret store.
@@ -250,7 +250,8 @@ gets the default value from the environment variables described below.
     "alias": "nplz",
     "is-production": false,
     "cloud-provider": "aws",
-    "access-token-endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/dev-lz-dsh/protocol/openid-connect/token",
+    "region": "eu-west-1",
+    "issuer-endpoint": "https://auth.prod.cp-prod.dsh.prod.aws.kpn.com/auth/realms/dev-lz-dsh/protocol/openid-connect/token",
     "realm": "dev-lz-dsh",
     "public-domain": "dsh-dev.dsh.np.aws.kpn.com",
     "private-domain": "dsh-dev.dsh.np.aws.kpn.org"
