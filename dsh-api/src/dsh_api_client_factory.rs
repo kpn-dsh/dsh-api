@@ -217,14 +217,6 @@ impl DshApiClientFactory {
     DshApiClientFactory { client: None, tenant, static_token: Some(static_token.into()), robot_password: None }
   }
 
-  /// Create factory for DSH API client.
-  ///
-  /// Deprecated, use [create_with_token_fetcher()](Self::create_with_token_fetcher).
-  #[deprecated]
-  pub fn create(tenant: DshApiTenant, password: String) -> DshApiResult<Self> {
-    Ok(Self::create_with_token_fetcher(tenant, password))
-  }
-
   /// Create default factory for DSH API client with token fetcher.
   ///
   /// This function will create a new `DshApiClientFactory` with token fetcher from the

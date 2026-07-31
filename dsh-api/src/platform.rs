@@ -273,22 +273,14 @@ impl DshPlatform {
   /// # Ok(())
   /// # }
   /// ```
-  pub fn bucket_name(&self, tenant_name: impl Display, bucket_id: impl Display, access_key: Option<impl Display>) -> Result<String, String> {
+  pub fn bucket_name(&self, tenant_name: impl Display, bucket_id: impl Display, access_key: Option<impl Display>) -> DshApiResult<String> {
     match self.cloud_provider {
       CloudProvider::AWS => Ok(format!("{}-{}-{}", self.realm, tenant_name, bucket_id)),
       CloudProvider::Azure => match access_key {
         Some(access_key) => Ok(format!("{}-{}-{}@{}", self.realm, tenant_name, bucket_id, access_key)),
-        None => Err("bucket name for azure requires the bucket access secret system/objectstore/access_key_id".to_string()),
+        None => Err(DshApiError::Parameter { message: "bucket name for azure requires the bucket access secret system/objectstore/access_key_id".to_string() }),
       },
     }
-  }
-
-  /// Returns properly formatted client_id.
-  ///
-  /// This method is deprecated, use [`DshPlatform::robot_client_id`] instead.
-  #[deprecated]
-  pub fn client_id(&self) -> String {
-    self.robot_client_id()
   }
 
   /// Returns the cloud provider for the platform.
@@ -859,7 +851,7 @@ impl DshPlatform {
   /// # Example
   /// ```
   /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(DshPlatform::new("nplz").client_id(), "robot:dev-lz-dsh");
+  /// assert_eq!(DshPlatform::new("nplz").robot_client_id(), "robot:dev-lz-dsh");
   /// ```
   pub fn robot_client_id(&self) -> String {
     format!("robot{}{}", CLIENT_ID_SEPARATOR, self.realm())
@@ -875,7 +867,7 @@ impl DshPlatform {
   /// ```
   /// # use dsh_api::platform::DshPlatform;
   /// assert_eq!(
-  ///   DshPlatform::new("nplz").tenant_client_id("my-tenant"),
+  ///   DshPlatform::new("nplz").robot_tenant_client_id("my-tenant"),
   ///   "robot:dev-lz-dsh:my-tenant"
   /// );
   /// ```
@@ -962,15 +954,6 @@ impl DshPlatform {
     format!("{}/services/{}/app", self.tenant_console_url(tenant_name), app_name)
   }
 
-  #[rustfmt::skip]
-  /// Returns properly formatted robot client_id for tenant.
-  ///
-  /// This method is deprecated, use [`DshPlatform::robot_tenant_client_id`] instead.
-  #[deprecated]
-  pub fn tenant_client_id(&self, tenant_name: impl Display) -> String {
-    format!("{}{}{}", self.robot_client_id(), CLIENT_ID_SEPARATOR, tenant_name)
-  }
-
   /// Returns the url of the platform console for a tenant.
   ///
   /// # Parameters
@@ -1026,7 +1009,7 @@ impl DshPlatform {
   /// # Ok(())
   /// # }
   /// ```
-  pub fn tenant_domain(&self, tenant_name: impl Display, vhost_zone: VhostZone) -> Result<String, String> {
+  pub fn tenant_domain(&self, tenant_name: impl Display, vhost_zone: VhostZone) -> DshApiResult<String> {
     Ok(format!("{}.{}", tenant_name, self.domain(vhost_zone)?))
   }
 
@@ -1045,35 +1028,6 @@ impl DshPlatform {
   /// ```
   pub fn tenant_monitoring_url(&self, tenant_name: impl Display) -> String {
     format!("https://monitoring-{}.{}", tenant_name, self.public_domain)
-  }
-
-  /// Returns the private domain for a tenant.
-  ///
-  /// The private domain for a tenant can only be constructed if the optional private domain
-  /// for the platform is defined. If it is not, an `Err` will be returned.
-  ///
-  /// # Parameters
-  /// * `tenant_name` - Tenant name.
-  ///
-  /// This method is deprecated, use [`DshPlatform::tenant_domain`] instead.
-  ///
-  /// # Examples
-  /// ```rust
-  /// # use dsh_api::platform::DshPlatform;
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// assert_eq!(
-  ///   DshPlatform::new("nplz").tenant_private_domain("my-tenant")?,
-  ///   "my-tenant.dsh-dev.dsh.np.aws.kpn.org"
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  #[deprecated]
-  pub fn tenant_private_domain(&self, tenant_name: impl Display) -> Result<String, String> {
-    match self.private_domain() {
-      Some(private_domain) => Ok(format!("{}.{}", tenant_name, private_domain)),
-      None => Err(format!("private domain is not set for platform {}", self.name())),
-    }
   }
 
   /// Returns the private domain for a vhost.
@@ -1096,7 +1050,7 @@ impl DshPlatform {
   /// # Ok(())
   /// # }
   /// ```
-  pub fn tenant_private_vhost_domain(&self, tenant_name: impl Display, vhost_name: impl Display) -> Result<String, String> {
+  pub fn tenant_private_vhost_domain(&self, tenant_name: impl Display, vhost_name: impl Display) -> DshApiResult<String> {
     self
       .tenant_domain(tenant_name, VhostZone::Private)
       .map(|tenant_private_domain| format!("{}.{}", vhost_name, tenant_private_domain))
@@ -1140,7 +1094,7 @@ impl DshPlatform {
     vhost_zone: VhostZone,
     port: Option<usize>,
     index: usize,
-  ) -> Result<String, String> {
+  ) -> DshApiResult<String> {
     match port {
       Some(port) => Ok(format!("{}-{}.kafka.{}:{}", proxy_name, index, self.tenant_domain(tenant_name, vhost_zone)?, port)),
       None => Ok(format!("{}-{}.kafka.{}:9091", proxy_name, index, self.tenant_domain(tenant_name, vhost_zone)?)),
@@ -1185,124 +1139,10 @@ impl DshPlatform {
     proxy_name: impl Display,
     vhost_zone: VhostZone,
     number_of_servers: usize,
-  ) -> Result<Vec<String>, String> {
+  ) -> DshApiResult<Vec<String>> {
     (0..number_of_servers)
       .map(|index| self.tenant_proxy_bootstrap_server(&tenant_name, &proxy_name, vhost_zone.clone(), None, index))
       .collect::<Result<Vec<_>, _>>()
-  }
-
-  /// Returns the private bootstrap servers for a configured proxy.
-  ///
-  /// The private bootstrap server can only be constructed if the optional private domain
-  /// for the platform is defined. If it is not, an `Err` will be returned.
-  ///
-  /// This method is deprecated, use [`DshPlatform::tenant_proxy_bootstrap_servers`] instead.
-  ///
-  /// # Parameters
-  /// * `tenant_name` - Tenant name.
-  /// * `proxy_name` - Proxy name.
-  /// * `number_of_servers` - Number of proxy servers.
-  ///
-  /// # Examples
-  /// ```rust
-  /// # use dsh_api::platform::DshPlatform;
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// assert_eq!(
-  ///   DshPlatform::new("nplz")
-  ///     .tenant_proxy_private_bootstrap_servers("my-tenant", "my-proxy", 3)?
-  ///     .first()
-  ///     .unwrap(),
-  ///   "my-proxy-0.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org:9091"
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  #[deprecated]
-  pub fn tenant_proxy_private_bootstrap_servers(&self, tenant_name: impl Display, proxy_name: impl Display, number_of_servers: usize) -> Result<Vec<String>, String> {
-    self.tenant_domain(tenant_name, VhostZone::Private).map(|tenant_private_domain| {
-      (0..number_of_servers)
-        .map(|index| format!("{}-{}.kafka.{}:9091", proxy_name, index, tenant_private_domain))
-        .collect_vec()
-    })
-  }
-
-  #[rustfmt::skip]
-  /// Returns the private schema store host for a configured proxy.
-  ///
-  /// The private schema store host can only be constructed if the optional private domain
-  /// for the platform is defined. If it is not, an `Err` will be returned.
-  ///
-  /// # Parameters
-  /// * `tenant_name` - Tenant name.
-  /// * `proxy_name` - Proxy name.
-  ///
-  /// This method is deprecated, use [`DshPlatform::tenant_proxy_schema_store_host`] instead.
-  ///
-  /// # Examples
-  /// ```rust
-  /// # use dsh_api::platform::DshPlatform;
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// assert_eq!(
-  ///   DshPlatform::new("nplz")
-  ///     .tenant_proxy_private_schema_store_host("my-tenant", "my-proxy")?,
-  ///   "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org"
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  #[deprecated]
-  pub fn tenant_proxy_private_schema_store_host(&self, tenant_name: impl Display, proxy_name: impl Display) -> Result<String, String> {
-    self
-      .tenant_domain(tenant_name, VhostZone::Private)
-      .map(|tenant_private_domain| format!("{}-schema-store.kafka.{}", proxy_name, tenant_private_domain))
-  }
-
-  /// Returns the public bootstrap servers for a configured proxy.
-  ///
-  /// This method is deprecated, use [`DshPlatform::tenant_proxy_bootstrap_servers`] instead.
-  ///
-  /// # Parameters
-  /// * `tenant_name` - Tenant name.
-  /// * `proxy_name` - Proxy name.
-  /// * `number_of_servers` - Bootstrap server index.
-  ///
-  /// # Examples
-  /// ```rust
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::new("nplz")
-  ///     .tenant_proxy_public_bootstrap_servers("my-tenant", "my-proxy", 3)
-  ///     .first()
-  ///     .unwrap(),
-  ///   "my-proxy-0.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com:9091"
-  /// );
-  /// ```
-  #[deprecated]
-  pub fn tenant_proxy_public_bootstrap_servers(&self, tenant_name: impl Display, proxy_name: impl Display, number_of_servers: usize) -> Vec<String> {
-    (0..number_of_servers)
-      .map(|index| format!("{}-{}.kafka.{}.{}:9091", proxy_name, index, tenant_name, self.public_domain))
-      .collect_vec()
-  }
-
-  /// Returns the public schema store host for a configured proxy.
-  ///
-  /// This method is deprecated, use [`DshPlatform::tenant_proxy_schema_store_host`] instead.
-  ///
-  /// # Parameters
-  /// * `tenant_name` - Tenant name.
-  /// * `proxy_name` - Proxy name.
-  ///
-  /// # Examples
-  /// ```rust
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::new("nplz").tenant_proxy_public_schema_store_host("my-tenant", "my-proxy"),
-  ///   "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
-  /// );
-  /// ```
-  #[deprecated]
-  pub fn tenant_proxy_public_schema_store_host(&self, tenant_name: impl Display, proxy_name: impl Display) -> String {
-    format!("{}-schema-store.kafka.{}.{}", proxy_name, tenant_name, self.public_domain)
   }
 
   /// Returns the private schema store host for a configured proxy.
@@ -1319,14 +1159,19 @@ impl DshPlatform {
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// use dsh_api::platform::VhostZone;
   /// assert_eq!(
-  ///   DshPlatform::new("nplz").tenant_proxy_private_schema_store_host("my-tenant", "my-proxy")?,
+  ///   DshPlatform::new("nplz").tenant_proxy_schema_store_host(
+  ///     "my-tenant",
+  ///     "my-proxy",
+  ///     VhostZone::Private
+  ///   )?,
   ///   "my-proxy-schema-store.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org"
   /// );
   /// # Ok(())
   /// # }
   /// ```
-  pub fn tenant_proxy_schema_store_host(&self, tenant_name: impl Display, proxy_name: impl Display, vhost_zone: VhostZone) -> Result<String, String> {
+  pub fn tenant_proxy_schema_store_host(&self, tenant_name: impl Display, proxy_name: impl Display, vhost_zone: VhostZone) -> DshApiResult<String> {
     self
       .tenant_domain(tenant_name, vhost_zone)
       .map(|tenant_private_domain| format!("{}-schema-store.kafka.{}", proxy_name, tenant_private_domain))
@@ -1348,26 +1193,6 @@ impl DshPlatform {
   /// ```
   pub fn tenant_public_app_domain(&self, tenant_name: impl Display, app_name: impl Display) -> String {
     format!("{}.{}.{}", app_name, tenant_name, self.public_domain)
-  }
-
-  /// Returns the public domain for a tenant.
-  ///
-  /// This method is deprecated, use [`DshPlatform::tenant_domain`] instead.
-  ///
-  /// # Parameters
-  /// * `tenant_name` - Tenant name.
-  ///
-  /// # Examples
-  /// ```rust
-  /// # use dsh_api::platform::DshPlatform;
-  /// assert_eq!(
-  ///   DshPlatform::new("nplz").tenant_public_domain("my-tenant"),
-  ///   "my-tenant.dsh-dev.dsh.np.aws.kpn.com"
-  /// );
-  /// ```
-  #[deprecated]
-  pub fn tenant_public_domain(&self, tenant_name: impl Display) -> String {
-    format!("{}.{}", tenant_name, self.public_domain)
   }
 
   /// Returns the url of the platform console for a tenant and service.
@@ -1417,25 +1242,27 @@ impl DshPlatform {
   ///   Err(error) => println!("no default platform: {}", error),
   /// }
   /// ```
-  pub fn try_default() -> Result<Self, String> {
+  pub fn try_default() -> DshApiResult<Self> {
     match env::var(ENV_VAR_PLATFORM) {
       Ok(platform_name_from_env_var) => match DshPlatform::try_from(platform_name_from_env_var.as_str()) {
         Ok(platform) => {
           debug!("platform '{}' (environment variable '{}')", platform, ENV_VAR_PLATFORM);
           Ok(platform)
         }
-        Err(_) => Err(format!(
-          "environment variable {} contains invalid platform name '{}' (possible values: {})",
-          ENV_VAR_PLATFORM,
-          platform_name_from_env_var,
-          DSH_PLATFORMS
-            .iter()
-            .map(|dsh_platform| format!("{}/{}", dsh_platform.name(), dsh_platform.alias()))
-            .collect_vec()
-            .join(", ")
-        )),
+        Err(_) => Err(DshApiError::Configuration {
+          message: format!(
+            "environment variable {} contains invalid platform name '{}' (possible values: {})",
+            ENV_VAR_PLATFORM,
+            platform_name_from_env_var,
+            DSH_PLATFORMS
+              .iter()
+              .map(|dsh_platform| format!("{}/{}", dsh_platform.name(), dsh_platform.alias()))
+              .collect_vec()
+              .join(", ")
+          ),
+        }),
       },
-      Err(_) => Err(format!("environment variable '{}' not set", ENV_VAR_PLATFORM)),
+      Err(_) => Err(DshApiError::Configuration { message: format!("environment variable '{}' not set", ENV_VAR_PLATFORM) }),
     }
   }
 
@@ -1469,8 +1296,7 @@ impl DshPlatform {
   ///   * `zone` - Vhost zone, `Public` or `Private`.
   /// * `Err()` - When `vhost_domain` is not valid for this platform.
   pub fn validate_vhost_domain(&self, vhost_domain: &str) -> DshApiResult<(String, Option<String>, bool, VhostZone)> {
-    // Parses the domain prefix
-    // Returns None when prefix is not valid
+    // Subfunction parses the domain prefix, returns None when prefix is not valid
     fn validate(public_subdomain: &str, zone: VhostZone) -> Option<(String, Option<String>, bool, VhostZone)> {
       static PART_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z0-9][a-z0-9\-]*[a-z0-9]$").unwrap());
 
@@ -1559,7 +1385,7 @@ impl Display for VhostZone {
 }
 
 impl TryFrom<&str> for DshPlatform {
-  type Error = String;
+  type Error = DshApiError;
 
   /// Converts a platform name to a `DshPlatform`.
   ///
@@ -1574,13 +1400,13 @@ impl TryFrom<&str> for DshPlatform {
   /// assert_eq!(DshPlatform::try_from("nplz").unwrap().name(), "np-aws-lz-dsh");
   /// assert!(DshPlatform::try_from("illegal-platform-name").is_err());
   /// ```
-  fn try_from(platform_name: &str) -> Result<Self, Self::Error> {
+  fn try_from(platform_name: &str) -> DshApiResult<Self> {
     Self::from_str(platform_name)
   }
 }
 
 impl FromStr for DshPlatform {
-  type Err = String;
+  type Err = DshApiError;
 
   /// Converts a platform name to a `DshPlatform`.
   ///
@@ -1594,21 +1420,23 @@ impl FromStr for DshPlatform {
   /// assert_eq!(DshPlatform::from_str("nplz").unwrap().name(), "np-aws-lz-dsh");
   /// assert!(DshPlatform::from_str("illegal-platform-name").is_err());
   /// ```
-  fn from_str(platform_name: &str) -> Result<Self, Self::Err> {
+  fn from_str(platform_name: &str) -> DshApiResult<Self> {
     match DSH_PLATFORMS
       .iter()
       .find(|dsh_platform| dsh_platform.name() == platform_name || dsh_platform.alias() == platform_name)
     {
       Some(platform) => Ok(platform.clone()),
-      None => Err(format!(
-        "invalid platform name '{}' (possible values: {})",
-        platform_name,
-        DSH_PLATFORMS
-          .iter()
-          .map(|dsh_platform| format!("{}/{}", dsh_platform.name(), dsh_platform.alias()))
-          .collect_vec()
-          .join(", ")
-      )),
+      None => Err(DshApiError::Parameter {
+        message: format!(
+          "invalid platform name '{}' (possible values: {})",
+          platform_name,
+          DSH_PLATFORMS
+            .iter()
+            .map(|dsh_platform| format!("{}/{}", dsh_platform.name(), dsh_platform.alias()))
+            .collect_vec()
+            .join(", ")
+        ),
+      }),
     }
   }
 }
@@ -1674,7 +1502,7 @@ static DSH_PLATFORMS: LazyLock<Vec<DshPlatform>> = LazyLock::new(|| match env::v
 
 // Check whether duplicate names or aliases exist
 #[allow(suspicious_double_ref_op)]
-fn check_for_duplicate_names_or_aliases(platforms: &Vec<DshPlatform>) -> Result<(), String> {
+fn check_for_duplicate_names_or_aliases(platforms: &Vec<DshPlatform>) -> DshApiResult<()> {
   let mut names_and_aliases: Vec<&str> = vec![];
   for platform in platforms {
     names_and_aliases.push(platform.name.as_str());
@@ -1688,10 +1516,7 @@ fn check_for_duplicate_names_or_aliases(platforms: &Vec<DshPlatform>) -> Result<
     }
   }
   if !duplicates.is_empty() {
-    Err(format!(
-      "platforms file contains duplicate names and/or aliases ({})",
-      duplicates.into_iter().join(", ")
-    ))
+    Err(DshApiError::Configuration { message: format!("platforms file contains duplicate names and/or aliases ({})", duplicates.into_iter().join(", ")) })
   } else {
     Ok(())
   }
