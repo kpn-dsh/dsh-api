@@ -1,5 +1,6 @@
 //! # Models semantic versions
 
+use crate::error::{DshApiError, DshApiResult};
 use regex::Regex;
 use serde::{de, Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
@@ -55,9 +56,9 @@ impl Ord for Version {
 static VERSION_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^([0-9]+)(?:.([0-9]+))?(?:.([0-9]+))?(?:-([a-zA-Z][a-zA-Z0-9_-]*))?$").unwrap());
 
 impl FromStr for Version {
-  type Err = String;
+  type Err = DshApiError;
 
-  fn from_str(representation: &str) -> Result<Self, Self::Err> {
+  fn from_str(representation: &str) -> DshApiResult<Self> {
     match VERSION_REGEX.captures(representation) {
       Some(captures) => Ok(Version::new(
         captures.get(1).unwrap().as_str().parse::<u32>().unwrap(),
@@ -65,7 +66,7 @@ impl FromStr for Version {
         captures.get(3).map(|m| m.as_str().parse::<u32>().unwrap()).unwrap_or(0),
         captures.get(4).map(|m| m.as_str().to_string()),
       )),
-      None => Err(format!("invalid version representation {}", representation)),
+      None => Err(DshApiError::Parameter { message: format!("invalid version representation {}", representation) }),
     }
   }
 }

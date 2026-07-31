@@ -2,6 +2,7 @@
 //!
 //! Module that contains parse functions for selected formatted strings as used in the DSH and
 //! the DSH resource management API.
+use crate::error::{DshApiError, DshApiResult};
 use itertools::Itertools;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -70,7 +71,7 @@ impl AuthString {
 }
 
 impl FromStr for AuthString {
-  type Err = String;
+  type Err = DshApiError;
 
   /// Parse auth string.
   ///
@@ -99,14 +100,14 @@ impl FromStr for AuthString {
   /// # Returns
   /// When the provided string is valid, the method returns an instance of the `AuthString`
   /// struct, describing the auth string.
-  fn from_str(auth_string: &str) -> Result<Self, Self::Err> {
+  fn from_str(auth_string: &str) -> DshApiResult<Self> {
     if let Some(basic_authentication_string) = auth_string.strip_prefix("basic-auth@") {
       parse_basic_authentication_string(basic_authentication_string)
     } else if let Some(fwd_auth_string) = auth_string.strip_prefix("fwd-auth@") {
       let split_string = fwd_auth_string.split("@").collect_vec();
       match split_string.first() {
         Some(authentication_service) => Ok(Self::fwd(*authentication_service, split_string.get(1).map(|headers| headers.to_string()))),
-        None => Err(format!("invalid forward authentication string (\"{}\")", auth_string)),
+        None => Err(DshApiError::Parameter { message: format!("invalid forward authentication string (\"{}\")", auth_string) }),
       }
     } else if let Some(roles) = auth_string.strip_prefix("system-fwd-auth@") {
       Ok(Self::system_fwd(roles))
@@ -335,9 +336,9 @@ impl<'a> TopicString<'a> {
 }
 
 impl<'a> TryFrom<&'a str> for TopicString<'a> {
-  type Error = String;
+  type Error = DshApiError;
 
-  fn try_from(topic_string: &'a str) -> Result<Self, Self::Error> {
+  fn try_from(topic_string: &'a str) -> DshApiResult<Self> {
     parse_topic_string(topic_string)
   }
 }
@@ -353,14 +354,14 @@ impl Display for TopicString<'_> {
 }
 
 // Parse basic authentication string
-pub fn parse_basic_authentication_string(basic_authentication_string: &str) -> Result<AuthString, String> {
+pub fn parse_basic_authentication_string(basic_authentication_string: &str) -> DshApiResult<AuthString> {
   let parts = basic_authentication_string.split(":").collect_vec();
   if parts.len() == 2 {
     Ok(AuthString::basic(None::<String>, *parts.first().unwrap()))
   } else if parts.len() == 3 {
     Ok(AuthString::basic(Some(*parts.first().unwrap()), *parts.get(1).unwrap()))
   } else {
-    Err(format!("invalid basic authentication string (\"{}\")", basic_authentication_string))
+    Err(DshApiError::Parameter { message: format!("invalid basic authentication string (\"{}\")", basic_authentication_string) })
   }
 }
 
@@ -379,7 +380,7 @@ pub fn parse_basic_authentication_string(basic_authentication_string: &str) -> R
 ///
 /// # Returns
 /// When the provided string is valid, the method returns the function parameter value
-pub fn parse_function1<'a>(string: &'a str, f_name: &str) -> Result<&'a str, String> {
+pub fn parse_function1<'a>(string: &'a str, f_name: &str) -> DshApiResult<&'a str> {
   static FUNCTION1_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\s*([a-z][a-z0-9_]*)\(\s*'([a-zA-Z0-9_.-]*)'\s*\)\s*}").unwrap());
   match FUNCTION1_REGEX.captures(string).map(|captures| {
     (
@@ -388,7 +389,7 @@ pub fn parse_function1<'a>(string: &'a str, f_name: &str) -> Result<&'a str, Str
     )
   }) {
     Some((Some(function), Some(par))) if function == f_name => Ok(par),
-    _ => Err(format!("invalid {} string (\"{}\")", f_name, string)),
+    _ => Err(DshApiError::Parameter { message: format!("invalid {} string (\"{}\")", f_name, string) }),
   }
 }
 
@@ -410,7 +411,7 @@ pub fn parse_function1<'a>(string: &'a str, f_name: &str) -> Result<&'a str, Str
 ///
 /// # Returns
 /// When the provided string is valid, the method returns the two function parameter values
-pub fn parse_function2<'a>(string: &'a str, f_name: &str) -> Result<(&'a str, &'a str), String> {
+pub fn parse_function2<'a>(string: &'a str, f_name: &str) -> DshApiResult<(&'a str, &'a str)> {
   static FUNCTION2_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\s*([a-z][a-z0-9_]*)\(\s*'([a-zA-Z0-9_.-]*)'\s*,\s*'([a-zA-Z0-9_.-]*)'\s*\)\s*}").unwrap());
   match FUNCTION2_REGEX.captures(string).map(|captures| {
     (
@@ -420,7 +421,7 @@ pub fn parse_function2<'a>(string: &'a str, f_name: &str) -> Result<(&'a str, &'
     )
   }) {
     Some((Some(function), Some(par1), Some(par2))) if function == f_name => Ok((par1, par2)),
-    _ => Err(format!("invalid {} string (\"{}\")", f_name, string)),
+    _ => Err(DshApiError::Parameter { message: format!("invalid {} string (\"{}\")", f_name, string) }),
   }
 }
 
@@ -444,12 +445,12 @@ pub fn parse_function2<'a>(string: &'a str, f_name: &str) -> Result<(&'a str, &'
 /// # Returns
 /// When the provided string is valid, the method returns the two function parameter values,
 /// the second of which can be `None`
-pub fn parse_function<'a>(string: &'a str, f_name: &str) -> Result<(&'a str, Option<&'a str>), String> {
+pub fn parse_function<'a>(string: &'a str, f_name: &str) -> DshApiResult<(&'a str, Option<&'a str>)> {
   match parse_function2(string, f_name) {
     Ok((first_parameter, second_parameter)) => Ok((first_parameter, Some(second_parameter))),
     Err(_) => match parse_function1(string, f_name) {
       Ok(parameter) => Ok((parameter, None)),
-      Err(_) => Err(format!("invalid {} string (\"{}\")", f_name, string)),
+      Err(_) => Err(DshApiError::Parameter { message: format!("invalid {} string (\"{}\")", f_name, string) }),
     },
   }
 }
@@ -469,7 +470,7 @@ pub fn parse_function<'a>(string: &'a str, f_name: &str) -> Result<(&'a str, Opt
 ///
 /// # Returns
 /// When the provided string is valid, the method returns the volume name
-pub fn parse_volume_string(volume_string: &str) -> Result<&str, String> {
+pub fn parse_volume_string(volume_string: &str) -> DshApiResult<&str> {
   parse_function1(volume_string, "volume")
 }
 
@@ -491,7 +492,7 @@ pub fn parse_volume_string(volume_string: &str) -> Result<&str, String> {
 ///
 /// # Returns
 /// When the provided string is valid, the method returns the volume name
-pub fn parse_topic_string<'a>(topic_string: &'a str) -> Result<TopicString<'a>, String> {
+pub fn parse_topic_string<'a>(topic_string: &'a str) -> DshApiResult<TopicString<'a>> {
   static TOPIC_STRING_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(internal|stream|scratch)\.([a-z][a-z0-9-]*)\.([a-z][a-z0-9-]*)").unwrap());
   match TOPIC_STRING_REGEX.captures(topic_string) {
     Some(registry_captures) => {
@@ -504,6 +505,6 @@ pub fn parse_topic_string<'a>(topic_string: &'a str) -> Result<TopicString<'a>, 
         _ => unreachable!(),
       }
     }
-    None => Err(format!("illegal topic name {}", topic_string)),
+    None => Err(DshApiError::Parameter { message: format!("illegal topic name {}", topic_string) }),
   }
 }

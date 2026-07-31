@@ -1,3 +1,4 @@
+use dsh_api::error::DshApiError;
 use dsh_api::parse::{parse_basic_authentication_string, parse_function, parse_function1, parse_function2, AuthString, ImageString};
 use std::str::FromStr;
 
@@ -133,7 +134,9 @@ fn test_parse_function1() {
     ("{function('par1','par2')}", "function"),
   ];
   for (invalid_string, function) in invalids_under_test {
-    assert!(parse_function1(invalid_string, function).is_err_and(|error| error == format!("invalid {} string (\"{}\")", function, invalid_string)));
+    assert!(
+      parse_function1(invalid_string, function).is_err_and(|error| error == DshApiError::Parameter { message: format!("invalid {} string (\"{}\")", function, invalid_string) })
+    );
   }
 }
 
@@ -161,7 +164,9 @@ fn test_parse_function2() {
     ("{function('par')}", "function"),
   ];
   for (invalid_string, function) in invalids_under_test {
-    assert!(parse_function2(invalid_string, function).is_err_and(|error| error == format!("invalid {} string (\"{}\")", function, invalid_string)));
+    assert!(
+      parse_function2(invalid_string, function).is_err_and(|error| error == DshApiError::Parameter { message: format!("invalid {} string (\"{}\")", function, invalid_string) })
+    );
   }
 }
 
@@ -197,7 +202,9 @@ fn test_parse_function() {
     ("{function()}", "function"),
   ];
   for (invalid_string, function) in invalids_under_test {
-    assert!(parse_function(invalid_string, function).is_err_and(|error| error == format!("invalid {} string (\"{}\")", function, invalid_string)));
+    assert!(
+      parse_function(invalid_string, function).is_err_and(|error| error == DshApiError::Parameter { message: format!("invalid {} string (\"{}\")", function, invalid_string) })
+    );
   }
 }
 
