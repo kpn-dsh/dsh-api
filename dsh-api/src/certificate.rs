@@ -189,9 +189,8 @@ impl DshApiClient {
   /// Returns a list of all certificate ids and their configurations,
   ///
   /// # Returns
-  /// * `Ok<Vec<(String, CertificateStatus, Vec<UsedBy>>>` - list of tuples
-  ///   containing the certificate id, certificate configuration and a vector of usages,
-  ///   which can be empty.
+  /// * `Ok<Vec<(String, CertificateStatus>>` - list of tuples containing the certificate id and
+  ///   certificate configuration.
   /// * `Err<`[`DshApiError`]`>` - when the request could not be processed by the DSH
   pub async fn certificates(&self) -> DshApiResult<Vec<(String, CertificateStatus)>> {
     let certificate_ids = self.get_certificate_ids().await?;
