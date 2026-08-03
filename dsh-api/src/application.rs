@@ -42,7 +42,7 @@ use crate::application_types::ApplicationValues;
 use crate::bucket::BucketInjection;
 use crate::dsh_api_client::DshApiClient;
 use crate::error::DshApiResult;
-use crate::platform::CloudProvider;
+use crate::platform::{CloudProvider, VhostZone};
 use crate::query_processor::{Match, QueryProcessor};
 use crate::secret::SecretInjection;
 use crate::topic::TopicInjection;
@@ -240,7 +240,7 @@ impl DshApiClient {
             application_values
               .values
               .iter()
-              .map(|(port, port_mapping)| VhostInjection::vhost(*port, Some(port_mapping.to_string())))
+              .map(|(port, port_mapping)| VhostInjection::vhost(*port, VhostZone::try_from(port_mapping).unwrap_or(None)))
               .collect_vec(),
           )
         })

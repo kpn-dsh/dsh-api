@@ -1,6 +1,8 @@
 //! # Defines DSH platforms and their properties
 
 use crate::error::{DshApiError, DshApiResult};
+use crate::types::PortMapping;
+use crate::vhost::VhostString;
 use crate::{DEFAULT_PLATFORMS, ENV_VAR_PLATFORM, ENV_VAR_PLATFORMS_FILE_NAME};
 use itertools::Itertools;
 use log::{debug, error, info};
@@ -1438,6 +1440,19 @@ impl FromStr for DshPlatform {
         ),
       }),
     }
+  }
+}
+
+impl VhostZone {
+  pub(crate) fn try_from(port_mapping: &PortMapping) -> DshApiResult<Option<Self>> {
+    Ok(
+      port_mapping
+        .vhost
+        .as_ref()
+        .map(|vhost| VhostString::from_str(vhost))
+        .transpose()?
+        .and_then(|vhost_string| vhost_string.zone),
+    )
   }
 }
 

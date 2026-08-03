@@ -1,3 +1,4 @@
+use dsh_api::platform::VhostZone;
 use dsh_api::vhost::VhostString;
 use std::str::FromStr;
 
@@ -5,10 +6,10 @@ use std::str::FromStr;
 fn test_parse_vhost_string() {
   assert_eq!(
     VhostString::from_str("{ vhost('my-vhost-name') }"),
-    Ok(VhostString::new("my-vhost-name", false, None::<String>, None::<String>))
+    Ok(VhostString::new("my-vhost-name", false, None::<String>, None::<VhostZone>))
   );
   assert_eq!(
     VhostString::from_str("{ vhost('my-vhost-name.kafka.my-tenant','public') }"),
-    Ok(VhostString::new("my-vhost-name", true, Some("my-tenant"), Some("public")))
+    Ok(VhostString::new("my-vhost-name", true, Some("my-tenant"), Some(VhostZone::Public)))
   );
 }
