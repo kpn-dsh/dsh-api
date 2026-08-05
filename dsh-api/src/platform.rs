@@ -720,6 +720,30 @@ impl DshPlatform {
   /// * `tenant_name` - Tenant name.
   /// * `proxy_name` - Proxy name.
   /// * `vhost_zone` - Vhost zone.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::{DshPlatform, VhostZone};
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz")
+  ///     .proxy_vhost("my-tenant", "my-proxy", VhostZone::Public)?,
+  ///   "my-proxy.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
+  /// );
+  /// #   Ok(())
+  /// # }
+  /// ```
+  pub fn proxy_vhost(&self, tenant_name: impl Display, proxy_name: impl Display, vhost_zone: VhostZone) -> DshApiResult<String> {
+    Ok(format!("{}.{}", proxy_name, self.proxy_vhost_domain(tenant_name, vhost_zone)?))
+  }
+
+  #[rustfmt::skip]
+  /// Returns the indexed proxy vhost.
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  /// * `proxy_name` - Proxy name.
+  /// * `vhost_zone` - Vhost zone.
   /// * `index` - Proxy vhost index.
   ///
   /// # Examples
@@ -728,13 +752,13 @@ impl DshPlatform {
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// assert_eq!(
   ///   DshPlatform::new("nplz")
-  ///     .proxy_vhost("my-tenant", "my-proxy", VhostZone::Public, 2)?,
+  ///     .proxy_vhost_index("my-tenant", "my-proxy", VhostZone::Public, 2)?,
   ///   "my-proxy-2.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
   /// );
   /// #   Ok(())
   /// # }
   /// ```
-  pub fn proxy_vhost(&self, tenant_name: impl Display, proxy_name: impl Display, vhost_zone: VhostZone, index: usize) -> DshApiResult<String> {
+  pub fn proxy_vhost_index(&self, tenant_name: impl Display, proxy_name: impl Display, vhost_zone: VhostZone, index: usize) -> DshApiResult<String> {
     Ok(format!("{}-{}.{}", proxy_name, index, self.proxy_vhost_domain(tenant_name, vhost_zone)?))
   }
 
@@ -1030,6 +1054,32 @@ impl DshPlatform {
   /// ```
   pub fn tenant_monitoring_url(&self, tenant_name: impl Display) -> String {
     format!("https://monitoring-{}.{}", tenant_name, self.public_domain)
+  }
+
+  /// Returns the private domain for an app.
+  ///
+  /// The private domain for an app can only be constructed if the optional private domain
+  /// for the platform is defined. If it is not, an `Err` will be returned.
+  ///
+  /// # Parameters
+  /// * `tenant_name` - Tenant name.
+  /// * `app_name` - Name of the app.
+  ///
+  /// # Examples
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// assert_eq!(
+  ///   DshPlatform::new("nplz").tenant_private_app_domain("my-tenant", "my-app")?,
+  ///   "my-app.my-tenant.dsh-dev.dsh.np.aws.kpn.org"
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn tenant_private_app_domain(&self, tenant_name: impl Display, app_name: impl Display) -> DshApiResult<String> {
+    self
+      .tenant_domain(tenant_name, VhostZone::Private)
+      .map(|tenant_private_domain| format!("{}.{}", app_name, tenant_private_domain))
   }
 
   /// Returns the private domain for a vhost.

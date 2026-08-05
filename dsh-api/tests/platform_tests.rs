@@ -72,16 +72,16 @@ fn test_proxy_common_name() {
 #[test]
 fn test_proxy_broker_vhost() {
   assert_eq!(
-    NPLZ.proxy_vhost("my-tenant", "my-proxy", VhostZone::Private, 2).unwrap(),
+    NPLZ.proxy_vhost_index("my-tenant", "my-proxy", VhostZone::Private, 2).unwrap(),
     "my-proxy-2.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.org"
   );
   assert_eq!(
-    NPLZ.proxy_vhost("my-tenant", "my-proxy", VhostZone::Public, 2).unwrap(),
+    NPLZ.proxy_vhost_index("my-tenant", "my-proxy", VhostZone::Public, 2).unwrap(),
     "my-proxy-2.kafka.my-tenant.dsh-dev.dsh.np.aws.kpn.com"
   );
-  assert!(PROD.proxy_vhost("my-tenant", "my-proxy", VhostZone::Private, 2).is_err());
+  assert!(PROD.proxy_vhost_index("my-tenant", "my-proxy", VhostZone::Private, 2).is_err());
   assert_eq!(
-    PROD.proxy_vhost("my-tenant", "my-proxy", VhostZone::Public, 2).unwrap(),
+    PROD.proxy_vhost_index("my-tenant", "my-proxy", VhostZone::Public, 2).unwrap(),
     "my-proxy-2.kafka.my-tenant.kpn-dsh.com"
   );
 }
