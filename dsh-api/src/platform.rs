@@ -5,7 +5,7 @@ use crate::types::PortMapping;
 use crate::vhost::VhostString;
 use crate::{DEFAULT_PLATFORMS, ENV_VAR_PLATFORM, ENV_VAR_PLATFORMS_FILE_NAME};
 use itertools::Itertools;
-use log::{debug, error, info};
+use log::{debug, info};
 use regex::Regex;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
@@ -37,6 +37,7 @@ use std::{env, fs};
 /// }
 /// ```
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct DshPlatform {
   name: String,
   description: String,
@@ -46,7 +47,7 @@ pub struct DshPlatform {
   #[serde(rename = "cloud-provider")]
   cloud_provider: CloudProvider,
   region: Option<String>,
-  #[serde(alias = "issuer-endpoint")]
+  #[serde(rename = "issuer-endpoint")]
   issuer_endpoint: String,
   realm: String,
   #[serde(rename = "public-domain")]
@@ -1536,24 +1537,15 @@ static DSH_PLATFORMS: LazyLock<Vec<DshPlatform>> = LazyLock::new(|| match env::v
     Ok(platform_list_from_file) => match serde_json::from_str(platform_list_from_file.as_str()) {
       Ok(mut dsh_platforms_from_file) => {
         if let Err(validation_error) = check_for_duplicate_names_or_aliases(&dsh_platforms_from_file) {
-          error!("{}", validation_error);
           panic!("{}", validation_error)
         }
         dsh_platforms_from_file.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
         info!("dsh platform list read from '{}'", platform_file_name_from_env_var);
         dsh_platforms_from_file
       }
-      Err(parse_error) => {
-        let message = format!("invalid platforms file '{}' ({})", platform_file_name_from_env_var, parse_error);
-        error!("{}", message);
-        panic!("{}", message)
-      }
+      Err(parse_error) => panic!("invalid platforms file '{}' ({})", platform_file_name_from_env_var, parse_error),
     },
-    Err(file_error) => {
-      let message = format!("unable to read platforms file '{}' ({})", platform_file_name_from_env_var, file_error);
-      error!("{}", message);
-      panic!("{}", message)
-    }
+    Err(file_error) => panic!("unable to read platforms file '{}' ({})", platform_file_name_from_env_var, file_error),
   },
   Err(_) => match serde_json::from_str::<Vec<DshPlatform>>(DEFAULT_PLATFORMS) {
     Ok(mut default_dsh_platforms) => {
@@ -1561,7 +1553,7 @@ static DSH_PLATFORMS: LazyLock<Vec<DshPlatform>> = LazyLock::new(|| match env::v
       debug!("default platform list");
       default_dsh_platforms
     }
-    Err(_) => panic!(),
+    Err(parse_error) => panic!("illegal default platforms file ({})", parse_error),
   },
 });
 
