@@ -1385,6 +1385,55 @@ impl DshPlatform {
       })
       .ok_or_else(|| DshApiError::conversion(format!("vhost domain '{}' not valid for platform {}", vhost_domain, self.name())))
   }
+
+  /// Generate url from vhost string.
+  ///
+  /// Generates the url from the `DshPlatform` and the provided `vhost_string` and `tenant`.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// # use dsh_api::vhost::VhostString;
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// let platform = DshPlatform::new("nplz");
+  /// let vhost_string = VhostString::from_resource_str("my-vhost.my-tenant@private")?;
+  /// assert_eq!(
+  ///   platform.url_from_vhost_string(&vhost_string, Some("my-tenant")),
+  ///   Ok("my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org".to_string())
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  ///
+  /// # Parameters
+  /// * `vhost_string` - the vhost string
+  /// * `tenant` - the tenant name
+  pub fn url_from_vhost_string(&self, vhost_string: &VhostString, tenant: Option<&str>) -> DshApiResult<String> {
+    match vhost_string.zone {
+      Some(VhostZone::Private) => match tenant {
+        Some(tenant) => {
+          if vhost_string.kafka {
+            self.proxy_vhost(tenant, vhost_string.vhost_name.as_str(), VhostZone::Private)
+          } else {
+            self.tenant_private_vhost_domain(tenant, vhost_string.vhost_name.as_str())
+          }
+        }
+        None => Err(DshApiError::Conversion { message: "tenant is mandatory for private zone".to_string() }),
+      },
+      Some(VhostZone::Public) => {
+        if vhost_string.kafka {
+          match tenant {
+            Some(tenant) => self.proxy_vhost(tenant, vhost_string.vhost_name.as_str(), VhostZone::Public),
+            None => Err(DshApiError::Conversion { message: "tenant is mandatory for proxy url".to_string() }),
+          }
+        } else {
+          Ok(self.public_vhost_domain(vhost_string.vhost_name.as_str()))
+        }
+      }
+      None => Err(DshApiError::Conversion { message: "zone is missing".to_string() }),
+    }
+  }
 }
 
 impl Default for DshPlatform {
