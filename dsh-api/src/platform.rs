@@ -439,7 +439,7 @@ impl DshPlatform {
   /// Tries to find a platform from the value of an environment variable.
   ///
   /// # Parameters
-  /// * `env_var` - Name of the environment variable.
+  /// * `platform_env_var` - Name of the environment variable.
   ///
   /// # Example
   /// ```rust
@@ -458,16 +458,82 @@ impl DshPlatform {
   /// * `Ok(None)` - When the environment variable is not set.
   /// * `Err(DshApiError::Configuration)` - When the environment variable is set but does not
   ///   contain a valid platform name or alias.
-  pub fn from_env_var(env_var: &str) -> DshApiResult<Option<Self>> {
-    match env::var(env_var) {
+  pub fn from_env_var(platform_env_var: &str) -> DshApiResult<Option<Self>> {
+    match env::var(platform_env_var) {
       Ok(platform_name) => match DshPlatform::from_str(&platform_name) {
         Ok(platform) => Ok(Some(platform)),
         Err(_) => Err(DshApiError::configuration(format!(
           "environment variable '{}' contains unrecognized platform name '{}'",
-          env_var, platform_name
+          platform_env_var, platform_name
         ))),
       },
       Err(_) => Ok(None),
+    }
+  }
+
+  #[rustfmt::skip]
+  /// Find a platform from an environment variable containing the realm.
+  ///
+  /// Tries to find a platform from the realm value of an environment variable.
+  ///
+  /// # Parameters
+  /// * `realm_env_var` - Name of the realm environment variable.
+  ///
+  /// # Example
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// const REALM_ENV_VAR: &str = "DSH_PLATFORM_REALM";
+  /// match DshPlatform::from_env_var_realm(REALM_ENV_VAR) {
+  ///   Ok(Some(platform)) => println!("platform is {}", platform),
+  ///   Ok(None) => println!("environment variable {} not set", REALM_ENV_VAR),
+  ///   Err(error) => println!("{}", error) // Illegal realm
+  /// }
+  /// ```
+  ///
+  /// # Returns
+  /// * `Ok(Some(DshPlatform))` - When the environment variable is set and contains a valid
+  ///   platform realm.
+  /// * `Ok(None)` - When the environment variable is not set.
+  /// * `Err(DshApiError::Configuration)` - When the environment variable is set but does not
+  ///   contain a valid realm.
+  pub fn from_env_var_realm(realm_env_var: &str) -> DshApiResult<Option<Self>> {
+    match env::var(realm_env_var) {
+      Ok(realm) => match DshPlatform::from_str(&realm) {
+        Ok(platform) => Ok(Some(platform)),
+        Err(_) => Err(DshApiError::configuration(format!("environment variable '{}' contains unrecognized realm '{}'", realm_env_var, realm))),
+      },
+      Err(_) => Ok(None),
+    }
+  }
+
+  #[rustfmt::skip]
+  /// Find a platform from the realm.
+  ///
+  /// Tries to find a platform from the provided realm value.
+  ///
+  /// # Parameters
+  /// * `realm` - Realm value.
+  ///
+  /// # Example
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// # use std::str::FromStr;
+  /// assert_eq!(
+  ///   DshPlatform::from_realm("dev-lz-dsh"),
+  ///   DshPlatform::from_str("np-aws-lz-dsh")
+  /// );
+  /// ```
+  ///
+  /// # Returns
+  /// * `Ok(DshPlatform)` - When the realm matches a platform.
+  /// * `Err(DshApiError::Parameter)` - When the realm does not match any platform.
+  pub fn from_realm(realm: &str) -> DshApiResult<Self> {
+    match DSH_PLATFORMS
+      .iter()
+      .find(|dsh_platform| dsh_platform.realm() == realm)
+    {
+      Some(platform) => Ok(platform.clone()),
+      None => Err(DshApiError::Parameter { message: format!("invalid realm '{}'", realm) } ),
     }
   }
 
