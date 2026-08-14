@@ -433,6 +433,44 @@ impl DshPlatform {
     }
   }
 
+  #[rustfmt::skip]
+  /// Find a platform from an environment variable.
+  ///
+  /// Tries to find a platform from the value of an environment variable.
+  ///
+  /// # Parameters
+  /// * `env_var` - Name of the environment variable.
+  ///
+  /// # Example
+  /// ```rust
+  /// # use dsh_api::platform::DshPlatform;
+  /// const PLATFORM_ENV_VAR: &str = "DSH_PLATFORM";
+  /// match DshPlatform::from_env_var(PLATFORM_ENV_VAR) {
+  ///   Ok(Some(platform)) => println!("platform is {}", platform),
+  ///   Ok(None) => println!("environment variable {} not set", PLATFORM_ENV_VAR),
+  ///   Err(error) => println!("{}", error) // Illegal platform name
+  /// }
+  /// ```
+  ///
+  /// # Returns
+  /// * `Ok(Some(DshPlatform))` - When the environment variable is set and contains a valid
+  ///   platform name or alias.
+  /// * `Ok(None)` - When the environment variable is not set.
+  /// * `Err(DshApiError::Configuration)` - When the environment variable is set but does not
+  ///   contain a valid platform name or alias.
+  pub fn from_env_var(env_var: &str) -> DshApiResult<Option<Self>> {
+    match env::var(env_var) {
+      Ok(platform_name) => match DshPlatform::from_str(&platform_name) {
+        Ok(platform) => Ok(Some(platform)),
+        Err(_) => Err(DshApiError::configuration(format!(
+          "environment variable '{}' contains unrecognized platform name '{}'",
+          env_var, platform_name
+        ))),
+      },
+      Err(_) => Ok(None),
+    }
+  }
+
   /// Returns the endpoint for the http messaging api (multi)
   ///
   /// # Parameters
