@@ -471,10 +471,23 @@ impl DshPlatform {
     }
   }
 
-  #[rustfmt::skip]
   /// Find a platform from an environment variable containing the realm.
   ///
   /// Tries to find a platform from the realm value of an environment variable.
+  /// This function can be used if your application is running in a container as a DSH service
+  /// and needs to know the platform it is running on. For this you need to inject the
+  /// `DSH_ENVIRONMENT` variable (which provides the realm) in your service definition file:
+  ///
+  /// ```json
+  ///   "env": {
+  ///     "REALM": "{ variables('DSH_ENVIRONMENT') }",
+  ///     "TENANT": "{ variables('DSH_TENANT') }",
+  ///     ...
+  ///   },
+  /// ```
+  /// Note that the `DSH_TENANT` variable can be used in a similar way to inject the tenant name.
+  /// See the [service definition](https://docs.kpn-dsh.com/reference/custom-service/service-definition/#environment-variables)
+  /// for more information.
   ///
   /// # Parameters
   /// * `realm_env_var` - Name of the realm environment variable.
@@ -482,12 +495,13 @@ impl DshPlatform {
   /// # Example
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
-  /// const REALM_ENV_VAR: &str = "DSH_PLATFORM_REALM";
-  /// match DshPlatform::from_env_var_realm(REALM_ENV_VAR) {
-  ///   Ok(Some(platform)) => println!("platform is {}", platform),
-  ///   Ok(None) => println!("environment variable {} not set", REALM_ENV_VAR),
-  ///   Err(error) => println!("{}", error) // Illegal realm
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// match DshPlatform::from_env_var_realm("REALM") {
+  ///   Ok(Some(platform)) => println!("I'm running on platform {}", platform),
+  ///   _ => println!("Please tell me where I am"),
   /// }
+  /// # Ok(())
+  /// # }
   /// ```
   ///
   /// # Returns
@@ -500,7 +514,10 @@ impl DshPlatform {
     match env::var(realm_env_var) {
       Ok(realm) => match DshPlatform::from_str(&realm) {
         Ok(platform) => Ok(Some(platform)),
-        Err(_) => Err(DshApiError::configuration(format!("environment variable '{}' contains unrecognized realm '{}'", realm_env_var, realm))),
+        Err(_) => Err(DshApiError::configuration(format!(
+          "environment variable '{}' contains unrecognized realm '{}'",
+          realm_env_var, realm
+        ))),
       },
       Err(_) => Ok(None),
     }
