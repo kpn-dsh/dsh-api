@@ -31,7 +31,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
   println!();
 
-  for platform in DshPlatform::all() {
+  for platform in DshPlatform::all()? {
     println!("{} / {} -> {}", platform.name(), platform.alias(), platform.description());
   }
 

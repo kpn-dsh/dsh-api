@@ -241,12 +241,18 @@ impl DshPlatform {
   /// # Examples
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
-  /// for platform in DshPlatform::all() {
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// for platform in DshPlatform::all()? {
   ///   println!("{} / {} -> {}", platform.name(), platform.alias(), platform.description());
   /// }
+  /// # Ok(())
+  /// # }
   /// ```
-  pub fn all() -> &'static [DshPlatform] {
-    &DSH_PLATFORMS
+  pub fn all() -> DshApiResult<&'static Vec<DshPlatform>> {
+    match &*DSH_PLATFORMS {
+      Ok(platforms) => Ok(platforms),
+      Err(error) => Err(error.clone()),
+    }
   }
 
   /// Returns properly formatted bucket name.
@@ -383,6 +389,56 @@ impl DshPlatform {
     }
   }
 
+  /// Generate domain from vhost string.
+  ///
+  /// Generates the domain from the `DshPlatform` and the provided `VhostString` and `tenant`.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// # use dsh_api::vhost::VhostString;
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// let platform = DshPlatform::new("nplz");
+  /// let vhost_string = VhostString::from_resource_str("my-vhost.my-tenant@private")?;
+  /// assert_eq!(
+  ///   platform.domain_from_vhost_string(&vhost_string, Some("my-tenant")),
+  ///   Ok("my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org".to_string())
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  ///
+  /// # Parameters
+  /// * `vhost_string` - Vhost string.
+  /// * `tenant` - Optional tenant name. Note tenant name is mandatory for private zone and for
+  ///   proxy vhosts.
+  pub fn domain_from_vhost_string(&self, vhost_string: &VhostString, tenant: Option<&str>) -> DshApiResult<String> {
+    match vhost_string.zone {
+      Some(VhostZone::Private) => match tenant {
+        Some(tenant) => {
+          if vhost_string.kafka {
+            self.proxy_vhost(tenant, vhost_string.vhost_name.as_str(), VhostZone::Private)
+          } else {
+            self.tenant_private_vhost_domain(tenant, vhost_string.vhost_name.as_str())
+          }
+        }
+        None => Err(DshApiError::Conversion { message: "tenant is mandatory for private zone".to_string() }),
+      },
+      Some(VhostZone::Public) => {
+        if vhost_string.kafka {
+          match tenant {
+            Some(tenant) => self.proxy_vhost(tenant, vhost_string.vhost_name.as_str(), VhostZone::Public),
+            None => Err(DshApiError::Conversion { message: "tenant is mandatory for proxy url".to_string() }),
+          }
+        } else {
+          Ok(self.public_vhost_domain(vhost_string.vhost_name.as_str()))
+        }
+      }
+      None => Err(DshApiError::Conversion { message: "zone is missing".to_string() }),
+    }
+  }
+
   #[rustfmt::skip]
   /// Finds a platform from a domain name.
   ///
@@ -397,7 +453,8 @@ impl DshPlatform {
   /// use dsh_api::platform::DshPlatform;
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// use dsh_api::platform::VhostZone;
-  /// let (platform, vhost_zone) = DshPlatform::from_domain("dsh.np.aws.kpn.com")?.unwrap();
+  /// let (platform, vhost_zone) =
+  ///   DshPlatform::from_domain("dsh.np.aws.kpn.com")?.unwrap();
   /// assert_eq!(platform, DshPlatform::new("nplz"));
   /// assert_eq!(vhost_zone, VhostZone::Public);
   /// # Ok(())
@@ -412,24 +469,29 @@ impl DshPlatform {
   /// * `Ok(None)` - When no match was found.
   /// * `Err()` - When multiple matches were found.
   pub fn from_domain(domain_name: &str) -> DshApiResult<Option<(Self, VhostZone)>> {
-    let matching_platforms: Vec<(DshPlatform, VhostZone)> = DSH_PLATFORMS
-      .iter()
-      .filter_map(|platform| {
-        match (
-          platform.public_domain.ends_with(domain_name),
-          platform.private_domain.as_ref().is_some_and(|private_domain| private_domain.ends_with(domain_name)),
-        ) {
-          (false, false) => None,
-          (false, true) => Some((platform.clone(), VhostZone::Private)),
-          (true, false) => Some((platform.clone(), VhostZone::Public)),
-          (true, true) => None,
+    match &*DSH_PLATFORMS {
+      Ok(platforms) => {
+        let matching_platforms: Vec<(DshPlatform, VhostZone)> = platforms
+          .iter()
+          .filter_map(|platform| {
+            match (
+              platform.public_domain.ends_with(domain_name),
+              platform.private_domain.as_ref().is_some_and(|private_domain| private_domain.ends_with(domain_name)),
+            ) {
+              (false, false) => None,
+              (false, true) => Some((platform.clone(), VhostZone::Private)),
+              (true, false) => Some((platform.clone(), VhostZone::Public)),
+              (true, true) => None,
+            }
+          })
+          .collect_vec();
+        match matching_platforms.len() {
+          0 => Ok(None),
+          1 => Ok(matching_platforms.first().cloned()),
+          _ => Err(DshApiError::parameter(format!("domain '{}' matches to multiple domains", domain_name))),
         }
-      })
-      .collect_vec();
-    match matching_platforms.len() {
-      0 => Ok(None),
-      1 => Ok(matching_platforms.first().cloned()),
-      _ => Err(DshApiError::parameter(format!("domain '{}' matches to multiple domains", domain_name))),
+      }
+      Err(error) => Err(error.clone()),
     }
   }
 
@@ -545,12 +607,12 @@ impl DshPlatform {
   /// * `Ok(DshPlatform)` - When the realm matches a platform.
   /// * `Err(DshApiError::Parameter)` - When the realm does not match any platform.
   pub fn from_realm(realm: &str) -> DshApiResult<Self> {
-    match DSH_PLATFORMS
-      .iter()
-      .find(|dsh_platform| dsh_platform.realm() == realm)
-    {
-      Some(platform) => Ok(platform.clone()),
-      None => Err(DshApiError::Parameter { message: format!("invalid realm '{}'", realm) } ),
+    match &*DSH_PLATFORMS {
+      Ok(platforms) => match platforms.iter().find(|dsh_platform| dsh_platform.realm() == realm) {
+        Some(platform) => Ok(platform.clone()),
+        None => Err(DshApiError::Parameter { message: format!("invalid realm '{}'", realm) }),
+      },
+      Err(error) => Err(error.clone()),
     }
   }
 
@@ -1417,27 +1479,58 @@ impl DshPlatform {
   /// }
   /// ```
   pub fn try_default() -> DshApiResult<Self> {
-    match env::var(ENV_VAR_PLATFORM) {
-      Ok(platform_name_from_env_var) => match DshPlatform::try_from(platform_name_from_env_var.as_str()) {
-        Ok(platform) => {
-          debug!("platform '{}' (environment variable '{}')", platform, ENV_VAR_PLATFORM);
-          Ok(platform)
-        }
-        Err(_) => Err(DshApiError::Configuration {
-          message: format!(
-            "environment variable {} contains invalid platform name '{}' (possible values: {})",
-            ENV_VAR_PLATFORM,
-            platform_name_from_env_var,
-            DSH_PLATFORMS
-              .iter()
-              .map(|dsh_platform| format!("{}/{}", dsh_platform.name(), dsh_platform.alias()))
-              .collect_vec()
-              .join(", ")
-          ),
-        }),
+    match &*DSH_PLATFORMS {
+      Ok(dsh_platforms) => match env::var(ENV_VAR_PLATFORM) {
+        Ok(platform_name_from_env_var) => match DshPlatform::try_from(platform_name_from_env_var.as_str()) {
+          Ok(platform) => {
+            debug!("platform '{}' (environment variable '{}')", platform, ENV_VAR_PLATFORM);
+            Ok(platform)
+          }
+          Err(_) => Err(DshApiError::Configuration {
+            message: format!(
+              "environment variable {} contains invalid platform name '{}' (possible values: {})",
+              ENV_VAR_PLATFORM,
+              platform_name_from_env_var,
+              dsh_platforms
+                .iter()
+                .map(|dsh_platform| format!("{}/{}", dsh_platform.name(), dsh_platform.alias()))
+                .collect_vec()
+                .join(", ")
+            ),
+          }),
+        },
+        Err(_) => Err(DshApiError::Configuration { message: format!("environment variable '{}' not set", ENV_VAR_PLATFORM) }),
       },
-      Err(_) => Err(DshApiError::Configuration { message: format!("environment variable '{}' not set", ENV_VAR_PLATFORM) }),
+      Err(error) => Err(error.clone()),
     }
+  }
+
+  /// Generate url from vhost string.
+  ///
+  /// Generates the url from the `DshPlatform` and the provided `VhostString` and `tenant`.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// # use dsh_api::platform::DshPlatform;
+  /// # use dsh_api::vhost::VhostString;
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// let platform = DshPlatform::new("nplz");
+  /// let vhost_string = VhostString::from_resource_str("my-vhost.my-tenant@private")?;
+  /// assert_eq!(
+  ///   platform.url_from_vhost_string(&vhost_string, Some("my-tenant")),
+  ///   Ok("https://my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org".to_string())
+  /// );
+  /// # Ok(())
+  /// # }
+  /// ```
+  ///
+  /// # Parameters
+  /// * `vhost_string` - Vhost string.
+  /// * `tenant` - Optional tenant name. Note tenant name is mandatory for private zone and for
+  ///   proxy vhosts.
+  pub fn url_from_vhost_string(&self, vhost_string: &VhostString, tenant: Option<&str>) -> DshApiResult<String> {
+    self.domain_from_vhost_string(vhost_string, tenant).map(|domain| format!("https://{}", domain))
   }
 
   /// Validate vhost domain.
@@ -1505,55 +1598,6 @@ impl DshPlatform {
         })
       })
       .ok_or_else(|| DshApiError::conversion(format!("vhost domain '{}' not valid for platform {}", vhost_domain, self.name())))
-  }
-
-  /// Generate url from vhost string.
-  ///
-  /// Generates the url from the `DshPlatform` and the provided `vhost_string` and `tenant`.
-  ///
-  /// # Example
-  ///
-  /// ```
-  /// # use dsh_api::platform::DshPlatform;
-  /// # use dsh_api::vhost::VhostString;
-  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /// let platform = DshPlatform::new("nplz");
-  /// let vhost_string = VhostString::from_resource_str("my-vhost.my-tenant@private")?;
-  /// assert_eq!(
-  ///   platform.url_from_vhost_string(&vhost_string, Some("my-tenant")),
-  ///   Ok("my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org".to_string())
-  /// );
-  /// # Ok(())
-  /// # }
-  /// ```
-  ///
-  /// # Parameters
-  /// * `vhost_string` - the vhost string
-  /// * `tenant` - the tenant name
-  pub fn url_from_vhost_string(&self, vhost_string: &VhostString, tenant: Option<&str>) -> DshApiResult<String> {
-    match vhost_string.zone {
-      Some(VhostZone::Private) => match tenant {
-        Some(tenant) => {
-          if vhost_string.kafka {
-            self.proxy_vhost(tenant, vhost_string.vhost_name.as_str(), VhostZone::Private)
-          } else {
-            self.tenant_private_vhost_domain(tenant, vhost_string.vhost_name.as_str())
-          }
-        }
-        None => Err(DshApiError::Conversion { message: "tenant is mandatory for private zone".to_string() }),
-      },
-      Some(VhostZone::Public) => {
-        if vhost_string.kafka {
-          match tenant {
-            Some(tenant) => self.proxy_vhost(tenant, vhost_string.vhost_name.as_str(), VhostZone::Public),
-            None => Err(DshApiError::Conversion { message: "tenant is mandatory for proxy url".to_string() }),
-          }
-        } else {
-          Ok(self.public_vhost_domain(vhost_string.vhost_name.as_str()))
-        }
-      }
-      None => Err(DshApiError::Conversion { message: "zone is missing".to_string() }),
-    }
   }
 }
 
@@ -1644,22 +1688,25 @@ impl FromStr for DshPlatform {
   /// assert!(DshPlatform::from_str("illegal-platform-name").is_err());
   /// ```
   fn from_str(platform_name: &str) -> DshApiResult<Self> {
-    match DSH_PLATFORMS
-      .iter()
-      .find(|dsh_platform| dsh_platform.name() == platform_name || dsh_platform.alias() == platform_name)
-    {
-      Some(platform) => Ok(platform.clone()),
-      None => Err(DshApiError::Parameter {
-        message: format!(
-          "invalid platform name '{}' (possible values: {})",
-          platform_name,
-          DSH_PLATFORMS
-            .iter()
-            .map(|dsh_platform| format!("{}/{}", dsh_platform.name(), dsh_platform.alias()))
-            .collect_vec()
-            .join(", ")
-        ),
-      }),
+    match &*DSH_PLATFORMS {
+      Ok(dsh_platforms) => match dsh_platforms
+        .iter()
+        .find(|dsh_platform| dsh_platform.name() == platform_name || dsh_platform.alias() == platform_name)
+      {
+        Some(platform) => Ok(platform.clone()),
+        None => Err(DshApiError::Parameter {
+          message: format!(
+            "invalid platform name '{}' (possible values: {})",
+            platform_name,
+            dsh_platforms
+              .iter()
+              .map(|dsh_platform| format!("{}/{}", dsh_platform.name(), dsh_platform.alias()))
+              .collect_vec()
+              .join(", ")
+          ),
+        }),
+      },
+      Err(error) => Err(error.clone()),
     }
   }
 }
@@ -1702,30 +1749,44 @@ impl FromStr for CloudProvider {
 }
 
 // Static list of all recognized DSH platforms, lazily initialized
-static DSH_PLATFORMS: LazyLock<Vec<DshPlatform>> = LazyLock::new(|| match env::var(ENV_VAR_PLATFORMS_FILE_NAME) {
-  Ok(platform_file_name_from_env_var) => match fs::read_to_string(&platform_file_name_from_env_var) {
-    Ok(platform_list_from_file) => match serde_json::from_str(platform_list_from_file.as_str()) {
-      Ok(mut dsh_platforms_from_file) => {
-        if let Err(validation_error) = check_for_duplicate_names_or_aliases(&dsh_platforms_from_file) {
-          panic!("{}", validation_error)
+static DSH_PLATFORMS: LazyLock<DshApiResult<Vec<DshPlatform>>> = LazyLock::new(configured_platforms);
+
+/// Get the configured platforms.
+///
+/// If the environment variable `DSH_API_PLATFORMS_FILE` is set it must refer to a file containing
+/// the platforms configuration. The function will read and parse the file and use this
+/// configuration instead of the default configuration, or it will return an error when something
+/// fails.
+///
+/// # Returns
+/// * `Ok(Vec<DshPlatform>)` - When everything is configured properly, the list of platforms is
+///   returned.
+/// * `Err(DshApiError::Configuration)` - When the list of platforms could not be determined
+///   because of a mis-configuration.
+fn configured_platforms() -> DshApiResult<Vec<DshPlatform>> {
+  match env::var(ENV_VAR_PLATFORMS_FILE_NAME) {
+    Ok(platform_file_name_from_env_var) => match fs::read_to_string(&platform_file_name_from_env_var) {
+      Ok(platform_list_from_file) => match serde_json::from_str(platform_list_from_file.as_str()) {
+        Ok(mut dsh_platforms_from_file) => {
+          check_for_duplicate_names_or_aliases(&dsh_platforms_from_file)?;
+          dsh_platforms_from_file.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
+          info!("dsh platform list read from '{}'", platform_file_name_from_env_var);
+          Ok(dsh_platforms_from_file)
         }
-        dsh_platforms_from_file.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
-        info!("dsh platform list read from '{}'", platform_file_name_from_env_var);
-        dsh_platforms_from_file
-      }
-      Err(parse_error) => panic!("invalid platforms file '{}' ({})", platform_file_name_from_env_var, parse_error),
+        Err(parse_error) => Err(DshApiError::Configuration { message: format!("invalid platforms file '{}' ({})", platform_file_name_from_env_var, parse_error) }),
+      },
+      Err(file_error) => Err(DshApiError::Configuration { message: format!("unable to read platforms file '{}' ({})", platform_file_name_from_env_var, file_error.kind()) }),
     },
-    Err(file_error) => panic!("unable to read platforms file '{}' ({})", platform_file_name_from_env_var, file_error),
-  },
-  Err(_) => match serde_json::from_str::<Vec<DshPlatform>>(DEFAULT_PLATFORMS) {
-    Ok(mut default_dsh_platforms) => {
-      default_dsh_platforms.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
-      debug!("default platform list");
-      default_dsh_platforms
-    }
-    Err(parse_error) => panic!("illegal default platforms file ({})", parse_error),
-  },
-});
+    Err(_) => match serde_json::from_str::<Vec<DshPlatform>>(DEFAULT_PLATFORMS) {
+      Ok(mut default_dsh_platforms) => {
+        default_dsh_platforms.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
+        debug!("default platform list");
+        Ok(default_dsh_platforms)
+      }
+      Err(parse_error) => Err(DshApiError::Configuration { message: format!("illegal default platforms file ({})", parse_error) }),
+    },
+  }
+}
 
 // Check whether duplicate names or aliases exist
 #[allow(suspicious_double_ref_op)]
