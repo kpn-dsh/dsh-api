@@ -11,29 +11,55 @@ static PRODLZ: LazyLock<DshPlatform> = LazyLock::new(|| DshPlatform::new("prodlz
 
 #[test]
 fn test_platform_from_domain() {
-  assert_eq!(
-    DshPlatform::from_domain("dsh-k8s.np.aws.kpn.com").unwrap().unwrap(),
-    (DEVLZ.clone(), VhostZone::Public)
-  );
-  assert_eq!(
-    DshPlatform::from_domain("dsh-k8s.np.aws.kpn.org").unwrap().unwrap(),
-    (DEVLZ.clone(), VhostZone::Private)
-  );
-  assert_eq!(DshPlatform::from_domain("dsh.np.aws.kpn.com").unwrap().unwrap(), (NPLZ.clone(), VhostZone::Public));
-  assert_eq!(DshPlatform::from_domain("dsh.np.aws.kpn.org").unwrap().unwrap(), (NPLZ.clone(), VhostZone::Private));
-  assert_eq!(DshPlatform::from_domain("poc.kpn-dsh.com").unwrap().unwrap(), (POC.clone(), VhostZone::Public));
-  assert_eq!(DshPlatform::from_domain("prod.aws.kpn.com").unwrap().unwrap(), (PRODLZ.clone(), VhostZone::Public));
-  assert_eq!(DshPlatform::from_domain("prod.aws.kpn.org").unwrap().unwrap(), (PRODLZ.clone(), VhostZone::Private));
-  assert_eq!(DshPlatform::from_domain("az.kpn-dsh.com").unwrap().unwrap(), (PRODAZ.clone(), VhostZone::Public));
+  vec![
+    ("dev.dsh-k8s.np.aws.kpn.com", DEVLZ.clone(), VhostZone::Public),
+    ("dsh-dev.dsh.np.aws.kpn.com", NPLZ.clone(), VhostZone::Public),
+    ("poc.kpn-dsh.com", POC.clone(), VhostZone::Public),
+    ("kpn-dsh.com", PROD.clone(), VhostZone::Public),
+    ("dsh-prod.dsh.prod.aws.kpn.com", PRODLZ.clone(), VhostZone::Public),
+    ("az.kpn-dsh.com", PRODAZ.clone(), VhostZone::Public),
+    ("dev.dsh-k8s.np.aws.kpn.org", DEVLZ.clone(), VhostZone::Private),
+    ("dsh-dev.dsh.np.aws.kpn.org", NPLZ.clone(), VhostZone::Private),
+    ("dsh-prod.dsh.prod.aws.kpn.org", PRODLZ.clone(), VhostZone::Private),
+  ]
+  .into_iter()
+  .for_each(|(domain, platform, vhost_zone)| {
+    assert_eq!(DshPlatform::from_domain(domain).unwrap().unwrap(), (platform, vhost_zone));
+  });
+}
+
+#[test]
+fn test_platform_from_domain_none() {
+  assert!(DshPlatform::from_domain("np.aws.kpn.com").unwrap().is_none());
+  assert!(DshPlatform::from_domain("np.aws.kpn.org").unwrap().is_none());
   assert!(DshPlatform::from_domain("google.com").unwrap().is_none());
   assert!(DshPlatform::from_domain("google.org").unwrap().is_none());
 }
 
 #[test]
-fn test_platform_from_domain_error() {
-  assert!(DshPlatform::from_domain("np.aws.kpn.com").is_err());
-  assert!(DshPlatform::from_domain("np.aws.kpn.org").is_err());
-  assert!(DshPlatform::from_domain("kpn-dsh.com").is_err());
+fn test_platform_from_subdomain() {
+  vec![
+    ("my-vhost.my-tenant.dev.dsh-k8s.np.aws.kpn.com", vec![(DEVLZ.clone(), VhostZone::Public)]),
+    ("my-vhost.my-tenant.dev.dsh-k8s.np.aws.kpn.org", vec![(DEVLZ.clone(), VhostZone::Private)]),
+    ("my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.com", vec![(NPLZ.clone(), VhostZone::Public)]),
+    ("my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org", vec![(NPLZ.clone(), VhostZone::Private)]),
+    ("$.my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org", vec![(NPLZ.clone(), VhostZone::Private)]),
+    ("my-vhost.my-tenant.poc.kpn-dsh.com", vec![
+      (POC.clone(), VhostZone::Public),
+      (PROD.clone(), VhostZone::Public),
+    ]),
+    ("my-vhost.my-tenant.kpn-dsh.com", vec![(PROD.clone(), VhostZone::Public)]),
+    ("my-vhost.my-tenant.dsh-prod.dsh.prod.aws.kpn.com", vec![(PRODLZ.clone(), VhostZone::Public)]),
+    ("my-vhost.my-tenant.dsh-prod.dsh.prod.aws.kpn.org", vec![(PRODLZ.clone(), VhostZone::Private)]),
+    ("my-vhost.my-tenant.az.kpn-dsh.com", vec![
+      (PROD.clone(), VhostZone::Public),
+      (PRODAZ.clone(), VhostZone::Public),
+    ]),
+  ]
+  .into_iter()
+  .for_each(|(domain, platforms)| {
+    assert_eq!(DshPlatform::from_subdomain(domain).unwrap(), platforms, "{}", domain);
+  });
 }
 
 #[test]

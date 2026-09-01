@@ -393,6 +393,11 @@ impl DshPlatform {
   ///
   /// Generates the domain from the `DshPlatform` and the provided `VhostString` and `tenant`.
   ///
+  /// # Parameters
+  /// * `vhost_string` - Vhost string.
+  /// * `tenant` - Optional tenant name. Note tenant name is mandatory for private zone and for
+  ///   proxy vhosts.
+  ///
   /// # Example
   ///
   /// ```
@@ -408,11 +413,6 @@ impl DshPlatform {
   /// # Ok(())
   /// # }
   /// ```
-  ///
-  /// # Parameters
-  /// * `vhost_string` - Vhost string.
-  /// * `tenant` - Optional tenant name. Note tenant name is mandatory for private zone and for
-  ///   proxy vhosts.
   pub fn domain_from_vhost_string(&self, vhost_string: &VhostString, tenant: Option<&str>) -> DshApiResult<String> {
     match vhost_string.zone {
       Some(VhostZone::Private) => match tenant {
@@ -442,10 +442,17 @@ impl DshPlatform {
   #[rustfmt::skip]
   /// Finds a platform from a domain name.
   ///
-  /// Tries to find a platform that matches the provided private or public domain name.
+  /// Tries to find a platform for which the private or public domain name exactly matches the
+  /// provided domain name.
   ///
   /// # Parameters
   /// * `domain_name` - Domain to match against.
+  ///
+  /// # Returns
+  /// * `Ok(Some((DshPlatform, VhostZone)))` - When a single platform with a matching
+  ///   private or public vhost domain was found.
+  /// * `Ok(None)` - When no match was found.
+  /// * `Err()` - When multiple matches were found.
   ///
   /// # Example
   /// ```rust
@@ -454,41 +461,33 @@ impl DshPlatform {
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// use dsh_api::platform::VhostZone;
   /// let (platform, vhost_zone) =
-  ///   DshPlatform::from_domain("dsh.np.aws.kpn.com")?.unwrap();
+  ///   DshPlatform::from_domain("dsh-dev.dsh.np.aws.kpn.com")?.unwrap();
   /// assert_eq!(platform, DshPlatform::new("nplz"));
   /// assert_eq!(vhost_zone, VhostZone::Public);
   /// # Ok(())
   /// # }
   /// ```
-  ///
-  /// # Returns
-  /// * `Ok(Some((DshPlatform, VhostZone::Public)))` - When a single platform with a matching
-  ///   public vhost domain was found.
-  /// * `Ok(Some((DshPlatform, VhostZone::Private)))` - When a single platform with a matching
-  ///   private vhost domain was found.
-  /// * `Ok(None)` - When no match was found.
-  /// * `Err()` - When multiple matches were found.
   pub fn from_domain(domain_name: &str) -> DshApiResult<Option<(Self, VhostZone)>> {
     match &*DSH_PLATFORMS {
       Ok(platforms) => {
-        let matching_platforms: Vec<(DshPlatform, VhostZone)> = platforms
+        let matching_platforms: Vec<(Self, VhostZone)> = platforms
           .iter()
           .filter_map(|platform| {
             match (
-              platform.public_domain.ends_with(domain_name),
-              platform.private_domain.as_ref().is_some_and(|private_domain| private_domain.ends_with(domain_name)),
+              domain_name == platform.public_domain,
+              platform.private_domain.as_ref().is_some_and(|private_domain| domain_name == private_domain),
             ) {
               (false, false) => None,
               (false, true) => Some((platform.clone(), VhostZone::Private)),
               (true, false) => Some((platform.clone(), VhostZone::Public)),
-              (true, true) => None,
+              (true, true) => unreachable!(),
             }
           })
           .collect_vec();
         match matching_platforms.len() {
           0 => Ok(None),
           1 => Ok(matching_platforms.first().cloned()),
-          _ => Err(DshApiError::parameter(format!("domain '{}' matches to multiple domains", domain_name))),
+          _ => unreachable!(),
         }
       }
       Err(error) => Err(error.clone()),
@@ -503,6 +502,13 @@ impl DshPlatform {
   /// # Parameters
   /// * `platform_env_var` - Name of the environment variable.
   ///
+  /// # Returns
+  /// * `Ok(Some(DshPlatform))` - When the environment variable is set and contains a valid
+  ///   platform name or alias.
+  /// * `Ok(None)` - When the environment variable is not set.
+  /// * `Err(DshApiError::Configuration)` - When the environment variable is set but does not
+  ///   contain a valid platform name or alias.
+  ///
   /// # Example
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
@@ -513,13 +519,6 @@ impl DshPlatform {
   ///   Err(error) => println!("{}", error) // Illegal platform name
   /// }
   /// ```
-  ///
-  /// # Returns
-  /// * `Ok(Some(DshPlatform))` - When the environment variable is set and contains a valid
-  ///   platform name or alias.
-  /// * `Ok(None)` - When the environment variable is not set.
-  /// * `Err(DshApiError::Configuration)` - When the environment variable is set but does not
-  ///   contain a valid platform name or alias.
   pub fn from_env_var(platform_env_var: &str) -> DshApiResult<Option<Self>> {
     match env::var(platform_env_var) {
       Ok(platform_name) => match DshPlatform::from_str(&platform_name) {
@@ -554,6 +553,13 @@ impl DshPlatform {
   /// # Parameters
   /// * `realm_env_var` - Name of the realm environment variable.
   ///
+  /// # Returns
+  /// * `Ok(Some(DshPlatform))` - When the environment variable is set and contains a valid
+  ///   platform realm.
+  /// * `Ok(None)` - When the environment variable is not set.
+  /// * `Err(DshApiError::Configuration)` - When the environment variable is set but does not
+  ///   contain a valid realm.
+  ///
   /// # Example
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
@@ -565,13 +571,6 @@ impl DshPlatform {
   /// # Ok(())
   /// # }
   /// ```
-  ///
-  /// # Returns
-  /// * `Ok(Some(DshPlatform))` - When the environment variable is set and contains a valid
-  ///   platform realm.
-  /// * `Ok(None)` - When the environment variable is not set.
-  /// * `Err(DshApiError::Configuration)` - When the environment variable is set but does not
-  ///   contain a valid realm.
   pub fn from_env_var_realm(realm_env_var: &str) -> DshApiResult<Option<Self>> {
     match env::var(realm_env_var) {
       Ok(realm) => match DshPlatform::from_str(&realm) {
@@ -593,6 +592,10 @@ impl DshPlatform {
   /// # Parameters
   /// * `realm` - Realm value.
   ///
+  /// # Returns
+  /// * `Ok(DshPlatform)` - When the realm matches a platform.
+  /// * `Err(DshApiError::Parameter)` - When the realm does not match any platform.
+  ///
   /// # Example
   /// ```rust
   /// # use dsh_api::platform::DshPlatform;
@@ -602,16 +605,64 @@ impl DshPlatform {
   ///   DshPlatform::from_str("np-aws-lz-dsh")
   /// );
   /// ```
-  ///
-  /// # Returns
-  /// * `Ok(DshPlatform)` - When the realm matches a platform.
-  /// * `Err(DshApiError::Parameter)` - When the realm does not match any platform.
   pub fn from_realm(realm: &str) -> DshApiResult<Self> {
     match &*DSH_PLATFORMS {
       Ok(platforms) => match platforms.iter().find(|dsh_platform| dsh_platform.realm() == realm) {
         Some(platform) => Ok(platform.clone()),
         None => Err(DshApiError::Parameter { message: format!("invalid realm '{}'", realm) }),
       },
+      Err(error) => Err(error.clone()),
+    }
+  }
+
+  #[rustfmt::skip]
+  /// Finds the platforms that could host a subdomain name.
+  ///
+  /// Tries to find all platforms that could potentially host the provided subdomain name.
+  ///
+  /// # Parameters
+  /// * `subdomain_name` - Subdomain to match against.
+  ///
+  /// # Returns
+  /// * `Vec((DshPlatform, VhostZone::Public))` - Matching public vhost domain was found.
+  ///
+  /// # Example
+  /// ```rust
+  /// # use std::str::FromStr;
+  /// use dsh_api::platform::DshPlatform;
+  /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+  /// use dsh_api::platform::VhostZone;
+  /// let platforms =
+  ///   DshPlatform::from_subdomain("my_vhost.my_tenant.dsh-dev.dsh.np.aws.kpn.com")?;
+  /// assert_eq!(platforms.len(), 1);
+  /// let (platform, vhost_zone) = platforms.first().unwrap();
+  /// assert_eq!(*platform, DshPlatform::new("nplz"));
+  /// assert_eq!(*vhost_zone, VhostZone::Public);
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn from_subdomain(domain_name: &str) -> DshApiResult<Vec<(Self, VhostZone)>> {
+    match &*DSH_PLATFORMS {
+      Ok(platforms) => {
+
+        Ok(platforms
+          .iter()
+          .filter_map(|platform| {
+            match (
+              domain_name.ends_with(&format!(".{}", platform.public_domain)),
+              platform
+                .private_domain
+                .as_ref()
+                .is_some_and(|private_domain| domain_name.ends_with(&format!(".{}", private_domain))),
+            ) {
+              (false, false) => None,
+              (false, true) => Some((platform.clone(), VhostZone::Private)),
+              (true, false) => Some((platform.clone(), VhostZone::Public)),
+              (true, true) => unreachable!(),
+            }
+          })
+          .collect_vec())
+      }
       Err(error) => Err(error.clone()),
     }
   }
@@ -1509,6 +1560,11 @@ impl DshPlatform {
   ///
   /// Generates the url from the `DshPlatform` and the provided `VhostString` and `tenant`.
   ///
+  /// # Parameters
+  /// * `vhost_string` - Vhost string.
+  /// * `tenant` - Optional tenant name. Note tenant name is mandatory for private zone and for
+  ///   proxy vhosts.
+  ///
   /// # Example
   ///
   /// ```
@@ -1524,11 +1580,6 @@ impl DshPlatform {
   /// # Ok(())
   /// # }
   /// ```
-  ///
-  /// # Parameters
-  /// * `vhost_string` - Vhost string.
-  /// * `tenant` - Optional tenant name. Note tenant name is mandatory for private zone and for
-  ///   proxy vhosts.
   pub fn url_from_vhost_string(&self, vhost_string: &VhostString, tenant: Option<&str>) -> DshApiResult<String> {
     self.domain_from_vhost_string(vhost_string, tenant).map(|domain| format!("https://{}", domain))
   }
@@ -1540,6 +1591,14 @@ impl DshPlatform {
   ///
   /// # Parameters
   /// * `vhost_domain` - Vhost domain to validate.
+  ///
+  /// # Returns
+  /// * `Ok((subdomain, Option(vhost), kafka, zone))`
+  ///   * `subdomain` - Vhost subdomain string.
+  ///   * `tenant` - Optional tenant name.
+  ///   * `kafka` - `true` if vhost domain is for a Kafka proxy, `false` otherwise.
+  ///   * `zone` - Vhost zone, `Public` or `Private`.
+  /// * `Err()` - When `vhost_domain` is not valid for this platform.
   ///
   /// # Examples
   /// ```rust
@@ -1554,14 +1613,6 @@ impl DshPlatform {
   /// #   Ok(())
   /// # }
   /// ```
-  ///
-  /// # Returns
-  /// * `Ok((subdomain, Option(vhost), kafka, zone))`
-  ///   * `subdomain` - Vhost subdomain string.
-  ///   * `tenant` - Optional tenant name.
-  ///   * `kafka` - `true` if vhost domain is for a Kafka proxy, `false` otherwise.
-  ///   * `zone` - Vhost zone, `Public` or `Private`.
-  /// * `Err()` - When `vhost_domain` is not valid for this platform.
   pub fn validate_vhost_domain(&self, vhost_domain: &str) -> DshApiResult<(String, Option<String>, bool, VhostZone)> {
     // Subfunction parses the domain prefix, returns None when prefix is not valid
     fn validate(public_subdomain: &str, zone: VhostZone) -> Option<(String, Option<String>, bool, VhostZone)> {
@@ -1769,6 +1820,8 @@ fn configured_platforms() -> DshApiResult<Vec<DshPlatform>> {
       Ok(platform_list_from_file) => match serde_json::from_str(platform_list_from_file.as_str()) {
         Ok(mut dsh_platforms_from_file) => {
           check_for_duplicate_names_or_aliases(&dsh_platforms_from_file)?;
+          check_for_duplicate_realms(&dsh_platforms_from_file)?;
+          check_for_duplicate_domains(&dsh_platforms_from_file)?;
           dsh_platforms_from_file.sort_by(|platform_a, platform_b| platform_a.name.cmp(&platform_b.name));
           info!("dsh platform list read from '{}'", platform_file_name_from_env_var);
           Ok(dsh_platforms_from_file)
@@ -1805,6 +1858,51 @@ fn check_for_duplicate_names_or_aliases(platforms: &Vec<DshPlatform>) -> DshApiR
   }
   if !duplicates.is_empty() {
     Err(DshApiError::Configuration { message: format!("platforms file contains duplicate names and/or aliases ({})", duplicates.into_iter().join(", ")) })
+  } else {
+    Ok(())
+  }
+}
+
+// Check whether duplicate realms exist
+#[allow(suspicious_double_ref_op)]
+fn check_for_duplicate_realms(platforms: &Vec<DshPlatform>) -> DshApiResult<()> {
+  let mut realms: Vec<&str> = vec![];
+  for platform in platforms {
+    realms.push(platform.realm.as_str());
+  }
+  realms.sort();
+  let mut duplicates = Vec::new();
+  for (realm, chunk) in &realms.into_iter().chunk_by(|b| b.clone()) {
+    if chunk.collect_vec().len() > 1 {
+      duplicates.push(realm);
+    }
+  }
+  if !duplicates.is_empty() {
+    Err(DshApiError::Configuration { message: format!("platforms file contains duplicate realms ({})", duplicates.into_iter().join(", ")) })
+  } else {
+    Ok(())
+  }
+}
+
+// Check whether duplicate domains exist
+#[allow(suspicious_double_ref_op)]
+fn check_for_duplicate_domains(platforms: &Vec<DshPlatform>) -> DshApiResult<()> {
+  let mut domains: Vec<&str> = vec![];
+  for platform in platforms {
+    domains.push(platform.public_domain.as_str());
+    if let Some(private_domain) = &platform.private_domain {
+      domains.push(private_domain);
+    }
+  }
+  domains.sort();
+  let mut duplicates = Vec::new();
+  for (domain, chunk) in &domains.into_iter().chunk_by(|b| b.clone()) {
+    if chunk.collect_vec().len() > 1 {
+      duplicates.push(domain);
+    }
+  }
+  if !duplicates.is_empty() {
+    Err(DshApiError::Configuration { message: format!("platforms file contains duplicate domains ({})", duplicates.into_iter().join(", ")) })
   } else {
     Ok(())
   }
