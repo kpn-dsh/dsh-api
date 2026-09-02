@@ -39,26 +39,50 @@ fn test_platform_from_domain_none() {
 #[test]
 fn test_platform_from_subdomain() {
   vec![
-    ("my-vhost.my-tenant.dev.dsh-k8s.np.aws.kpn.com", vec![(DEVLZ.clone(), VhostZone::Public)]),
-    ("my-vhost.my-tenant.dev.dsh-k8s.np.aws.kpn.org", vec![(DEVLZ.clone(), VhostZone::Private)]),
-    ("my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.com", vec![(NPLZ.clone(), VhostZone::Public)]),
-    ("my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org", vec![(NPLZ.clone(), VhostZone::Private)]),
-    ("$.my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org", vec![(NPLZ.clone(), VhostZone::Private)]),
-    ("my-vhost.my-tenant.poc.kpn-dsh.com", vec![
-      (POC.clone(), VhostZone::Public),
-      (PROD.clone(), VhostZone::Public),
-    ]),
-    ("my-vhost.my-tenant.kpn-dsh.com", vec![(PROD.clone(), VhostZone::Public)]),
-    ("my-vhost.my-tenant.dsh-prod.dsh.prod.aws.kpn.com", vec![(PRODLZ.clone(), VhostZone::Public)]),
-    ("my-vhost.my-tenant.dsh-prod.dsh.prod.aws.kpn.org", vec![(PRODLZ.clone(), VhostZone::Private)]),
-    ("my-vhost.my-tenant.az.kpn-dsh.com", vec![
-      (PROD.clone(), VhostZone::Public),
-      (PRODAZ.clone(), VhostZone::Public),
-    ]),
+    (
+      "my-vhost.my-tenant.dev.dsh-k8s.np.aws.kpn.com",
+      (DEVLZ.clone(), "my-vhost.my-tenant".to_string(), VhostZone::Public),
+    ),
+    (
+      "my-vhost.my-tenant.dev.dsh-k8s.np.aws.kpn.org",
+      (DEVLZ.clone(), "my-vhost.my-tenant".to_string(), VhostZone::Private),
+    ),
+    (
+      "my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.com",
+      (NPLZ.clone(), "my-vhost.my-tenant".to_string(), VhostZone::Public),
+    ),
+    (
+      "my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org",
+      (NPLZ.clone(), "my-vhost.my-tenant".to_string(), VhostZone::Private),
+    ),
+    (
+      "$.my-vhost.my-tenant.dsh-dev.dsh.np.aws.kpn.org",
+      (NPLZ.clone(), "$.my-vhost.my-tenant".to_string(), VhostZone::Private),
+    ),
+    (
+      "my-vhost.my-tenant.poc.kpn-dsh.com",
+      (POC.clone(), "my-vhost.my-tenant".to_string(), VhostZone::Public),
+    ),
+    (
+      "my-vhost.my-tenant.kpn-dsh.com",
+      (PROD.clone(), "my-vhost.my-tenant".to_string(), VhostZone::Public),
+    ),
+    (
+      "my-vhost.my-tenant.dsh-prod.dsh.prod.aws.kpn.com",
+      (PRODLZ.clone(), "my-vhost.my-tenant".to_string(), VhostZone::Public),
+    ),
+    (
+      "my-vhost.my-tenant.dsh-prod.dsh.prod.aws.kpn.org",
+      (PRODLZ.clone(), "my-vhost.my-tenant".to_string(), VhostZone::Private),
+    ),
+    (
+      "my-vhost.my-tenant.az.kpn-dsh.com",
+      (PRODAZ.clone(), "my-vhost.my-tenant".to_string(), VhostZone::Public),
+    ),
   ]
   .into_iter()
   .for_each(|(domain, platforms)| {
-    assert_eq!(DshPlatform::from_subdomain(domain).unwrap(), platforms, "{}", domain);
+    assert_eq!(DshPlatform::from_subdomain(domain).unwrap().unwrap(), platforms, "{}", domain);
   });
 }
 

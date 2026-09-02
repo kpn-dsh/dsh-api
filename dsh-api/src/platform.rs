@@ -8,6 +8,7 @@ use itertools::Itertools;
 use log::{debug, info};
 use regex::Regex;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -616,15 +617,18 @@ impl DshPlatform {
   }
 
   #[rustfmt::skip]
-  /// Finds the platforms that could host a subdomain name.
+  /// Finds the platform that could host a subdomain name.
   ///
-  /// Tries to find all platforms that could potentially host the provided subdomain name.
+  /// Tries to find a platform that could potentially host the provided subdomain name.
   ///
   /// # Parameters
   /// * `subdomain_name` - Subdomain to match against.
   ///
   /// # Returns
-  /// * `Vec((DshPlatform, VhostZone::Public))` - Matching public vhost domain was found.
+  /// * Matching public vhost domain was found:
+  /// * `DshPlatform` - The matching platform.
+  /// * `String` - The subdomain string.
+  /// * `VhostZone` - Vhost zone.
   ///
   /// # Example
   /// ```rust
@@ -632,36 +636,23 @@ impl DshPlatform {
   /// use dsh_api::platform::DshPlatform;
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// use dsh_api::platform::VhostZone;
-  /// let platforms =
+  /// let platform =
   ///   DshPlatform::from_subdomain("my_vhost.my_tenant.dsh-dev.dsh.np.aws.kpn.com")?;
-  /// assert_eq!(platforms.len(), 1);
-  /// let (platform, vhost_zone) = platforms.first().unwrap();
-  /// assert_eq!(*platform, DshPlatform::new("nplz"));
-  /// assert_eq!(*vhost_zone, VhostZone::Public);
+  /// let (platform, subdomain, vhost_zone) = platform.unwrap();
+  /// assert_eq!(platform, DshPlatform::new("nplz"));
+  /// assert_eq!(subdomain, "my_vhost.my_tenant");
+  /// assert_eq!(vhost_zone, VhostZone::Public);
   /// # Ok(())
   /// # }
   /// ```
-  pub fn from_subdomain(domain_name: &str) -> DshApiResult<Vec<(Self, VhostZone)>> {
+  pub fn from_subdomain(domain_name: &str) -> DshApiResult<Option<(Self, String, VhostZone)>> {
     match &*DSH_PLATFORMS {
       Ok(platforms) => {
-
-        Ok(platforms
-          .iter()
-          .filter_map(|platform| {
-            match (
-              domain_name.ends_with(&format!(".{}", platform.public_domain)),
-              platform
-                .private_domain
-                .as_ref()
-                .is_some_and(|private_domain| domain_name.ends_with(&format!(".{}", private_domain))),
-            ) {
-              (false, false) => None,
-              (false, true) => Some((platform.clone(), VhostZone::Private)),
-              (true, false) => Some((platform.clone(), VhostZone::Public)),
-              (true, true) => unreachable!(),
-            }
-          })
-          .collect_vec())
+        Ok(postfix_free_sorted_domains(platforms).into_iter().find_map(|dp| {
+          domain_name
+            .strip_suffix(&format!(".{}", dp.domain))
+            .map(|subdomain| (dp.platform.clone(), subdomain.to_string(), dp.vhost_zone))
+        }))
       }
       Err(error) => Err(error.clone()),
     }
@@ -1906,4 +1897,42 @@ fn check_for_duplicate_domains(platforms: &Vec<DshPlatform>) -> DshApiResult<()>
   } else {
     Ok(())
   }
+}
+
+#[allow(clippy::derive_ord_xor_partial_ord)]
+#[derive(Debug, Eq, PartialEq, PartialOrd)]
+struct DomainPlatform<'a> {
+  domain: &'a str,
+  vhost_zone: VhostZone,
+  platform: &'a DshPlatform,
+}
+
+impl<'a> Ord for DomainPlatform<'a> {
+  fn cmp(&self, other: &Self) -> Ordering {
+    if other.domain.ends_with(&self.domain) {
+      Ordering::Greater
+    } else if self.domain.ends_with(&other.domain) {
+      Ordering::Less
+    } else {
+      self.domain.cmp(other.domain)
+    }
+  }
+}
+
+/// Get postfix-free sorted domains and platforms.
+///
+/// Returns a list of domain/platform tuples sorted by domain, where domains that are a postfix of
+/// another domain will be guaranteed to be placed after that other domain. This ordering can is
+/// useful when finding platforms that match a given (sub)domain.
+fn postfix_free_sorted_domains(platforms: &[DshPlatform]) -> Vec<DomainPlatform<'_>> {
+  let mut ordered_platforms = vec![];
+  for platform in platforms {
+    ordered_platforms.push(DomainPlatform { domain: platform.public_domain.as_str(), vhost_zone: VhostZone::Public, platform });
+    if let Some(private_domain) = &platform.private_domain {
+      ordered_platforms.push(DomainPlatform { domain: private_domain.as_str(), vhost_zone: VhostZone::Private, platform });
+    }
+  }
+  #[allow(clippy::unnecessary_sort_by)]
+  ordered_platforms.sort_by(|dp_a, dp_b| dp_a.cmp(dp_b));
+  ordered_platforms
 }
