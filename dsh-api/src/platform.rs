@@ -1145,7 +1145,7 @@ impl DshPlatform {
   /// Returns the url of the app in the app catalog for a tenant.
   ///
   /// Note that this method also requires the `vendor` to be specified.
-  /// This will most likely be `kpn`.
+  /// This will most likely be `klarrio`, `kpn`, `lfm` or `unibox`.
   ///
   /// # Parameters
   /// * `tenant_name` - Tenant name.
@@ -1899,31 +1899,19 @@ fn check_for_duplicate_domains(platforms: &Vec<DshPlatform>) -> DshApiResult<()>
   }
 }
 
-#[allow(clippy::derive_ord_xor_partial_ord)]
-#[derive(Debug, Eq, PartialEq, PartialOrd)]
+#[derive(Debug)]
 struct DomainPlatform<'a> {
   domain: &'a str,
   vhost_zone: VhostZone,
   platform: &'a DshPlatform,
 }
 
-impl<'a> Ord for DomainPlatform<'a> {
-  fn cmp(&self, other: &Self) -> Ordering {
-    if other.domain.ends_with(&self.domain) {
-      Ordering::Greater
-    } else if self.domain.ends_with(&other.domain) {
-      Ordering::Less
-    } else {
-      self.domain.cmp(other.domain)
-    }
-  }
-}
-
 /// Get postfix-free sorted domains and platforms.
 ///
 /// Returns a list of domain/platform tuples sorted by domain, where domains that are a postfix of
-/// another domain will be guaranteed to be placed after that other domain. This ordering can is
-/// useful when finding platforms that match a given (sub)domain.
+/// another domain will be guaranteed to be ordered after that other domain. This ordering can be
+/// useful when finding platforms that match a given subdomain, so that the longer domain is
+/// checked first.
 fn postfix_free_sorted_domains(platforms: &[DshPlatform]) -> Vec<DomainPlatform<'_>> {
   let mut ordered_platforms = vec![];
   for platform in platforms {
@@ -1932,7 +1920,16 @@ fn postfix_free_sorted_domains(platforms: &[DshPlatform]) -> Vec<DomainPlatform<
       ordered_platforms.push(DomainPlatform { domain: private_domain.as_str(), vhost_zone: VhostZone::Private, platform });
     }
   }
-  #[allow(clippy::unnecessary_sort_by)]
-  ordered_platforms.sort_by(|dp_a, dp_b| dp_a.cmp(dp_b));
+  // This `sort_by` implementation guarantees that domains which are a postfix of another domain
+  // always end later in the ordering than that other domain.
+  ordered_platforms.sort_by(|dp_a, dp_b| {
+    if dp_b.domain.ends_with(&dp_a.domain) {
+      Ordering::Greater
+    } else if dp_a.domain.ends_with(&dp_b.domain) {
+      Ordering::Less
+    } else {
+      dp_a.domain.cmp(dp_b.domain)
+    }
+  });
   ordered_platforms
 }

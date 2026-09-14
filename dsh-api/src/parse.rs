@@ -149,7 +149,7 @@ pub struct RegistryImage {
 pub struct AppImage {
   /// Stage of development (`draft` or `release`)
   pub stage: String,
-  /// Supplier of the image (`klarrio` or `kpn`)
+  /// Supplier of the image (`klarrio`, `kpn`, `lfm`, `unibox` et cetera)
   pub supplier: String,
   /// Tenant
   pub tenant: String,
@@ -185,7 +185,7 @@ impl ImageString {
   ///
   /// # Parameters
   /// * `stage` - stage of development (`draft` or `release`)
-  /// * `supplier` - supplier of the image (`klarrio` or `kpn`)
+  /// * `supplier` - supplier of the image (`klarrio`, `kpn`, `lfm`, `unibox` et cetera)
   /// * `tenant` - tenant
   /// * `id` - image identifier
   /// * `version` - image version
@@ -265,7 +265,8 @@ impl From<&str> for ImageString {
   /// a `ImageString::Unrecognized` will be returned.
   fn from(image_string: &str) -> Self {
     static APP_CATALOG_IMAGE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-      Regex::new(r"APPCATALOG_REGISTRY/dsh-appcatalog/tenant/([a-z0-9-_]+)/([0-9]+)/([0-9]+)/(release|draft)/(klarrio|kpn)/([a-zA-Z][a-zA-Z0-9-_]*):([a-zA-Z0-9-_.]*)").unwrap()
+      Regex::new(r"APPCATALOG_REGISTRY/dsh-appcatalog/tenant/([a-z0-9-_]+)/([0-9]+)/([0-9]+)/(release|draft)/(klarrio|kpn|lfm|unibox)/([a-zA-Z][a-zA-Z0-9-_]*):([a-zA-Z0-9-_.]*)")
+        .unwrap()
     });
     static REGISTRY_IMAGE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"registry.cp.kpn-dsh.com/([a-z0-9-_]+)/([a-zA-Z][a-zA-Z0-9-_]*):([a-zA-Z0-9-_.]*)").unwrap());
     match APP_CATALOG_IMAGE_REGEX.captures(image_string) {
