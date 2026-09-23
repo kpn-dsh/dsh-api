@@ -23,7 +23,7 @@ pub fn generate_types(writer: &mut dyn Write, openapi_spec_json: &str) -> Result
           let mut type_space = TypeSpace::new(&type_space_settings);
           type_space.add_root_schema(root_schema).unwrap();
           let types_code = prettyplease::unparse(&syn::parse2::<File>(type_space.to_stream()).unwrap());
-          write!(writer, "{}", &types_code).map_err(|error| format!("could not write schema ({})", error))
+          write!(writer, "{}", types_code).map_err(|error| format!("could not write schema ({})", error))
         }
         _ => Err("openapi does not contain schemas".to_string()),
       },
