@@ -34,7 +34,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
     * `DshPlatform::from_realm`,
     * `DshPlatform::url_from_vhost_string`,
     * `DshPlatform::validate_vhost_domain`.
-* Added vendors `lfm` and `unibox`.
+* Accept all vendor names (e.g. `lfm` and `unibox`).
 
 ### Fixed
 

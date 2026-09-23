@@ -265,7 +265,7 @@ impl From<&str> for ImageString {
   /// a `ImageString::Unrecognized` will be returned.
   fn from(image_string: &str) -> Self {
     static APP_CATALOG_IMAGE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-      Regex::new(r"APPCATALOG_REGISTRY/dsh-appcatalog/tenant/([a-z0-9-_]+)/([0-9]+)/([0-9]+)/(release|draft)/(klarrio|kpn|lfm|unibox)/([a-zA-Z][a-zA-Z0-9-_]*):([a-zA-Z0-9-_.]*)")
+      Regex::new(r"APPCATALOG_REGISTRY/dsh-appcatalog/tenant/([a-z0-9-_]+)/([0-9]+)/([0-9]+)/(release|draft)/([a-zA-Z][a-zA-Z0-9-_]*)/([a-zA-Z][a-zA-Z0-9-_]*):([a-zA-Z0-9-_.]*)")
         .unwrap()
     });
     static REGISTRY_IMAGE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"registry.cp.kpn-dsh.com/([a-z0-9-_]+)/([a-zA-Z][a-zA-Z0-9-_]*):([a-zA-Z0-9-_.]*)").unwrap());

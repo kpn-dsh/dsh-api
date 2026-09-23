@@ -106,6 +106,16 @@ fn test_parse_image_string() {
     )
   );
   assert_eq!(
+    ImageString::from("APPCATALOG_REGISTRY/dsh-appcatalog/tenant/my-tenant/1234/1234/release/anything/whoami:1.6.1"),
+    ImageString::app(
+      "release".to_string(),
+      "anything".to_string(),
+      "my-tenant".to_string(),
+      "whoami".to_string(),
+      "1.6.1".to_string()
+    )
+  );
+  assert_eq!(
     ImageString::from("registry.cp.kpn-dsh.com/greenbox-dev/postgres:pooria.20241211.1"),
     ImageString::registry("greenbox-dev".to_string(), "postgres".to_string(), "pooria.20241211.1".to_string())
   );
