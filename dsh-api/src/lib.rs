@@ -111,12 +111,11 @@
 //! The following features are defined:
 //!
 //! * `generic` - Enables the generic methods, which allows calling all api operations by name.
-//! * `manage` -  Enables the manage modules [`stream`] and [`tenant`], which support creating
+//! * `manage` -  Enables the manage modules `stream` and `tenant`, which support creating
 //!   managed streams and tenants. This feature is only useful when you have the proper
 //!   authorizations for these capabilities.
-//! * `robot` - Enables the
-//!   [`post_robot_generate_secret()`](DshApiClient::post_robot_generate_secret) operation, which
-//!   will generate a new robot password, invalidating the old password.
+//! * `robot` - Enables the `post_robot_generate_secret()` operation, which will generate a new
+//!   robot password, invalidating the old password.
 
 /// # Types generated from openapi file
 #[allow(clippy::clone_on_copy)]
