@@ -52,7 +52,6 @@ use crate::{Dependant, DependantApp, DependantApplication, DependantCertificate,
 use futures::try_join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
@@ -444,14 +443,6 @@ pub fn secret_env_vars_from_applications<'a>(secret_name: &str, applications: &'
   application_tuples
 }
 
-/// Checks if secret id is a system secret.
-///
-/// Deprecated, use [is_system_id].
-#[deprecated]
-pub fn secret_is_system(secret_id: &str) -> bool {
-  is_system_id(secret_id)
-}
-
 /// Checks if secret id is a system secret id.
 pub fn is_system_id(secret_id_name: &str) -> bool {
   secret_id_name.contains('!')
@@ -460,28 +451,6 @@ pub fn is_system_id(secret_id_name: &str) -> bool {
 /// Checks if secret id is a system secret name.
 pub fn is_system_name(secret_id_name: &str) -> bool {
   secret_id_name.starts_with("system/")
-}
-
-/// Converts secret id to secret name.
-///
-/// This function is deprecated, use [`secret_name()`](normalize_secret_name) instead.
-///
-/// When the secret is a system secret this function will convert the secret id to a secret name.
-/// For non-system secrets the secret id and the secret name are the same.
-///
-/// # Parameters
-/// `secret_id` - Secret id to be converted.
-///
-/// # Returns
-/// * `Cow::Borrowed` - Secret id was already in the proper format.
-/// * `Cow::Owned` - Secret id was not in the proper format.
-#[deprecated]
-pub fn secret_id_to_secret_name(secret_id: &String) -> Cow<String> {
-  if is_system_id(secret_id) {
-    Cow::Owned(format!("system{}", secret_id.replace("!", "/")))
-  } else {
-    Cow::Borrowed(secret_id)
-  }
 }
 
 /// Normalize secret id or name.
@@ -541,7 +510,7 @@ pub fn secret_resources_from_app(app: &AppCatalogApp) -> Vec<(&str, &Secret)> {
 /// * lists of environment variables that reference the secret
 ///
 /// The list is sorted by secret name.
-pub fn secrets_from_application(application: &Application) -> Vec<EnvVarInjection> {
+pub fn secrets_from_application(application: &Application) -> Vec<EnvVarInjection<'_>> {
   let mut grouped_injections: Vec<(&String, Vec<&str>)> = application
     .secrets
     .iter()
@@ -579,7 +548,7 @@ pub fn secrets_from_application(application: &Application) -> Vec<EnvVarInjectio
 /// * sorted list of pairs of secret names and lists of environment variables referencing those secrets
 ///
 /// The list is sorted by application id.
-pub fn secrets_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<EnvVarInjection>> {
+pub fn secrets_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<'_, EnvVarInjection<'_>>> {
   let mut application_tuples = applications
     .iter()
     .filter_map(|(application_id, application)| {

@@ -371,7 +371,7 @@ impl DshApiClient {
       .await
       .ok()
       .and_then(|response_bytes| from_utf8(response_bytes.as_ref()).map(|response_str| response_str.to_string()).ok())
-      .and_then(|response_string| if response_string.is_empty() { None } else { Some(response_string) })
+      .filter(|response_string| !response_string.is_empty())
   }
 }
 

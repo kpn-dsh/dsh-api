@@ -111,12 +111,11 @@
 //! The following features are defined:
 //!
 //! * `generic` - Enables the generic methods, which allows calling all api operations by name.
-//! * `manage` -  Enables the manage modules [`stream`] and [`tenant`], which support creating
+//! * `manage` -  Enables the manage modules `stream` and `tenant`, which support creating
 //!   managed streams and tenants. This feature is only useful when you have the proper
 //!   authorizations for these capabilities.
-//! * `robot` - Enables the
-//!   [`post_robot_generate_secret()`](DshApiClient::post_robot_generate_secret) operation, which
-//!   will generate a new robot password, invalidating the old password.
+//! * `robot` - Enables the `post_robot_generate_secret()` operation, which will generate a new
+//!   robot password, invalidating the old password.
 
 /// # Types generated from openapi file
 #[allow(clippy::clone_on_copy)]
@@ -183,10 +182,10 @@ pub mod volume;
 ///
 /// ```
 /// # use dsh_api::version::Version;
-/// assert_eq!(dsh_api::crate_version(), &Version::new(0, 9, 0, None));
+/// assert_eq!(dsh_api::crate_version(), &Version::new(0, 11, 0, None));
 /// ```
 pub fn crate_version() -> &'static Version {
-  static CRATE_VERSION: LazyLock<Version> = LazyLock::new(|| Version::new(0, 9, 0, None));
+  static CRATE_VERSION: LazyLock<Version> = LazyLock::new(|| Version::new(0, 11, 0, None));
   &CRATE_VERSION
 }
 
@@ -198,7 +197,7 @@ pub fn crate_version() -> &'static Version {
 ///
 /// ```
 /// # use dsh_api::version::Version;
-/// assert_eq!(dsh_api::openapi_version(), &Version::new(1, 11, 1, None));
+/// assert_eq!(dsh_api::openapi_version(), &Version::new(1, 13, 0, None));
 /// ```
 pub fn openapi_version() -> &'static Version {
   DshApiClient::api_version()
@@ -236,7 +235,7 @@ impl DependantApp {
 
 impl Display for DependantApp {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}: {}", self.app_id, self.resources.join(", "))
+    write!(f, "{}:{}", self.app_id, self.resources.join(", "))
   }
 }
 
@@ -282,7 +281,7 @@ where
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     write!(f, "{}", self.application_id)?;
     if !self.injections.is_empty() {
-      write!(f, ": {}", self.injections.iter().map(|inj| inj.to_string()).collect_vec().join(", "))?
+      write!(f, ":{}", self.injections.iter().map(|inj| inj.to_string()).collect_vec().join(","))?
     }
     Ok(())
   }
@@ -312,9 +311,9 @@ pub enum CertificateSecretKind {
 impl Display for CertificateSecretKind {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::CertChainSecret => write!(f, "cert-chain-secret"),
-      Self::KeySecret => write!(f, "key-secret"),
-      Self::PassphraseSecret => write!(f, "passphrase-secret"),
+      Self::CertChainSecret => write!(f, "ca"),
+      Self::KeySecret => write!(f, "key"),
+      Self::PassphraseSecret => write!(f, "passphrase"),
     }
   }
 }
@@ -378,7 +377,7 @@ impl DependantProxy {
 
 impl Display for DependantProxy {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.proxy_id)
+    write!(f, "{}:ca", self.proxy_id)
   }
 }
 
@@ -461,9 +460,9 @@ where
   T: Display,
 {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "tr:{}", self.trifonius_id)?;
+    write!(f, "{}", self.trifonius_id)?;
     if !self.injections.is_empty() {
-      write!(f, ": {}", self.injections.iter().map(|inj| inj.to_string()).collect_vec().join(", "))?
+      write!(f, ":{}", self.injections.iter().map(|inj| inj.to_string()).collect_vec().join(","))?
     }
     Ok(())
   }
@@ -504,19 +503,19 @@ pub enum Dependant<T> {
 
 impl<T> Dependant<T> {
   pub fn app(app_id: String, resources: Vec<String>) -> Self {
-    Dependant::App { app: DependantApp::new(app_id, resources) }
+    Self::App { app: DependantApp::new(app_id, resources) }
   }
 
   pub fn application(application_id: String, instances: u64, injections: Vec<T>) -> Self {
-    Dependant::Application { application: DependantApplication::new(application_id, instances, injections) }
+    Self::Application { application: DependantApplication::new(application_id, instances, injections) }
   }
 
   pub fn certificate(certificate_id: String, secret_kind: CertificateSecretKind) -> Self {
-    Dependant::Certificate { certificate: DependantCertificate::new(certificate_id, secret_kind) }
+    Self::Certificate { certificate: DependantCertificate::new(certificate_id, secret_kind) }
   }
 
   pub fn proxy(proxy_id: String, instances: u64) -> Self {
-    Dependant::Proxy { proxy: DependantProxy::new(proxy_id, instances) }
+    Self::Proxy { proxy: DependantProxy::new(proxy_id, instances) }
   }
 
   pub fn service(service_id: &str, instances: u64, injections: Vec<T>) -> Self {
@@ -528,7 +527,17 @@ impl<T> Dependant<T> {
   }
 
   pub fn trifonius(trifonius_id: String, instances: u64, injections: Vec<T>) -> Self {
-    Dependant::Trifonius { trifonius: DependantTrifonius::new(trifonius_id, instances, injections) }
+    Self::Trifonius { trifonius: DependantTrifonius::new(trifonius_id, instances, injections) }
+  }
+
+  pub fn kind(&self) -> &str {
+    match self {
+      Self::App { .. } => "app",
+      Self::Application { .. } => "service",
+      Self::Certificate { .. } => "cert",
+      Self::Proxy { .. } => "proxy",
+      Self::Trifonius { .. } => "tf",
+    }
   }
 
   pub fn id(&self) -> &str {

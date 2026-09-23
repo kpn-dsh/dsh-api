@@ -2,7 +2,43 @@
 
 All notable changes to the DSH Api Client project will be documented in this file.
 
-## [Unreleased]
+## [0.11.0] - 2026-09-23
+
+### Non backwards compatible changes
+
+* Almost all methods and functions now return `DshApiResult`.
+* Openapi specification updated to version 1.13.0. Field
+  `started_at` in struct `Task` is now optional.
+* Struct `DshPermission` fields `manage` and `view` replaced by set `permissions` that contains all
+  permissions.
+* Removed deprecated `platform` methods:
+    * `DshPlatform::client_id`,
+    * `DshPlatform::tenant_client_id`,
+    * `DshPlatform::tenant_private_domain`,
+    * `DshPlatform::tenant_proxy_private_bootstrap_servers`,
+    * `DshPlatform::tenant_proxy_private_schema_store_host`,
+    * `DshPlatform::tenant_proxy_public_bootstrap_servers`,
+    * `DshPlatform::tenant_proxy_public_schema_store_host` and
+    * `DshPlatform::tenant_public_domain`.
+* Removed deprecated function `Secret::secret_is_system`.
+* Renamed platform `k8s-dev-aws-lz-dsh` to `dev-aws-lz-dsh` (alias `devlz`).
+* Platform specification file no longer accepts alias `issuer_endpoint`.
+* Function `DshPlatform::all` returns `Result`.
+
+### Added
+
+* Added `platform` methods:
+    * `DshPlatform::domain_from_vhost_string`,
+    * `DshPlatform::from_env_var`,
+    * `DshPlatform::from_env_var_realm`,
+    * `DshPlatform::from_realm`,
+    * `DshPlatform::url_from_vhost_string`,
+    * `DshPlatform::validate_vhost_domain`.
+* Accept all vendor names (e.g. `lfm` and `unibox`).
+
+### Fixed
+
+* Unused import warning (`FromStr`) in generated generic code.
 
 ## [0.10.0] - 2026-05-29
 
@@ -14,6 +50,7 @@ All notable changes to the DSH Api Client project will be documented in this fil
 * Added `platform` methods:
     * `DshPlatform::consumer_group`.
     * `DshPlatform::from_domain`,
+    * `DshPlatform::from_subdomain`,
     * `DshPlatform::robot_client_id`,
     * `DshPlatform::robot_tenant_client_id`.
     * Custom serializer and deserializer.

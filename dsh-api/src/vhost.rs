@@ -30,8 +30,9 @@ use crate::application_types::ApplicationValues;
 /// # Derived methods
 /// * [`list_vhosts_with_usage() -> [id, [usage]]`](DshApiClient::list_vhosts_with_usage)
 use crate::dsh_api_client::DshApiClient;
-use crate::error::DshApiResult;
+use crate::error::{DshApiError, DshApiResult};
 use crate::parse::parse_function;
+use crate::platform::VhostZone;
 use crate::types::{AppCatalogApp, AppCatalogAppResourcesValue, Application, PortMapping, Vhost};
 use crate::{Dependant, DependantApp, DependantApplication};
 use futures::try_join;
@@ -54,16 +55,15 @@ pub enum VhostInjection {
   Variable { variable_name: String },
   /// Vhost injection, where the values are the exposed port and the zone
   #[serde(rename = "vhost")]
-  Vhost { exposed_port: String, zone: Option<String> },
+  Vhost { exposed_port: String, zone: Option<VhostZone> },
 }
 
 impl VhostInjection {
-  pub(crate) fn vhost<S, T>(exposed_port: S, zone: Option<T>) -> Self
+  pub(crate) fn vhost<T>(exposed_port: T, zone: Option<VhostZone>) -> Self
   where
-    S: Into<String>,
     T: Into<String>,
   {
-    Self::Vhost { exposed_port: exposed_port.into(), zone: zone.map(|zone| zone.into()) }
+    Self::Vhost { exposed_port: exposed_port.into(), zone }
   }
 }
 
@@ -89,15 +89,15 @@ impl DshApiClient {
     let applications = self.get_application_configuration_map().await?;
     let mut vhosts_map = HashMap::<String, Vec<DependantApplication<VhostInjection>>>::new();
     for ApplicationValues { id, application, values } in vhosts_from_applications(&applications) {
-      for (vhost, port, _) in values {
+      for (vhost, port, port_mapping) in values {
         let dependant_applications = vhosts_map.entry(vhost.clone()).or_default();
         dependant_applications.push(DependantApplication::new(id.to_string(), application.instances, vec![VhostInjection::Vhost {
           exposed_port: port.to_string(),
-          zone: None,
+          zone: VhostZone::try_from(port_mapping)?,
         }]));
       }
     }
-    let mut vhosts: Vec<(String, Vec<DependantApplication<VhostInjection>>)> = Vec::from_iter(vhosts_map.into_iter());
+    let mut vhosts: Vec<(String, Vec<DependantApplication<VhostInjection>>)> = Vec::from_iter(vhosts_map);
     vhosts.sort_by(|(vhost_id_a, _), (vhost_id_b, _)| vhost_id_a.cmp(vhost_id_b));
     Ok(vhosts)
   }
@@ -123,6 +123,65 @@ impl DshApiClient {
     Ok(vhosts)
   }
 
+  // /// Returns all vhosts with attached certificates.
+  // ///
+  // /// Returns a sorted list of all vhosts together with the certificates that are attached to them.
+  // /// Note that only vhosts that are actually attached to a certificate will be included. Vhosts
+  // /// from Kafka proxy certificates will not be included.
+  // pub async fn vhosts_with_certificates(&self) -> DshApiResult<Vec<(String, Vec<CertificateStatus>)>> {
+  //   let certificate_ids = self.get_certificate_ids().await?;
+  //   let certificates = try_join_all(certificate_ids.iter().map(|certificate_id| self.get_certificate(certificate_id.as_str()))).await?;
+  //
+  //   let mut vhosts_with_certificates: Vec<(String, Vec<CertificateStatus>)> = Vec::new();
+  //
+  //   for (certificate_id, certificate_status) in certificate_ids.iter().zip(certificates) {
+  //     if let Some(actual_certificate) = certificate_status.actual {
+  //
+  //       self.platform().tenant_domain(self.tenant_name(), self.platform().v)
+  //
+  //       actual_certificate.distinguished_name;
+  //       actual_certificate.dns_names;
+  //       actual_certificate.not_after;
+  //     }
+  //     let mut dependants: Vec<Dependant<T>> = vec![];
+  //     if let Some(certificate_configuration) = &certificate_status.configuration {
+  //       for (app_id, app_catalog_app) in &apps {
+  //         let certificate_resources = certificate_resources_from_app(app_catalog_app)
+  //           .iter()
+  //           .filter(|(_, certificate_resource)| certificate_resource.cert_chain_secret == certificate_configuration.cert_chain_secret)
+  //           .map(|(resource_id, _)| resource_id.to_string())
+  //           .collect_vec();
+  //         if !certificate_resources.is_empty() {
+  //           dependants.push(Dependant::app(app_id.to_string(), certificate_resources));
+  //         }
+  //       }
+  //     } else {
+  //       return Err(DshApiError::unexpected(format!("certificate {} has not configuration", certificate_id)));
+  //     }
+  //     for (proxy_id, proxy) in &proxies {
+  //       if proxy.certificate == *certificate_id {
+  //         dependants.push(Dependant::proxy(proxy_id.to_string(), proxy.instances.get()));
+  //       }
+  //     }
+  //     certificates_with_usage.push((certificate_id.clone(), certificate_status, dependants));
+  //   }
+  //
+  //   let apps = self.get_appcatalogapp_configuration_map().await?;
+  //   let mut vhosts_map = HashMap::<String, Vec<DependantApp>>::new();
+  //   let mut app_ids = apps.keys().collect_vec();
+  //   app_ids.sort();
+  //   for app_id in app_ids {
+  //     let app = apps.get(app_id).unwrap();
+  //     for (_, vhost_string) in vhost_strings_from_app(app) {
+  //       let dependant_apps = vhosts_map.entry(vhost_string.vhost_name.clone()).or_default();
+  //       dependant_apps.push(DependantApp::new(app_id.clone(), vec![vhost_string.to_string()]));
+  //     }
+  //   }
+  //   let mut vhosts: Vec<(String, Vec<DependantApp>)> = Vec::from_iter(vhosts_map);
+  //   vhosts.sort_by(|(vhost_id_a, _), (vhost_id_b, _)| vhost_id_a.cmp(vhost_id_b));
+  //   Ok(vhosts)
+  // }
+
   /// Returns all vhosts with dependant applications and apps.
   ///
   /// Returns a sorted list of all vhosts together with the applications and apps that use them.
@@ -132,11 +191,11 @@ impl DshApiClient {
     let (application_configuration_map, appcatalogapp_configuration_map) = try_join!(self.get_application_configuration_map(), self.get_appcatalogapp_configuration_map())?;
     let mut vhosts_with_dependants_map = HashMap::<String, Vec<Dependant<VhostInjection>>>::new();
     for ApplicationValues { id, application, values } in vhosts_from_applications(&application_configuration_map) {
-      for (vhost, port, _) in values {
+      for (vhost, port, port_mapping) in values {
         let dependants = vhosts_with_dependants_map.entry(vhost.clone()).or_default();
         dependants.push(Dependant::service(id, application.instances, vec![VhostInjection::Vhost {
           exposed_port: port.to_string(),
-          zone: None,
+          zone: VhostZone::try_from(port_mapping)?,
         }]));
       }
     }
@@ -149,7 +208,7 @@ impl DshApiClient {
         dependants.push(Dependant::app(app_id.clone(), vec![vhost_string.to_string()]));
       }
     }
-    let mut vhosts: Vec<(String, Vec<Dependant<VhostInjection>>)> = Vec::from_iter(vhosts_with_dependants_map.into_iter());
+    let mut vhosts: Vec<(String, Vec<Dependant<VhostInjection>>)> = Vec::from_iter(vhosts_with_dependants_map);
     vhosts.sort_by(|(vhost_id_a, _), (vhost_id_b, _)| vhost_id_a.cmp(vhost_id_b));
     Ok(vhosts)
   }
@@ -182,7 +241,7 @@ pub fn vhost_port_mappings_from_application<'a>(vhost_id: &str, application: &'a
       })
     })
     .collect_vec();
-  port_mappings.sort_by(|(port_a, _), (port_b, _)| port_a.cmp(port_b));
+  port_mappings.sort_by_key(|(port, _)| *port);
   port_mappings
 }
 
@@ -253,7 +312,7 @@ pub(crate) fn vhost_strings_from_app(app: &AppCatalogApp) -> Vec<(&str, VhostStr
       }
     }
   }
-  resources.sort_by(|(resource_id_a, _), (resource_id_b, _)| resource_id_a.cmp(resource_id_b));
+  resources.sort_by_key(|(resource_id, _)| *resource_id);
   resources
 }
 
@@ -301,7 +360,7 @@ pub fn vhosts_from_application(application: &Application) -> Vec<(String, &str, 
 /// * application id
 /// * application reference
 /// * lists of vhost ids, ports and port mappings used in the application
-pub fn vhosts_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<(String, &str, &PortMapping)>> {
+pub fn vhosts_from_applications(applications: &HashMap<String, Application>) -> Vec<ApplicationValues<'_, (String, &str, &PortMapping)>> {
   let mut vhosts: Vec<ApplicationValues<(String, &str, &PortMapping)>> = vec![];
   for (application_id, application) in applications {
     for (port, port_mapping) in &application.exposed_ports {
@@ -313,7 +372,6 @@ pub fn vhosts_from_applications(applications: &HashMap<String, Application>) -> 
     }
   }
   vhosts.sort();
-  // vhosts.sort_by(|application_tuple_a, application_tuple_b| application_tuple_a.cmp(application_tuple_b));
   vhosts
 }
 
@@ -329,7 +387,7 @@ pub struct VhostString {
   /// Optional tenant name
   pub tenant_name: Option<String>,
   /// Optional zone
-  pub zone: Option<String>,
+  pub zone: Option<VhostZone>,
 }
 
 impl VhostString {
@@ -340,13 +398,12 @@ impl VhostString {
   /// * `kafka` - whether the vhost name contains the substring `.kafka`
   /// * `tenant_name` - optional tenant name
   /// * `zone` - optional zone, typically `private` or `public`
-  pub fn new<T, U, V>(vhost_name: T, kafka: bool, tenant_name: Option<U>, zone: Option<V>) -> Self
+  pub fn new<S, T>(vhost_name: S, kafka: bool, tenant_name: Option<T>, zone: Option<VhostZone>) -> Self
   where
+    S: Into<String>,
     T: Into<String>,
-    U: Into<String>,
-    V: Into<String>,
   {
-    Self { vhost_name: vhost_name.into(), kafka, tenant_name: tenant_name.map(Into::<String>::into), zone: zone.map(Into::<String>::into) }
+    Self { vhost_name: vhost_name.into(), kafka, tenant_name: tenant_name.map(Into::<String>::into), zone }
   }
 
   /// Parse vhost resource string.
@@ -356,6 +413,7 @@ impl VhostString {
   /// # Example
   ///
   /// ```
+  /// # use dsh_api::platform::VhostZone;
   /// # use dsh_api::vhost::VhostString;
   /// assert_eq!(
   ///   VhostString::from_resource_str("my-vhost.my-tenant@private"),
@@ -363,7 +421,7 @@ impl VhostString {
   ///     "my-vhost".to_string(),
   ///     false,
   ///     Some("my-tenant".to_string()),
-  ///     Some("private".to_string())
+  ///     Some(VhostZone::Private)
   ///   ))
   /// );
   /// ```
@@ -374,7 +432,7 @@ impl VhostString {
   /// # Returns
   /// When the provided string is valid, the method returns an instance of the `VhostString`
   /// struct, describing the auth string.
-  pub fn from_resource_str(vhost_resource_string: &str) -> Result<Self, String> {
+  pub fn from_resource_str(vhost_resource_string: &str) -> DshApiResult<Self> {
     static VHOST_RESOURCE_STRING_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)@([a-zA-Z0-9_-]+)$").unwrap());
 
     VHOST_RESOURCE_STRING_REGEX
@@ -384,16 +442,17 @@ impl VhostString {
           captures.get(1).map(|vhost_match| vhost_match.as_str()).unwrap_or_default(),
           false,
           captures.get(2).map(|tenant_match| Some(tenant_match.as_str())).unwrap_or_default(),
-          captures.get(3).map(|zone_match| zone_match.as_str()),
+          captures.get(3).and_then(|zone_match| VhostZone::from_str(zone_match.as_str()).ok()),
         )
       })
-      .ok_or(format!("invalid value in vhost string (\"{}\")", vhost_resource_string))
+      .ok_or(DshApiError::Parameter { message: format!("invalid value in vhost string (\"{}\")", vhost_resource_string) })
   }
 }
 
 impl FromStr for VhostString {
-  type Err = String;
+  type Err = DshApiError;
 
+  #[rustfmt::skip]
   /// Parse vhost string.
   ///
   /// Multiple vhosts using the `join` function are not supported.
@@ -402,10 +461,16 @@ impl FromStr for VhostString {
   ///
   /// ```
   /// # use std::str::FromStr;
+  /// # use dsh_api::platform::VhostZone;
   /// # use dsh_api::vhost::VhostString;
   /// assert_eq!(
   ///   VhostString::from_str("{ vhost('my-vhost-name') }"),
-  ///   Ok(VhostString::new("my-vhost-name".to_string(), false, None::<String>, None::<String>))
+  ///   Ok(VhostString::new(
+  ///     "my-vhost-name".to_string(),
+  ///     false,
+  ///     None::<String>,
+  ///     None::<VhostZone>
+  ///   ))
   /// );
   /// assert_eq!(
   ///   VhostString::from_str("{ vhost('my-vhost-name.kafka.my-tenant','public') }"),
@@ -413,7 +478,7 @@ impl FromStr for VhostString {
   ///     "my-vhost-name".to_string(),
   ///     true,
   ///     Some("my-tenant".to_string()),
-  ///     Some("public".to_string())
+  ///     Some(VhostZone::Public)
   ///   ))
   /// );
   /// ```
@@ -424,30 +489,29 @@ impl FromStr for VhostString {
   /// # Returns
   /// When the provided string is valid, the method returns an instance of the `VhostString`
   /// struct, describing the auth string.
-  fn from_str(vhost_string: &str) -> Result<Self, Self::Err> {
+  fn from_str(vhost_string: &str) -> DshApiResult<Self> {
     static VALUE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"([a-zA-Z0-9_-]+)(\.kafka)?(?:\.([a-zA-Z0-9_-]+))?").unwrap());
     let (value_string, zone) = parse_function(vhost_string, "vhost")?;
-    VALUE_REGEX
-      .captures(value_string)
-      .map(|captures| {
-        VhostString::new(
-          captures.get(1).map(|vhost_match| vhost_match.as_str()).unwrap_or_default(),
-          captures.get(2).is_some(),
-          captures.get(3).map(|tenant_match| tenant_match.as_str()),
-          zone,
-        )
-      })
-      .ok_or(format!("invalid value in vhost string (\"{}\")", vhost_string))
+    match VALUE_REGEX.captures(value_string) {
+      Some(captures) => {
+        let vhost_name = captures.get(1).map(|vhost_match| vhost_match.as_str()).unwrap_or_default();
+        let kafka = captures.get(2).is_some();
+        let tenant_name = captures.get(3).map(|tenant_match| tenant_match.as_str());
+        let vhost_zone = zone.map(VhostZone::from_str).transpose()?;
+        Ok(VhostString::new(vhost_name, kafka, tenant_name, vhost_zone))
+      }
+      None => Err(DshApiError::Parameter { message: format!("invalid value in vhost string (\"{}\")", vhost_string) }),
+    }
   }
 }
 
 impl TryFrom<&PortMapping> for VhostString {
-  type Error = String;
+  type Error = DshApiError;
 
-  fn try_from(port_mapping: &PortMapping) -> Result<Self, Self::Error> {
+  fn try_from(port_mapping: &PortMapping) -> DshApiResult<Self> {
     match &port_mapping.vhost {
       Some(vhost) => VhostString::from_str(vhost),
-      None => Err("port mapping has no vhost".to_string()),
+      None => Err(DshApiError::Parameter { message: "port mapping has no vhost".to_string() }),
     }
   }
 }

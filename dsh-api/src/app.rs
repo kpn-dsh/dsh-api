@@ -368,7 +368,7 @@ pub(crate) fn app_resources<'a, T>(app: &'a AppCatalogApp, get_resource_variant:
       resources.push((resource_id, resource))
     }
   }
-  resources.sort_by(|(resource_id_a, _), (resource_id_b, _)| resource_id_a.cmp(resource_id_b));
+  resources.sort_by_key(|(resource_id, _)| *resource_id);
   resources
 }
 
@@ -397,6 +397,6 @@ pub(crate) fn apps_that_use_resource<'a, T: 'a>(
       }
     }
   }
-  tuples.sort_by(|(app_id_a, _, _), (app_id_b, _, _)| app_id_a.cmp(app_id_b));
+  tuples.sort_by_key(|(app_id, _, _)| *app_id);
   tuples
 }

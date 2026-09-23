@@ -1,3 +1,4 @@
+use dsh_api::error::DshApiError;
 use dsh_api::parse::{parse_basic_authentication_string, parse_function, parse_function1, parse_function2, AuthString, ImageString};
 use std::str::FromStr;
 
@@ -105,6 +106,16 @@ fn test_parse_image_string() {
     )
   );
   assert_eq!(
+    ImageString::from("APPCATALOG_REGISTRY/dsh-appcatalog/tenant/my-tenant/1234/1234/release/anything/whoami:1.6.1"),
+    ImageString::app(
+      "release".to_string(),
+      "anything".to_string(),
+      "my-tenant".to_string(),
+      "whoami".to_string(),
+      "1.6.1".to_string()
+    )
+  );
+  assert_eq!(
     ImageString::from("registry.cp.kpn-dsh.com/greenbox-dev/postgres:pooria.20241211.1"),
     ImageString::registry("greenbox-dev".to_string(), "postgres".to_string(), "pooria.20241211.1".to_string())
   );
@@ -133,7 +144,9 @@ fn test_parse_function1() {
     ("{function('par1','par2')}", "function"),
   ];
   for (invalid_string, function) in invalids_under_test {
-    assert!(parse_function1(invalid_string, function).is_err_and(|error| error == format!("invalid {} string (\"{}\")", function, invalid_string)));
+    assert!(
+      parse_function1(invalid_string, function).is_err_and(|error| error == DshApiError::Parameter { message: format!("invalid {} string (\"{}\")", function, invalid_string) })
+    );
   }
 }
 
@@ -161,7 +174,9 @@ fn test_parse_function2() {
     ("{function('par')}", "function"),
   ];
   for (invalid_string, function) in invalids_under_test {
-    assert!(parse_function2(invalid_string, function).is_err_and(|error| error == format!("invalid {} string (\"{}\")", function, invalid_string)));
+    assert!(
+      parse_function2(invalid_string, function).is_err_and(|error| error == DshApiError::Parameter { message: format!("invalid {} string (\"{}\")", function, invalid_string) })
+    );
   }
 }
 
@@ -197,7 +212,9 @@ fn test_parse_function() {
     ("{function()}", "function"),
   ];
   for (invalid_string, function) in invalids_under_test {
-    assert!(parse_function(invalid_string, function).is_err_and(|error| error == format!("invalid {} string (\"{}\")", function, invalid_string)));
+    assert!(
+      parse_function(invalid_string, function).is_err_and(|error| error == DshApiError::Parameter { message: format!("invalid {} string (\"{}\")", function, invalid_string) })
+    );
   }
 }
 

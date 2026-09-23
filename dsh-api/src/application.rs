@@ -42,7 +42,7 @@ use crate::application_types::ApplicationValues;
 use crate::bucket::BucketInjection;
 use crate::dsh_api_client::DshApiClient;
 use crate::error::DshApiResult;
-use crate::platform::CloudProvider;
+use crate::platform::{CloudProvider, VhostZone};
 use crate::query_processor::{Match, QueryProcessor};
 use crate::secret::SecretInjection;
 use crate::topic::TopicInjection;
@@ -124,7 +124,7 @@ impl DshApiClient {
     let task_ids = self.get_task_appid_ids(&application_id).await?;
     let tasks: Vec<TaskStatus> = try_join_all(task_ids.iter().map(|task_id| self.get_task(&application_id, task_id))).await?;
     let mut tasks: Vec<(String, TaskStatus)> = task_ids.into_iter().zip(tasks).collect();
-    tasks.sort_by(|(_, task_a), (_, task_b)| timestamp(task_b).cmp(&timestamp(task_a)));
+    tasks.sort_by_key(|(_, task)| timestamp(task));
     Ok(tasks)
   }
 
@@ -240,7 +240,7 @@ impl DshApiClient {
             application_values
               .values
               .iter()
-              .map(|(port, port_mapping)| VhostInjection::vhost(*port, Some(port_mapping.to_string())))
+              .map(|(port, port_mapping)| VhostInjection::vhost(*port, VhostZone::try_from(port_mapping).unwrap_or(None)))
               .collect_vec(),
           )
         })

@@ -90,7 +90,7 @@ impl DshApiClient {
   /// * `Err<`[`DshApiError`]`>` - When the request could not be processed.
   pub async fn manifest_latest_version(&self, manifest_id: &str, allow_draft_version: bool) -> DshApiResult<Manifest> {
     match self.manifest_all_versions(manifest_id).await {
-      Ok(manifests) => match manifests.into_iter().filter(|manifest| !manifest.draft || allow_draft_version).next_back() {
+      Ok(manifests) => match manifests.into_iter().rfind(|manifest| !manifest.draft || allow_draft_version) {
         Some(latest_manifest) => Ok(latest_manifest),
         None => Err(DshApiError::not_found()),
       },
@@ -326,7 +326,7 @@ impl Display for Manifest {
 impl TryFrom<&AppCatalogManifest> for Manifest {
   type Error = DshApiError;
 
-  fn try_from(app_catalog_manifest: &AppCatalogManifest) -> Result<Self, Self::Error> {
+  fn try_from(app_catalog_manifest: &AppCatalogManifest) -> DshApiResult<Self> {
     from_str::<Manifest>(app_catalog_manifest.payload.as_str())
       .map(|payload| Manifest { draft: app_catalog_manifest.draft, last_modified: epoch_milliseconds_to_string(app_catalog_manifest.last_modified as i64), ..payload })
       .map_err(DshApiError::from)
@@ -727,16 +727,16 @@ impl Resource {
 }
 
 impl TryFrom<Value> for Numerical {
-  type Error = String;
+  type Error = DshApiError;
 
-  fn try_from(value: Value) -> Result<Self, Self::Error> {
+  fn try_from(value: Value) -> DshApiResult<Self> {
     match value.as_i64() {
       Some(value) => Ok(Numerical::Integer { value }),
       None => match value.as_f64() {
         Some(value) => Ok(Numerical::Float { value }),
         None => match value.as_str() {
           Some(template) => Ok(Numerical::Template { template: template.to_string() }),
-          None => Err(format!("could not parse '{}' value", value)),
+          None => Err(DshApiError::Parameter { message: format!("could not parse '{}' value", value) }),
         },
       },
     }

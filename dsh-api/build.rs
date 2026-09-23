@@ -10,7 +10,7 @@ use std::io::BufWriter;
 fn main() -> Result<(), Box<dyn Error>> {
   let out_dir = std::env::var("OUT_DIR").unwrap();
 
-  const OPENAPI_SPEC_FILE_NAME: &str = "openapi_spec/openapi_1_11_1.json";
+  const OPENAPI_SPEC_FILE_NAME: &str = "openapi_spec/openapi_1_13_0.json";
 
   println!("cargo:rerun-if-changed={}", OPENAPI_SPEC_FILE_NAME);
 

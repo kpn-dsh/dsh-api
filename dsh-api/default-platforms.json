@@ -1,13 +1,13 @@
 [
   {
-    "name": "k8s-dev-aws-lz-dsh",
+    "name": "dev-aws-lz-dsh",
     "description": "Development platform for Klarrio",
     "alias": "devlz",
     "is-production": false,
     "cloud-provider": "aws",
     "region": "eu-west-1",
     "issuer-endpoint": "https://auth.staging.dev-aws-cp.kpn-dsh.com/auth/realms/k8s-dev-aws-lz-dsh",
-    "realm": "k8s-dev-aws-lz-dsh",
+    "realm": "dev-aws-lz-dsh",
     "public-domain": "dev.dsh-k8s.np.aws.kpn.com",
     "private-domain": "dev.dsh-k8s.np.aws.kpn.org"
   },
