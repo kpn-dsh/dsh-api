@@ -2,7 +2,7 @@
 
 All notable changes to the DSH Api Client project will be documented in this file.
 
-## [0.11.0] - YYYY-MM-DD
+## [0.11.0] - 2026-09-23
 
 ### Non backwards compatible changes
 
