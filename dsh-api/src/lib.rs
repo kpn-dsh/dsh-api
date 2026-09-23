@@ -182,10 +182,10 @@ pub mod volume;
 ///
 /// ```
 /// # use dsh_api::version::Version;
-/// assert_eq!(dsh_api::crate_version(), &Version::new(0, 9, 0, None));
+/// assert_eq!(dsh_api::crate_version(), &Version::new(0, 11, 0, None));
 /// ```
 pub fn crate_version() -> &'static Version {
-  static CRATE_VERSION: LazyLock<Version> = LazyLock::new(|| Version::new(0, 9, 0, None));
+  static CRATE_VERSION: LazyLock<Version> = LazyLock::new(|| Version::new(0, 11, 0, None));
   &CRATE_VERSION
 }
 
