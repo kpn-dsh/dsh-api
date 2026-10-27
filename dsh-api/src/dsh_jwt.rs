@@ -7,14 +7,16 @@ use base64::engine::general_purpose::STANDARD_NO_PAD;
 use base64::Engine;
 use itertools::Itertools;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use std::sync::LazyLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct DshJwt {
   pub header: DshJwtHeader,
   pub payload: DshJwtPayload,
@@ -52,6 +54,30 @@ pub struct DshJwtHeader {
   pub kid: Option<String>,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub enum StringOrArray {
+  String { string: String },
+  Array { array: Vec<String> },
+}
+
+impl<'de> Deserialize<'de> for StringOrArray {
+  fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+    match Value::deserialize(d)? {
+      Value::Array(array) => Ok(StringOrArray::Array {
+        array: array
+          .iter()
+          .map(|value| match value {
+            Value::String(string) => Ok(string.to_string()),
+            _ => Err(D::Error::custom("")),
+          })
+          .collect::<Result<_, _>>()?,
+      }),
+      Value::String(string) => Ok(StringOrArray::String { string }),
+      _ => Err(D::Error::custom("expected string or array")),
+    }
+  }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DshJwtPayload {
   /// Issuer claim (rfc7519 "iss").
@@ -62,7 +88,7 @@ pub struct DshJwtPayload {
   pub subject: Option<String>,
   /// Audience claim (rfc7519 "aud").
   #[serde(rename = "aud")]
-  pub audience: Option<String>,
+  pub audience: Option<StringOrArray>,
   /// Expiration time claim (rfc7519 "exp").
   #[serde(rename = "exp")]
   pub expiration_time: Option<i64>,
@@ -164,6 +190,35 @@ pub struct DshPermission {
 impl DshPermission {
   pub fn new(realm: String, tenant: String) -> Self {
     Self { realm, tenant, permissions: HashSet::new() }
+  }
+}
+
+impl Display for StringOrArray {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      StringOrArray::String { string: aud } => write!(f, "{}", aud),
+      StringOrArray::Array { array: aud } => write!(f, "[{}]", aud.join(", ")),
+    }
+  }
+}
+
+pub fn deserialize_audience<'de, D>(deserializer: D) -> Result<StringOrArray, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  match Value::deserialize(deserializer)? {
+    Value::String(aud) => Ok(StringOrArray::String { string: aud }),
+    Value::Array(array) => {
+      let aud = array
+        .iter()
+        .map(|array_value| match array_value {
+          Value::String(array_string) => Ok(array_string.to_string()),
+          _ => Err(D::Error::custom("expected string")),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+      Ok(StringOrArray::Array { array: aud })
+    }
+    _ => Err(D::Error::custom("expected null or array of strings")),
   }
 }
 
@@ -311,13 +366,24 @@ impl FromStr for DshPermission {
         let permissions = HashSet::from([kind.to_string()]);
         Ok(Self { realm, tenant, permissions })
       }
-      None => Err(DshApiError::conversion("illegal permission representation")),
+      None => Err(DshApiError::conversion(format!(
+        "illegal permission representation '{}'",
+        permission_representation
+      ))),
     }
   }
 }
 
 #[test]
 fn test_dsh_permission_from_str() {
+  let representations = ["manage:dev-aws-lz-dsh:a-callcenter:manage", "manage:dev-aws-lz-dsh:ddev-managed-1:manage", "manage:dev-aws-lz-dsh:dsh:tracing"];
+
+  for representation in representations {
+    let dsh_permission = DshPermission::from_str(representation).unwrap();
+    println!("{:?}", dsh_permission);
+    assert_eq!(dsh_permission.realm, "dev-aws-lz-dsh");
+  }
+
   let dsh_permission = DshPermission::from_str("manage:dev-lz-dsh:greenbox-dev:view").unwrap();
   assert_eq!(dsh_permission.realm, "dev-lz-dsh");
   assert_eq!(dsh_permission.tenant, "greenbox-dev");

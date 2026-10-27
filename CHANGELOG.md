@@ -2,6 +2,12 @@
 
 All notable changes to the DSH Api Client project will be documented in this file.
 
+## [0.11.1] - 2026-1-27
+
+### Fixed
+
+* Fixed bug with `audience` attribute in `DshJwt`.
+
 ## [0.11.0] - 2026-09-23
 
 ### Non backwards compatible changes
