@@ -127,7 +127,6 @@ pub mod types {
 
 include!(concat!(env!("OUT_DIR"), "/methods.rs"));
 
-/// Openapi specification version 1.11.1
 pub static OPENAPI_SPEC: &str = include_str!(concat!(env!("OUT_DIR"), "/openapi.json"));
 
 /// Specification of default platforms
@@ -182,10 +181,10 @@ pub mod volume;
 ///
 /// ```
 /// # use dsh_api::version::Version;
-/// assert_eq!(dsh_api::crate_version(), &Version::new(0, 11, 0, None));
+/// assert_eq!(dsh_api::crate_version(), &Version::new(0, 11, 1, None));
 /// ```
 pub fn crate_version() -> &'static Version {
-  static CRATE_VERSION: LazyLock<Version> = LazyLock::new(|| Version::new(0, 11, 0, None));
+  static CRATE_VERSION: LazyLock<Version> = LazyLock::new(|| Version::new(0, 11, 1, None));
   &CRATE_VERSION
 }
 
